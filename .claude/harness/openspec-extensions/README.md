@@ -116,7 +116,7 @@ node .claude/hooks/openspec-sync-check.cjs --ci
 ```
 
 que sale con código `1` si algo está desincronizado y `0` si está al día.
-Debe ser un check **requerido** en la protección de rama. Versiona todo en git,
+Debe estar en verde antes de fusionar (ver `profile/quality-gates.md`). Versiona todo en git,
 `.claude/` incluido (salvo `.claude/settings.local.json`).
 
 ## Si algún día hace falta tocar un `SKILL.md` de OpenSpec

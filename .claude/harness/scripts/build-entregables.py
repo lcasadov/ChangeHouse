@@ -446,7 +446,7 @@ def pie(doc: Document, ent: Entregable, logo: Path) -> None:
     footer = doc.sections[0].footer
     footer.is_linked_to_previous = False
     base = footer.paragraphs[0]
-    anchos = [1.4, 7.0, 2.2, 2.4, 3.0]
+    anchos = [1.2, 6.4, 3.0, 2.4, 3.0]
     t = footer.add_table(rows=1, cols=5, width=Cm(TABLE_WIDTH_CM))
     t.alignment = WD_TABLE_ALIGNMENT.CENTER
     _diseno_fijo(t)

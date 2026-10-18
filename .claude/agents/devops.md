@@ -78,13 +78,14 @@ Este agente **no crea ramas ni Pull Requests**. El orquestador es el único auto
 Disponible para **consulta y operación de GitHub Actions**: leer workflows,
 consultar el estado y los logs de una ejecución (`gh run list`, `gh run view
 <id> --log-failed`), relanzarla o lanzar un `workflow_dispatch` cuando el
-orquestador lo indique (`gh run rerun`, `gh workflow run`), revisar la
-protección de rama y los environments (`gh api repos/{owner}/{repo}/branches/<rama>/protection`,
-`gh api repos/{owner}/{repo}/environments`) y comentar resultados en el issue.
+orquestador lo indique (`gh run rerun`, `gh workflow run`), revisar los environments
+(`gh api repos/{owner}/{repo}/environments`) y comentar resultados en el issue.
 
 Nunca crees ramas remotas ni Pull Requests. Nunca uses `curl`; siempre `gh`.
-Cambiar la protección de rama o los *required reviewers* de un environment es
-una decisión de una persona: propónlo, no lo apliques.
+El repositorio no tiene protección de rama ni *required reviewers* (privado sin
+GitHub Pro): el job de despliegue a `PROD` debe dispararse solo con
+`workflow_dispatch`. Cambiar la configuración de environments es decisión de
+una persona: propónlo, no lo apliques.
 
 ---
 

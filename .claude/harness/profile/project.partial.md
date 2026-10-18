@@ -31,7 +31,7 @@ Ver `branching.md` y `versioning.md`.
 | Variable | Valor |
 |---|---|
 | `$QG_PROVIDER` | `CodeRabbit` (revisión automática de Pull Requests en GitHub) |
-| `$QUALITY_GATE` | Checks obligatorios de GitHub Actions (lint, tipos, pruebas y cobertura) **y** revisión de CodeRabbit sin hallazgos sin atender, exigidos por la protección de rama de `$BASE_BRANCH` y `$PROD_BRANCH` |
+| `$QUALITY_GATE` | Checks de GitHub Actions (lint, tipos, pruebas y cobertura) en verde **y** revisión de CodeRabbit sin conversaciones abiertas. Repositorio privado sin GitHub Pro: **no hay protección de rama**; la puerta la hace cumplir el proceso (ver `.claude/harness/profile/quality-gates.md`, «Verificación antes de fusionar») |
 | `$QG_LEVEL` | `N/A` — CodeRabbit no tiene niveles; los umbrales están en `quality-gates.md` |
 | `$COVERAGE_THRESHOLD` | `80%` |
 | `$COVERAGE_SCOPE` | Código nuevo |
@@ -56,7 +56,7 @@ Ver `quality-gates.md`.
 | `$PIPELINE_DIR` | `.github/workflows` |
 | `$ENVIRONMENTS` | `DES → PROD` (GitHub Environments con el mismo nombre) |
 | `$ARTIFACT_REGISTRY` | Artefacto generado por el workflow de build: imagen en Artifact Registry (servicios) o artefacto del workflow (web estática y binarios móviles). Es el que se despliega en todos los entornos |
-| `$APPROVAL_POLICY` | Aprobación manual obligatoria para producción: *required reviewers* en el GitHub Environment `PROD` |
+| `$APPROVAL_POLICY` | Aprobación manual para producción: el despliegue a `PROD` solo lo lanza a mano una persona (`workflow_dispatch`). Sin *required reviewers* en el environment (requiere GitHub Pro) |
 | `$DEPLOY_TARGET` · `$CONTAINER_RUNTIME` · `$IAC_TOOL` · `$OBSERVABILITY` | `⚠️ PENDIENTE` |
 
 Ver `pipelines.md`.

@@ -32,7 +32,7 @@ nuevo, mira cómo se llaman los existentes y respétalo.
 
 | Síntoma | Causa |
 |---|---|
-| La PR se puede fusionar con la CI en rojo | El check no está marcado como **requerido** en la protección de rama. No produce error: produce un verde falso |
+| La PR se fusiona con la CI en rojo | No hay protección de rama (repositorio privado sin GitHub Pro). Se evita con la verificación de `quality-gates.md` antes de fusionar |
 | Cobertura sin umbral | El comando de cobertura genera el informe pero no falla por debajo de `$COVERAGE_THRESHOLD`. El umbral se configura en la herramienta de pruebas, no en un paso aparte que solo avisa |
 | CodeRabbit no revisa | La app no está instalada en el repositorio, o la rama de destino no está en su configuración (`.coderabbit.yaml`) |
 | El despliegue usa un artefacto que no es el verificado | Se compila de nuevo en el job de despliegue en lugar de consumir el artefacto publicado |
@@ -50,8 +50,9 @@ DES → PROD
   *digest*). No hay entorno de QA: la validación funcional se hace en `DES`.
 - La diferencia entre entornos está **solo** en la configuración, nunca en el
   binario.
-- El paso a producción requiere **aprobación manual**: *required reviewers* en
-  el environment `PROD`.
+- El paso a producción requiere **aprobación manual**: el job de `PROD` solo se
+  ejecuta con `workflow_dispatch`, lanzado por una persona. (Los *required
+  reviewers* del environment exigen GitHub Pro en repositorios privados.)
 
 ## Secretos
 
