@@ -1,0 +1,109 @@
+# Despliegue: construye una vez, despliega en DES al integrar en develop y promociona
+# la MISMA imagen (por digest) a PROD con aprobación manual (required reviewers en PROD).
+# Inactivo mientras el environment no tenga la variable GCP_PROJECT_ID (infra/README.md).
+name: Deploy
+
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:
+    inputs:
+      image_digest:
+        description: Digest de la imagen ya validada en DES que se promociona a PROD
+        required: false
+
+permissions:
+  contents: read
+  id-token: write # Workload Identity Federation
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  des:
+    name: deploy-des
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: DES
+    timeout-minutes: 30
+    outputs:
+      digest: ${{ steps.push.outputs.digest }}
+    steps:
+      - name: Comprobar configuración del entorno
+        id: enabled
+        run: |
+          if [ -z "${{ vars.GCP_PROJECT_ID }}" ]; then
+            echo "DES sin configurar (falta GCP_PROJECT_ID): se omite el despliegue." >> "$GITHUB_STEP_SUMMARY"
+            echo "on=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "on=true" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.enabled.outputs.on == 'true'
+        uses: actions/checkout@v4
+      - if: steps.enabled.outputs.on == 'true'
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+      - if: steps.enabled.outputs.on == 'true'
+        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
+      - name: Construir y publicar la imagen de la API
+        if: steps.enabled.outputs.on == 'true'
+        id: push
+        run: |
+          IMAGE="${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/changehouse/api"
+          gcloud auth configure-docker "${{ vars.GCP_REGION }}-docker.pkg.dev" --quiet
+          docker build -f services/api/Dockerfile -t "$IMAGE:${{ github.sha }}" .
+          docker push "$IMAGE:${{ github.sha }}"
+          DIGEST="$(gcloud artifacts docker images describe "$IMAGE:${{ github.sha }}" --format='value(image_summary.digest)')"
+          echo "digest=$IMAGE@$DIGEST" >> "$GITHUB_OUTPUT"
+      - name: Desplegar la API en Cloud Run
+        if: steps.enabled.outputs.on == 'true'
+        uses: google-github-actions/deploy-cloudrun@2028e2d7d30a78c6910e0632e48dd561b064884d # v3
+        with:
+          service: api
+          region: ${{ vars.GCP_REGION }}
+          image: ${{ steps.push.outputs.digest }}
+          flags: >-
+            --service-account=${{ vars.GCP_API_SERVICE_ACCOUNT }}
+            --add-cloudsql-instances=${{ vars.CLOUD_SQL_INSTANCE }}
+            --min-instances=0 --allow-unauthenticated
+      - if: steps.enabled.outputs.on == 'true'
+        uses: ./.github/actions/setup
+      - name: Construir y publicar landing y app web
+        if: steps.enabled.outputs.on == 'true'
+        run: |
+          pnpm --filter @changehouse/landing --filter @changehouse/mobile build
+          pnpm exec firebase target:apply hosting landing "${{ vars.GCP_PROJECT_ID }}" --project "${{ vars.GCP_PROJECT_ID }}"
+          pnpm exec firebase target:apply hosting app "${{ vars.GCP_PROJECT_ID }}-app" --project "${{ vars.GCP_PROJECT_ID }}"
+          pnpm exec firebase deploy --only hosting,firestore:rules,storage --project "${{ vars.GCP_PROJECT_ID }}" --non-interactive
+
+  prod:
+    name: deploy-prod
+    if: github.event_name == 'workflow_dispatch' && inputs.image_digest != ''
+    runs-on: ubuntu-latest
+    environment: PROD # exige aprobación manual (required reviewers)
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
+      - name: Copiar la imagen validada en DES al registro de PROD
+        run: |
+          TARGET="${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/changehouse/api:${GITHUB_SHA}"
+          gcloud artifacts docker images copy "${{ inputs.image_digest }}" "$TARGET" --quiet 2>/dev/null \
+            || { docker pull "${{ inputs.image_digest }}" && docker tag "${{ inputs.image_digest }}" "$TARGET" && docker push "$TARGET"; }
+          echo "TARGET=$TARGET" >> "$GITHUB_ENV"
+      - uses: google-github-actions/deploy-cloudrun@2028e2d7d30a78c6910e0632e48dd561b064884d # v3
+        with:
+          service: api
+          region: ${{ vars.GCP_REGION }}
+          image: ${{ env.TARGET }}
+          flags: >-
+            --service-account=${{ vars.GCP_API_SERVICE_ACCOUNT }}
+            --add-cloudsql-instances=${{ vars.CLOUD_SQL_INSTANCE }}
+            --min-instances=0 --allow-unauthenticated
