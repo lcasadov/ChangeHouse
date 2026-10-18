@@ -1,0 +1,35 @@
+{
+  "common": {
+    "appName": "ChangeHouse"
+  },
+  "tabs": {
+    "explore": "Explorar",
+    "matches": "Matches",
+    "homes": "Mis casas",
+    "profile": "Perfil"
+  },
+  "explore": {
+    "empty": {
+      "title": "Aquí verás las casas con las que puedes cambiar",
+      "description": "Cuando publiques tu casa y elijas dónde quieres vivir, te mostraremos viviendas compatibles con una foto grande y lo que te costaría el cambio."
+    }
+  },
+  "matches": {
+    "empty": {
+      "title": "Todavía no tienes matches",
+      "description": "Cuando a otra persona le guste tu casa y a ti la suya, aparecerá aquí y podrás hablar con ella."
+    }
+  },
+  "homes": {
+    "empty": {
+      "title": "Aún no has publicado ninguna casa",
+      "description": "Publica tu casa en cinco pasos, empezando por las fotos. Sin una casa publicada no puede haber matches."
+    }
+  },
+  "profile": {
+    "empty": {
+      "title": "Tu perfil estará aquí",
+      "description": "Desde aquí podrás revisar tus datos, cambiar el tema de la aplicación y gestionar tu cuenta."
+    }
+  }
+}

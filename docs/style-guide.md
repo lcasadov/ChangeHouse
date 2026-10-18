@@ -16,6 +16,40 @@ crudo funciona en el tema en que se escribió y rompe en el otro.
 
 ---
 
+## 0 · Concepto de diseño
+
+**Idea fuerza: «el cambio en un vistazo».** Cada pantalla responde en menos de
+un segundo a las dos preguntas que importan: *¿me gusta esta casa?* y *¿cuánto me
+cuesta el cambio?* Todo lo demás se esconde hasta que hace falta.
+
+| Principio | Cómo se aplica |
+|---|---|
+| **Foto primero** | Tarjetas a sangre (4:5) con la foto ocupando el 80 % de la pantalla; datos sobre un degradado inferior, nunca en tablas |
+| **El dinero, visible y claro** | Píldora de compensación en cada tarjeta: «Tú recibes 12.000 €» (verde), «Tú pagas 8.000 €» (coral) o «Cambio justo» (azul). Es el diferencial del producto |
+| **Un gesto, una decisión** | Deslizar o pulsar ♥ / ✕ grandes al alcance del pulgar; deshacer siempre visible durante 5 s; háptica en cada acción |
+| **Buscar es escribir un sitio** | Una sola barra «¿Dónde quieres vivir?» con autocompletado y chips de filtro de un toque (dormitorios, m², garaje, ascensor, terraza). El resto, en una hoja inferior |
+| **El match se celebra** | Animación de pantalla completa: las casas se deslizan una hacia la otra y se intercambian (en cadena, tres casas en triángulo). Botón directo al chat |
+| **Tu casa, tu escaparate** | Alta de vivienda en 5 pasos con progreso, empezando por las fotos; borrador guardado en cada paso |
+| **Cero jerga** | Textos cortos en tú; nada de «permuta» sin explicar ni términos fiscales sin ayuda contextual |
+
+**Navegación**: 4 pestañas — *Explorar* · *Matches* (con contador) · *Mis casas* ·
+*Perfil*. En web ancha, barra lateral con las mismas cuatro secciones.
+
+**Primer uso en tres pasos** hasta la primera tarjeta: acceso (Google, Apple o
+email) → «¿Dónde quieres vivir y cuánto puedes compensar?» → tarjetas. Publicar la
+vivienda se ofrece después, con un aviso persistente: sin vivienda publicada no
+hay matches.
+
+**Lenguaje visual**: coral intenso y azul noche, esquinas muy redondeadas
+(`radius.lg`), titulares grandes en Inter 800, superficies translúcidas sobre las
+fotos, degradado coral → rosa reservado a los momentos de match, microanimaciones
+con Reanimated (≤ 320 ms y respetando «reducir movimiento»).
+
+**Landing**: héroe con la animación de dos casas que se intercambian, la promesa
+«Cambia de casa sin vender primero», el formulario de lista de espera en la
+primera pantalla, «Cómo funciona» en tres pasos y una sección propia para las
+cadenas de tres.
+
 ## 1 · Fundamentos de diseño (tokens)
 
 Nomenclatura: `categoria.rol[.variante]`, accesibles en código como
@@ -34,18 +68,24 @@ ilustraciones y elementos no textuales grandes.
 | `color.bg` | Fondo de pantalla | `#FFFFFF` | `#121826` | — |
 | `color.surface` | Tarjetas, hojas | `#FFFFFF` | `#1A1F2B` | — |
 | `color.surfaceMuted` | Fondos secundarios, filas alternas | `#FDEEEF` | `#232A38` | — |
-| `color.text` | Texto principal | `#3A3A3A` | `#E6E8EC` | 11,4:1 · 13,4:1 |
+| `color.text` | Texto principal | `#3A3A3A` | `#E6E8EC` | 11,4:1 · 14,5:1 |
 | `color.textMuted` | Texto secundario | `#5A6672` | `#8A94A3` | 5,9:1 · 5,4:1 |
 | `color.textOnPrimary` | Texto sobre `primary` | `#FFFFFF` | `#121826` | 5,3:1 · 7,1:1 |
 | `color.primary` | Acción principal, enlaces | `#C8323E` | `#FF7A84` | 5,3:1 · 7,1:1 |
 | `color.primaryPressed` | Estado activo | `#B42A35` | `#FF959D` | ≥ 4,5:1 |
 | `color.brand` | Logotipo e ilustración (no texto) | `#E8505B` | `#E8505B` | no textual |
 | `color.secondary` | Cabeceras, navegación | `#1F2A44` | `#A9B1BD` | 14,3:1 · 8,2:1 |
-| `color.border` | Bordes y separadores | `#D9DDE3` | `#2E3646` | no textual (≥ 3:1 en controles: ⚠️ verificar) |
+| `color.border` | Separadores y bordes decorativos (no de controles) | `#D9DDE3` | `#2E3646` | decorativo |
+| `color.borderStrong` | Borde de controles: campos, casillas, interruptores | `#7A8594` | `#8A94A3` | ≥ 3:1 sobre `bg` y `surface` (WCAG 1.4.11) |
 | `color.focus` | Anillo de foco | `#1D4ED8` | `#3B82F6` | 6,7:1 · 4,8:1 |
 | `color.success` | Confirmación | `#1E7D4F` | `#4ADE80` | 5,1:1 · 10,2:1 |
 | `color.warning` | Aviso | `#B54708` | `#FBBF24` | 5,4:1 · 10,6:1 |
 | `color.danger` | Error, acción destructiva | `#B42A35` | `#FF7A84` | 6,3:1 · 7,1:1 |
+| `color.compensationReceive` | Píldora «Tú recibes» | `#1E7D4F` | `#4ADE80` | 5,1:1 · 10,2:1 |
+| `color.compensationPay` | Píldora «Tú pagas» | `#C8323E` | `#FF7A84` | 5,3:1 · 7,1:1 |
+| `color.compensationEven` | Píldora «Cambio justo» | `#1D4ED8` | `#3B82F6` | 6,7:1 · 4,8:1 |
+| `color.matchGradientStart` / `matchGradientEnd` | Degradado de los momentos de match (no textual) | `#E8505B` → `#F472B6` | `#E8505B` → `#F472B6` | no textual |
+| `color.photoScrimStart` / `photoScrimEnd` | Degradado inferior sobre fotos para texto blanco | `rgba(0,0,0,0)` → `rgba(0,0,0,0.72)` | ídem | texto blanco ≥ 4,5:1 sobre el tramo final |
 | `color.overlay` | Velo de diálogos | `rgba(18,24,38,0.5)` | `rgba(0,0,0,0.6)` | — |
 
 Contrastes calculados con la fórmula de WCAG 2.2 sobre `color.bg` del tema
@@ -93,6 +133,18 @@ chips).
 
 Los valores concretos de sombra se definen por plataforma en `packages/ui`
 (iOS `shadow*`, Android `elevation`, web `box-shadow`).
+
+### Medidas de disposición
+
+| Token | Valor | Uso |
+|---|---|---|
+| `touchTarget` | 44 | Tamaño mínimo de cualquier objetivo táctil |
+| `borderWidth` | 1 (fino) · 2 (foco y selección) | Grosor de bordes |
+| `contentMaxWidth.reading` / `.card` | 720 / 480 | Ancho máximo de texto y de la tarjeta de descubrimiento |
+| `breakpoints.medium` / `.expanded` | 600 / 1024 | Puntos de corte de §4 |
+| `disabledOpacity` | 0,5 | Opacidad de controles deshabilitados (siempre acompañada de otro indicador) |
+
+Los valores concretos de sombra de `elevation.*` viven en `packages/ui/src/tokens/elevation.ts`; en oscuro, `elevation.3` usa una superficie más clara en lugar de sombra.
 
 ### Movimiento
 
