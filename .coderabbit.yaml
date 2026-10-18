@@ -6,8 +6,7 @@ language: es-ES
 reviews:
   profile: assertive
   # Pide cambios cuando hay hallazgos y aprueba cuando se resuelven.
-  # Sin protección de rama (repo privado sin GitHub Pro), su estado se comprueba antes
-  # de fusionar: ver .claude/harness/profile/quality-gates.md.
+  # La protección de rama exige resolver sus conversaciones antes de fusionar.
   request_changes_workflow: true
   high_level_summary: true
   review_status: true

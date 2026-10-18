@@ -82,10 +82,8 @@ orquestador lo indique (`gh run rerun`, `gh workflow run`), revisar los environm
 (`gh api repos/{owner}/{repo}/environments`) y comentar resultados en el issue.
 
 Nunca crees ramas remotas ni Pull Requests. Nunca uses `curl`; siempre `gh`.
-El repositorio no tiene protección de rama ni *required reviewers* (privado sin
-GitHub Pro): el job de despliegue a `PROD` debe dispararse solo con
-`workflow_dispatch`. Cambiar la configuración de environments es decisión de
-una persona: propónlo, no lo apliques.
+Cambiar la protección de rama o los *required reviewers* del environment `PROD`
+es una decisión de una persona: propónlo, no lo apliques.
 
 ---
 

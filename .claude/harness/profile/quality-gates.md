@@ -1,22 +1,19 @@
 # Perfil de Habitinder — Puerta de calidad
 
 > La puerta se compone de **checks de GitHub Actions** y de la revisión
-> automática de **CodeRabbit**.
->
-> ⚠️ **El repositorio es privado y sin GitHub Pro: no hay protección de rama.**
-> GitHub no impide fusionar con la CI en rojo ni con comentarios abiertos. La
-> puerta se cumple por proceso: ver «Verificación antes de fusionar».
+> automática de **CodeRabbit**, ambos exigidos por la protección de rama de
+> `$BASE_BRANCH` y `$PROD_BRANCH`.
 
 ## Componentes de la puerta
 
 | Control | Herramienta | Bloquea |
 |---|---|---|
-| Lint y formato | `$LINT_CMD` en GitHub Actions | Check en verde |
-| Comprobación de tipos | `$TYPECHECK_CMD` en GitHub Actions | Check en verde |
-| Pruebas | `$TEST_CMD` en GitHub Actions | Check en verde |
-| Cobertura sobre código nuevo | `$COVERAGE_CMD` con umbral configurado en la herramienta | Check en verde |
-| Dependencias vulnerables | Escaneo de dependencias en la CI (severidad crítica) | Check en verde |
-| Coherencia de OpenSpec | `openspec-sync` en GitHub Actions | Check en verde |
+| Lint y formato | `$LINT_CMD` en GitHub Actions | Check requerido |
+| Comprobación de tipos | `$TYPECHECK_CMD` en GitHub Actions | Check requerido |
+| Pruebas | `$TEST_CMD` en GitHub Actions | Check requerido |
+| Cobertura sobre código nuevo | `$COVERAGE_CMD` con umbral configurado en la herramienta | Check requerido |
+| Dependencias vulnerables | Escaneo de dependencias en la CI (severidad crítica) | Check requerido |
+| Coherencia de OpenSpec | `openspec-sync` en GitHub Actions | Check requerido |
 | Revisión automática | CodeRabbit (`coderabbitai[bot]`) | Cero conversaciones abiertas y revisión no en *changes requested* |
 
 ## Umbrales
@@ -61,10 +58,25 @@ Lo que no puede es empeorar. Cada cambio deja el conjunto igual o mejor.
   destino. Con `request_changes_workflow: true` su revisión pide cambios y
   aprueba al resolverse.
 
+## Protección de rama
+
+`$BASE_BRANCH` y `$PROD_BRANCH` están protegidas (configurado el 2026-10-18):
+
+- Cambios solo mediante Pull Request; sin *force push* ni borrado.
+- *Require conversation resolution before merging*: cada comentario de
+  CodeRabbit es una conversación abierta hasta que se corrige o se responde y
+  se resuelve.
+- Checks de GitHub Actions requeridos y rama al día con la de destino.
+- Aplicada también a administradores: nadie se la salta.
+
+Cambiar la protección (quitar un check requerido, desactivar la resolución de
+conversaciones) es decisión de una persona, se documenta y lleva fecha de
+revisión.
+
 ## Verificación antes de fusionar
 
-Sin protección de rama, **nadie fusiona una Pull Request** (`gh pr merge` ni
-desde la web) sin comprobar antes, y dejar constancia en la respuesta, de:
+La protección impide fusionar si algo falla, pero **los agentes nunca fusionan**
+(`gh pr merge`). Antes de declarar una PR lista, comprueba y deja constancia de:
 
 ```bash
 gh pr checks <PR>                       # todos en verde, ninguno pendiente
@@ -75,7 +87,3 @@ gh api graphql -f query='query($o:String!,$r:String!,$n:Int!){repository(owner:$
 Si algo no cumple, la PR **no se fusiona**: se corrige la causa. Los agentes
 tienen prohibido fusionar; lo hace una persona tras esta verificación.
 
-> Si en el futuro se contrata GitHub Pro o el repositorio pasa a público, hay
-> que activar la protección de rama de `$BASE_BRANCH` y `$PROD_BRANCH` (checks
-> requeridos, *Require conversation resolution before merging*, aplicada a
-> administradores) y *required reviewers* en el environment `PROD`.

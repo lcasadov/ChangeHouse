@@ -121,10 +121,9 @@ técnica previa de golpe, pero **tampoco se admite añadir deuda nueva**.
 - `$QUALITY_GATE`: checks requeridos de GitHub Actions (lint, tipos, pruebas,
   cobertura, dependencias) **y** revisión de CodeRabbit (`$QG_PROVIDER`) sin
   hallazgos sin atender. La cobertura es necesaria, **no suficiente**.
-- **No hay protección de rama** (repositorio privado sin GitHub Pro): ninguna PR
-  se fusiona sin la verificación de `.claude/harness/profile/quality-gates.md`,
-  «Verificación antes de fusionar». **Los agentes nunca fusionan**; lo hace una
-  persona.
+- La protección de rama **bloquea la integración** si la puerta no está en verde.
+  **Los agentes nunca fusionan**: lo hace una persona tras la verificación de
+  `.claude/harness/profile/quality-gates.md`.
 
 Bajar un umbral, excluir ficheros de la medición, desactivar reglas del linter o
 ignorar un comentario de CodeRabbit **no son decisiones de un agente**. Si crees

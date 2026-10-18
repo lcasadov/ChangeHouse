@@ -318,7 +318,7 @@ sanear la deuda previa de golpe, pero **no se admite deuda nueva**.
 | `$NEW_CODE_DEFINITION` | Líneas añadidas o modificadas por la Pull Request respecto a su rama de destino | Qué cuenta como código nuevo |
 | `$COVERAGE_CMD` | `⚠️ PENDIENTE` | Comando que genera el informe |
 | `$QG_PROVIDER` | `CodeRabbit` (revisión automática de Pull Requests en GitHub) | Herramienta de análisis estático y puerta de calidad |
-| `$QUALITY_GATE` | Checks de GitHub Actions (lint, tipos, pruebas y cobertura) en verde **y** revisión de CodeRabbit sin conversaciones abiertas. Repositorio privado sin GitHub Pro: **no hay protección de rama**; la puerta la hace cumplir el proceso (ver `.claude/harness/profile/quality-gates.md`, «Verificación antes de fusionar») | Nombre de la puerta aplicada y criterio de bloqueo |
+| `$QUALITY_GATE` | Checks de GitHub Actions (lint, tipos, pruebas y cobertura) en verde **y** revisión de CodeRabbit sin conversaciones abiertas, exigidos por la protección de rama de `$BASE_BRANCH` y `$PROD_BRANCH` (aplicada también a administradores) | Nombre de la puerta aplicada y criterio de bloqueo |
 | `$QG_LEVEL` | `N/A` — ver `.claude/harness/profile/quality-gates.md` | Nivel o perfil asignado al proyecto, si aplica |
 | `$CODE_STANDARDS_DOC` | `⚠️ PENDIENTE` | Ruta a los estándares de codificación |
 | `$TEST_FRAMEWORKS` | `⚠️ PENDIENTE` | Marcos de prueba por nivel |
@@ -384,7 +384,7 @@ separando código nuevo de código existente.
 | `$ARTIFACT_REGISTRY` | Artefacto generado por el workflow de build de GitHub Actions: imagen en Artifact Registry (servicios) o artefacto del workflow (web y móvil). Es el que se despliega en todos los entornos | Registro de artefactos |
 | `$SECRETS_MANAGER` | Google Secret Manager en ejecución; secretos de GitHub Actions por environment solo para la CI, con Workload Identity Federation | Gestor de secretos |
 | `$IAC_TOOL` | `⚠️ PENDIENTE` | Infraestructura como código, o `ninguna` |
-| `$APPROVAL_POLICY` | Aprobación manual para producción: el despliegue a `PROD` solo lo lanza a mano una persona (`workflow_dispatch`). Sin *required reviewers* en el environment (requiere GitHub Pro) | Qué entornos exigen aprobación manual |
+| `$APPROVAL_POLICY` | Aprobación manual obligatoria para producción: *required reviewers* en el GitHub Environment `PROD` | Qué entornos exigen aprobación manual |
 | `$OBSERVABILITY` | `⚠️ PENDIENTE` | Registro, métricas y trazas |
 
 > **Ningún secreto se escribe en este fichero.** Solo la referencia al gestor y
