@@ -1,5 +1,5 @@
 ---
-description: "Entregable · Genera el informe SAST y SCA de un sistema que no tiene informe de seguridad previo, en Word y con la plantilla de Habitinder."
+description: "Entregable · Genera el informe SAST y SCA de un sistema que no tiene informe de seguridad previo, en Word y con la plantilla de ChangeHouse."
 argument-hint: "[contexto opcional]"
 ---
 
@@ -7,7 +7,7 @@ argument-hint: "[contexto opcional]"
 
 Genera, en un proyecto que **no tiene informe de seguridad previo**, un informe formal de
 análisis estático de código (SAST) y de composición de software (SCA) con formato de
-entregable de Habitinder.
+entregable de ChangeHouse.
 
 > **Si el proyecto ya tiene un informe anterior**, usa `entregable-informe-seguridad-reemision`.
 > Ese otro prompt añade el contraste con la verificación precedente, que aquí no procede
@@ -174,7 +174,7 @@ publicarás una cifra inconsistente.
 
 #### pnpm: el gestor de este proyecto
 
-Habitinder es un monorepo **pnpm** (`apps/*`, `services/*`, `packages/*`). Analiza cada
+ChangeHouse es un monorepo **pnpm** (`apps/*`, `services/*`, `packages/*`). Analiza cada
 paquete del espacio de trabajo y el conjunto:
 
 ```powershell

@@ -1,4 +1,4 @@
-# Perfil de Habitinder — formato de los entregables
+# Perfil de ChangeHouse — formato de los entregables
 
 Valores que aplican las plantillas de esta carpeta. Las reglas —qué elementos se unifican y
 cómo se construye el documento— están en `.claude/harness/entregables-formato.md`; aquí solo
@@ -28,7 +28,7 @@ Requiere Python 3.10+ con `python-docx` y `Pillow`.
 
 | Elemento | Valor |
 |---|---|
-| Marca | **Habitinder** — logotipo de dos casas unidas por flechas de intercambio |
+| Marca | **ChangeHouse** — casa blanca dentro de un ciclo de dos flechas (cambio de casa y cadenas de intercambio), sobre cuadrado coral redondeado |
 | Color principal | Coral `E8505B` |
 | Color secundario | Azul marino `1F2A44` |
 | Tinte claro | `FDEEEF` (filas alternas) |

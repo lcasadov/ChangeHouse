@@ -1,10 +1,7 @@
 ---
 description: "Use when creating or modifying inbound transport adapters on the server side (REST/HTTP controllers, handlers, resources). Enforces DTO mapping, status-code discipline and endpoint security. Stack-agnostic."
 paths:
-  - "backend/**/{rest,http,web,controller,controllers,handlers}/**"
-  - "server/**/{rest,http,controller,controllers,handlers}/**"
-  - "api/**/{rest,http,controller,controllers,handlers}/**"
-  - "**/src/main/**/{rest,controller,controllers}/**"
+  - "services/api/src/interfaces/**"
 ---
 
 # Convenciones de adaptadores de entrada (controladores)

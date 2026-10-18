@@ -1,0 +1,1486 @@
+openapi: 3.1.0
+info:
+  title: ChangeHouse API
+  version: 0.1.0
+  license:
+    name: Propietaria — todos los derechos reservados
+    url: https://github.com/lcasadov/ChangeHouse/blob/develop/LICENSE
+  summary: API de la plataforma de permuta de viviendas ChangeHouse.
+  description: |
+    Contrato de la API Fastify (`services/api`). Es la fuente de verdad de
+    endpoints, campos, enumerados y códigos de estado (`$API_CONTRACT`).
+
+    **Estado: PROPUESTA.** Generado el 2026-10-18 a partir de los requisitos
+    del README (prioridad M, MVP). Ninguna operación está confirmada todavía:
+    cada una se confirma en el `design.md` del change que la implemente. Las
+    operaciones de fase 2 (operaciones con gestoría, simulador fiscal, pagos,
+    KYC) no se incluyen.
+
+    Convenciones:
+    - Recursos en plural, rutas en `kebab-case`, campos en `camelCase`.
+    - Importes en céntimos de euro, enteros (`*Cents`).
+    - Paginación por cursor opaco: `cursor` + `limit`; respuesta con `nextCursor`.
+    - Autenticación: ID token de Firebase en `Authorization: Bearer`.
+    - Roles autorizados por operación en `x-roles` (ver `docs/rbac-matrix.md`).
+      `resourceOwner` = propietario del recurso; `participant` = participante del match.
+    - **401** sin token o token inválido. **403** cuando la existencia del
+      recurso no es secreta (p. ej. endpoints de administración) pero el rol no
+      basta. **404** cuando el usuario no puede ver el recurso: no se revela su
+      existencia (viviendas no publicadas ajenas, matches de otros).
+    - Errores en `application/problem+json` (RFC 9457) con `correlationId`.
+      Nunca trazas, consultas SQL ni nombres de tabla.
+servers:
+  - url: https://api.des.changehouse.app/v1
+    description: DES (⚠️ dominio changehouse.app pendiente de compra)
+  - url: https://api.changehouse.app/v1
+    description: PROD (⚠️ dominio changehouse.app pendiente de compra)
+security:
+  - firebaseIdToken: []
+tags:
+  - name: cuenta
+    description: Perfil, consentimientos y derechos RGPD
+  - name: viviendas
+    description: Fichas de vivienda y fotos
+  - name: preferencias
+    description: Preferencias de búsqueda
+  - name: descubrimiento
+    description: Tarjetas, me gusta y descartes
+  - name: matches
+    description: Matches directos y en cadena
+  - name: moderacion
+    description: Denuncias y bloqueos
+  - name: administracion
+    description: Panel de administración
+  - name: captacion
+    description: Lista de espera de la landing
+
+paths:
+  /me:
+    get:
+      tags: [cuenta]
+      operationId: getMe
+      summary: Perfil del usuario autenticado
+      x-roles: [owner, seeker, agency, admin]
+      responses:
+        '200':
+          description: Perfil
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Me' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    put:
+      tags: [cuenta]
+      operationId: upsertMe
+      summary: Completa o actualiza el perfil (crea el usuario en el primer acceso)
+      description: Idempotente. En el primer acceso exige aceptar términos y privacidad (RF-04).
+      x-roles: [authenticated]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MeInput' }
+      responses:
+        '200':
+          description: Perfil actualizado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Me' }
+        '201':
+          description: Usuario creado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Me' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+    delete:
+      tags: [cuenta]
+      operationId: deleteMe
+      summary: Elimina la cuenta (RF-05)
+      description: |
+        Borrado lógico y anonimización de datos personales. Las viviendas pasan
+        a `closed` y los matches abiertos se cierran para todos (RN-10).
+      x-roles: [owner, seeker]
+      responses:
+        '204': { description: Cuenta eliminada }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /me/export:
+    get:
+      tags: [cuenta]
+      operationId: exportMyData
+      summary: Exporta los datos personales del usuario (portabilidad, RF-05)
+      x-roles: [owner, seeker, agency]
+      responses:
+        '200':
+          description: Exportación en JSON
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /me/consents:
+    get:
+      tags: [cuenta]
+      operationId: listMyConsents
+      summary: Consentimientos registrados del usuario
+      x-roles: [owner, seeker, agency, admin]
+      responses:
+        '200':
+          description: Consentimientos
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Consent' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [cuenta]
+      operationId: acceptConsent
+      summary: Registra la aceptación de una versión de un documento legal o tratamiento
+      x-roles: [owner, seeker, agency, admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ConsentInput' }
+      responses:
+        '201':
+          description: Consentimiento registrado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Consent' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /me/devices:
+    put:
+      tags: [cuenta]
+      operationId: registerDevice
+      summary: Registra o refresca el token FCM del dispositivo (RF-61)
+      x-roles: [owner, seeker, agency, admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fcmToken, platform]
+              properties:
+                fcmToken: { type: string, minLength: 1, maxLength: 4096 }
+                platform: { type: string, enum: [android, ios, web] }
+      responses:
+        '204': { description: Registrado }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /me/homes:
+    get:
+      tags: [viviendas]
+      operationId: listMyHomes
+      summary: Viviendas del usuario, en cualquier estado
+      x-roles: [owner, seeker]
+      responses:
+        '200':
+          description: Viviendas
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Home' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /homes:
+    post:
+      tags: [viviendas]
+      operationId: createHome
+      summary: Crea una vivienda en borrador (RF-10). Un usuario puede tener varias (RF-20)
+      x-roles: [owner, seeker]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/HomeInput' }
+      responses:
+        '201':
+          description: Vivienda creada en `draft`
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Home' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: Las cuentas `agency` y `admin` no publican viviendas
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+  /homes/{homeId}:
+    parameters:
+      - $ref: '#/components/parameters/HomeId'
+    get:
+      tags: [viviendas]
+      operationId: getHome
+      summary: Detalle de una vivienda
+      description: |
+        El propietario ve la ficha completa. Otros usuarios solo ven viviendas
+        `published` y en su forma pública (`HomePublic`): la ubicación exacta
+        solo si el propietario eligió `locationVisibility: exact`; si no, el
+        barrio o zona. La dirección postal exacta solo se incluye para
+        participantes de un match (RN-08).
+      x-roles: [resourceOwner, owner, seeker, admin]
+      responses:
+        '200':
+          description: Vivienda
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/Home'
+                  - $ref: '#/components/schemas/HomePublic'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [viviendas]
+      operationId: updateHome
+      summary: Modifica una vivienda propia
+      description: |
+        Una vivienda `published` que cambia datos relevantes vuelve a `in_review`
+        (moderación previa, RF-18). No se puede modificar en `in_operation` ni `closed`.
+      x-roles: [resourceOwner]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/HomePatch' }
+      responses:
+        '200':
+          description: Vivienda modificada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Home' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+  /homes/{homeId}/submit:
+    parameters:
+      - $ref: '#/components/parameters/HomeId'
+    post:
+      tags: [viviendas]
+      operationId: submitHome
+      summary: Envía la vivienda a moderación (`draft` → `in_review`)
+      description: Exige al menos 3 fotos (RF-11) y los campos obligatorios completos.
+      x-roles: [resourceOwner]
+      responses:
+        '200':
+          description: Vivienda en revisión
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Home' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+  /homes/{homeId}/pause:
+    parameters:
+      - $ref: '#/components/parameters/HomeId'
+    post:
+      tags: [viviendas]
+      operationId: pauseHome
+      summary: Pausa una vivienda publicada (`published` → `paused`)
+      x-roles: [resourceOwner]
+      responses:
+        '200':
+          description: Vivienda pausada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Home' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /homes/{homeId}/resume:
+    parameters:
+      - $ref: '#/components/parameters/HomeId'
+    post:
+      tags: [viviendas]
+      operationId: resumeHome
+      summary: Reactiva una vivienda pausada (`paused` → `published`)
+      x-roles: [resourceOwner]
+      responses:
+        '200':
+          description: Vivienda publicada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Home' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /homes/{homeId}/photos:
+    parameters:
+      - $ref: '#/components/parameters/HomeId'
+    post:
+      tags: [viviendas]
+      operationId: createHomePhotoUpload
+      summary: Solicita una URL firmada para subir una foto (máx. 20, RF-11)
+      description: |
+        Devuelve una URL firmada de subida de corta duración. Tras la subida, la
+        API comprime la imagen y elimina los metadatos EXIF de ubicación antes
+        de publicarla.
+      x-roles: [resourceOwner]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [contentType]
+              properties:
+                contentType: { type: string, enum: [image/jpeg, image/png, image/heic, image/webp] }
+      responses:
+        '201':
+          description: URL de subida
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PhotoUpload' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Ya hay 20 fotos
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+  /homes/{homeId}/photos/{photoId}:
+    parameters:
+      - $ref: '#/components/parameters/HomeId'
+      - $ref: '#/components/parameters/PhotoId'
+    delete:
+      tags: [viviendas]
+      operationId: deleteHomePhoto
+      summary: Elimina una foto
+      x-roles: [resourceOwner]
+      responses:
+        '204': { description: Eliminada }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Una vivienda publicada no puede quedarse con menos de 3 fotos
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  /me/search-preferences:
+    get:
+      tags: [preferencias]
+      operationId: getMySearchPreferences
+      summary: Preferencias de búsqueda del usuario
+      x-roles: [owner, seeker]
+      responses:
+        '200':
+          description: Preferencias
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SearchPreferences' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [preferencias]
+      operationId: putMySearchPreferences
+      summary: Define las preferencias de búsqueda por defecto del usuario (RF-30 a RF-33)
+      description: Valen para todas sus viviendas salvo las que tengan preferencias propias.
+      x-roles: [owner, seeker]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SearchPreferences' }
+      responses:
+        '200':
+          description: Preferencias guardadas
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SearchPreferences' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+
+  /homes/{homeId}/search-preferences:
+    parameters:
+      - $ref: '#/components/parameters/HomeId'
+    get:
+      tags: [preferencias]
+      operationId: getHomeSearchPreferences
+      summary: Preferencias propias de una vivienda, si las tiene
+      x-roles: [resourceOwner]
+      responses:
+        '200':
+          description: Preferencias de la vivienda
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SearchPreferences' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404':
+          description: La vivienda no es del usuario, o no tiene preferencias propias (usa las del usuario)
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+    put:
+      tags: [preferencias]
+      operationId: putHomeSearchPreferences
+      summary: Define preferencias propias de una vivienda, que sustituyen a las del usuario para ella
+      x-roles: [resourceOwner]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SearchPreferences' }
+      responses:
+        '200':
+          description: Preferencias guardadas
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SearchPreferences' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+    delete:
+      tags: [preferencias]
+      operationId: deleteHomeSearchPreferences
+      summary: Elimina las preferencias propias de la vivienda; vuelve a usar las del usuario
+      x-roles: [resourceOwner]
+      responses:
+        '204': { description: Eliminadas }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /discover:
+    get:
+      tags: [descubrimiento]
+      operationId: discoverHomes
+      summary: Tarjetas de viviendas compatibles (RF-40, RF-44, RN-06, RN-11)
+      description: |
+        Viviendas `published`, que cumplen las preferencias del usuario, no
+        descartadas (salvo cambio relevante), no propias y con compatibilidad
+        económica en ambos sentidos, con las preferencias de la vivienda si las
+        tiene o, si no, las del usuario. Las VPP solo se muestran si el usuario
+        declara cumplir los requisitos. Un `seeker` puede mirar sin `homeId`
+        (sin filtro de compatibilidad inversa), pero no da me gusta. Con
+        `homeId`, la compatibilidad se calcula para esa vivienda del usuario.
+      x-roles: [owner, seeker]
+      parameters:
+        - name: homeId
+          in: query
+          required: false
+          description: Vivienda propia y publicada desde la que se busca. Obligatoria para un `owner` con varias viviendas
+          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Página de tarjetas
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/HomePublic' }
+                  nextCursor: { type: [string, 'null'] }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422':
+          description: El usuario no ha definido preferencias de búsqueda
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+  /me/likes:
+    post:
+      tags: [descubrimiento]
+      operationId: likeHome
+      summary: Me gusta en una vivienda (RF-41, RN-01, RN-02)
+      description: |
+        Crea la arista desde una vivienda publicada del usuario (`fromHomeId`)
+        hacia la vivienda indicada y busca ciclos de 2 y 3 en la misma
+        transacción. Cada vivienda del usuario participa de forma independiente
+        (RF-20). Si se cierra un ciclo compatible, devuelve el match creado.
+      x-roles: [owner]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fromHomeId, targetHomeId]
+              properties:
+                fromHomeId: { type: string, format: uuid, description: Vivienda propia y publicada que ofrece el usuario }
+                targetHomeId: { type: string, format: uuid }
+      responses:
+        '201':
+          description: Like registrado, con el match si se ha formado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LikeResult' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: El usuario no tiene vivienda publicada (`seeker`, RN-01) o es `agency`/`admin`
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Ya existía el like
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+  /me/dismissals:
+    post:
+      tags: [descubrimiento]
+      operationId: dismissHome
+      summary: Descarta una vivienda (RF-41, RF-44)
+      x-roles: [owner, seeker]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [targetHomeId]
+              properties:
+                fromHomeId: { type: string, format: uuid, description: Vivienda propia desde la que se descarta; omitida para un `seeker` }
+                targetHomeId: { type: string, format: uuid }
+      responses:
+        '204': { description: Descartada }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /me/last-action:
+    delete:
+      tags: [descubrimiento]
+      operationId: undoLastAction
+      summary: Deshace el último me gusta o descarte (RF-41)
+      description: No deshace un like que ya ha formado un match.
+      x-roles: [owner, seeker]
+      parameters:
+        - name: homeId
+          in: query
+          required: false
+          description: Vivienda propia cuya última acción se deshace; omitida para un `seeker`
+          schema: { type: string, format: uuid }
+      responses:
+        '204': { description: Deshecho }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: El like ya forma parte de un match
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  /matches:
+    get:
+      tags: [matches]
+      operationId: listMyMatches
+      summary: Matches en los que participa el usuario
+      x-roles: [owner]
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema: { $ref: '#/components/schemas/MatchStatus' }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Página de matches
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Match' }
+                  nextCursor: { type: [string, 'null'] }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /matches/{matchId}:
+    parameters:
+      - $ref: '#/components/parameters/MatchId'
+    get:
+      tags: [matches]
+      operationId: getMatch
+      summary: Detalle de un match, con dirección exacta y compensaciones (RF-53, RF-56)
+      x-roles: [participant, admin]
+      responses:
+        '200':
+          description: Match
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Match' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /matches/{matchId}/confirm:
+    parameters:
+      - $ref: '#/components/parameters/MatchId'
+    post:
+      tags: [matches]
+      operationId: confirmMatch
+      summary: El participante confirma interés (RF-54)
+      description: |
+        Cuando todos confirman, el match pasa a `confirmed`. En el MVP no se
+        pausan los demás matches de esas viviendas; el paso a operación con
+        gestoría (`in_operation`) llega en la fase 2.
+      x-roles: [participant]
+      responses:
+        '200':
+          description: Match actualizado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Match' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /matches/{matchId}/withdraw:
+    parameters:
+      - $ref: '#/components/parameters/MatchId'
+    post:
+      tags: [matches]
+      operationId: withdrawFromMatch
+      summary: El participante se retira; el match se cierra para todos (RF-54, RN-10)
+      x-roles: [participant]
+      responses:
+        '200':
+          description: Match cerrado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Match' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /matches/{matchId}/phone-sharing:
+    parameters:
+      - $ref: '#/components/parameters/MatchId'
+    put:
+      tags: [matches]
+      operationId: setPhoneSharing
+      summary: Autoriza o revoca mostrar el teléfono a los participantes (RF-53)
+      x-roles: [participant]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [share]
+              properties:
+                share: { type: boolean }
+      responses:
+        '204': { description: Preferencia guardada }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /reports:
+    post:
+      tags: [moderacion]
+      operationId: createReport
+      summary: Denuncia un usuario, una vivienda o un mensaje (RF-63)
+      x-roles: [owner, seeker]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReportInput' }
+      responses:
+        '201':
+          description: Denuncia registrada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Report' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+  /me/blocked-users:
+    post:
+      tags: [moderacion]
+      operationId: blockUser
+      summary: Bloquea a un usuario (RF-63)
+      x-roles: [owner, seeker]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId]
+              properties:
+                userId: { type: string, format: uuid }
+      responses:
+        '204': { description: Bloqueado }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /admin/homes:
+    get:
+      tags: [administracion]
+      operationId: adminListHomes
+      summary: Viviendas por estado, p. ej. pendientes de moderación (RF-18, RF-90)
+      x-roles: [admin]
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema: { $ref: '#/components/schemas/HomeStatus' }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Página de viviendas
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Home' }
+                  nextCursor: { type: [string, 'null'] }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /admin/homes/{homeId}/moderation:
+    parameters:
+      - $ref: '#/components/parameters/HomeId'
+    post:
+      tags: [administracion]
+      operationId: adminModerateHome
+      summary: Aprueba o rechaza una vivienda en revisión (RF-18)
+      description: Queda registrado en el log de auditoría (RF-93).
+      x-roles: [admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision]
+              properties:
+                decision: { type: string, enum: [approve, reject] }
+                reason: { type: string, maxLength: 1000, description: Obligatorio si se rechaza }
+      responses:
+        '200':
+          description: Vivienda moderada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Home' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /admin/reports:
+    get:
+      tags: [administracion]
+      operationId: adminListReports
+      summary: Denuncias (RF-63, RF-90)
+      x-roles: [admin]
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema: { $ref: '#/components/schemas/ReportStatus' }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Página de denuncias
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Report' }
+                  nextCursor: { type: [string, 'null'] }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /admin/reports/{reportId}:
+    parameters:
+      - name: reportId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    patch:
+      tags: [administracion]
+      operationId: adminResolveReport
+      summary: Resuelve una denuncia
+      x-roles: [admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { type: string, enum: [resolved, dismissed] }
+                resolution: { type: string, maxLength: 2000 }
+      responses:
+        '200':
+          description: Denuncia resuelta
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Report' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /admin/users:
+    get:
+      tags: [administracion]
+      operationId: adminListUsers
+      summary: Usuarios (RF-90)
+      x-roles: [admin]
+      parameters:
+        - name: q
+          in: query
+          required: false
+          description: Búsqueda por email o nombre visible
+          schema: { type: string, maxLength: 200 }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Página de usuarios
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/AdminUser' }
+                  nextCursor: { type: [string, 'null'] }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /admin/users/{userId}/suspension:
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    put:
+      tags: [administracion]
+      operationId: adminSetUserSuspension
+      summary: Suspende o reactiva a un usuario
+      description: Queda registrado en el log de auditoría (RF-93).
+      x-roles: [admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [suspended, reason]
+              properties:
+                suspended: { type: boolean }
+                reason: { type: string, minLength: 1, maxLength: 1000 }
+      responses:
+        '200':
+          description: Usuario actualizado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminUser' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /admin/metrics:
+    get:
+      tags: [administracion]
+      operationId: adminGetMetrics
+      summary: Métricas agregadas (RF-91)
+      x-roles: [admin]
+      parameters:
+        - name: from
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          required: true
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: Métricas
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Metrics' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /admin/audit-log:
+    get:
+      tags: [administracion]
+      operationId: adminListAuditLog
+      summary: Registro de auditoría de acciones administrativas (RF-93)
+      x-roles: [admin]
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Página de entradas
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/AuditEntry' }
+                  nextCursor: { type: [string, 'null'] }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /admin/waitlist:
+    get:
+      tags: [administracion]
+      operationId: adminListWaitlist
+      summary: Lista de espera, consultable y exportable (RF-101)
+      x-roles: [admin]
+      parameters:
+        - name: municipality
+          in: query
+          required: false
+          schema: { type: string, maxLength: 120 }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Página de altas
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/WaitlistEntry' }
+                  nextCursor: { type: [string, 'null'] }
+            text/csv:
+              schema: { type: string }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /waitlist:
+    post:
+      tags: [captacion]
+      operationId: joinWaitlist
+      summary: Alta en la lista de espera desde la landing (RF-101)
+      description: |
+        Pública. Protegida con limitación de peticiones y verificación
+        anti-bots (⚠️ mecanismo pendiente). Responde 202 también si el email ya
+        existía, para no revelar quién está apuntado.
+      security: []
+      x-roles: [visitor]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/WaitlistInput' }
+      responses:
+        '202': { description: Alta aceptada }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+components:
+  securitySchemes:
+    firebaseIdToken:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: ID token de Firebase Authentication, verificado en cada petición.
+
+  parameters:
+    HomeId:
+      name: homeId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    PhotoId:
+      name: photoId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    MatchId:
+      name: matchId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    Cursor:
+      name: cursor
+      in: query
+      required: false
+      description: Cursor opaco devuelto en `nextCursor`
+      schema: { type: string, maxLength: 512 }
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema: { type: integer, minimum: 1, maximum: 50, default: 20 }
+
+  responses:
+    BadRequest:
+      description: Petición mal formada o que no cumple el esquema
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Unauthorized:
+      description: Sin token o token inválido o caducado
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Forbidden:
+      description: Autenticado, pero sin el rol requerido
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    NotFound:
+      description: No existe o el usuario no puede verlo (no se distingue)
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Conflict:
+      description: La transición no es válida en el estado actual del recurso
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Unprocessable:
+      description: Esquema válido, pero incumple una regla de negocio
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    TooManyRequests:
+      description: Límite de peticiones o límite diario de likes superado (10 por usuario y día, configurable por entorno; RF-45, RNF-06)
+      headers:
+        Retry-After:
+          schema: { type: integer }
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+
+  schemas:
+    Problem:
+      type: object
+      description: Formato único de error (RFC 9457).
+      required: [type, title, status, correlationId]
+      properties:
+        type: { type: string, format: uri-reference, examples: ['https://changehouse.app/problems/invalid-transition'] }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        code: { type: string, description: Código estable de error de negocio, examples: ['HOME_NOT_EDITABLE'] }
+        correlationId: { type: string, description: Identificador para el diagnóstico en los logs }
+        errors:
+          type: array
+          description: Errores por campo (400 y 422)
+          items:
+            type: object
+            required: [field, message]
+            properties:
+              field: { type: string }
+              message: { type: string }
+      examples:
+        - type: https://changehouse.app/problems/invalid-transition
+          title: Transición no válida
+          status: 409
+          code: HOME_NOT_EDITABLE
+          correlationId: 01J9Z8X7Y6W5V4T3S2R1Q0P9N8
+
+    Role:
+      type: string
+      description: |
+        Roles técnicos. `owner` (tiene al menos una vivienda publicada, pausada o
+        en operación) y `seeker` (no la tiene) se **derivan**; `agency` y `admin`
+        se **asignan** y son exclusivos con los demás.
+      enum: [owner, seeker, agency, admin]
+    HomeType:
+      type: string
+      description: Lista cerrada (propuesta a partir de README RF-10).
+      enum: [piso, atico, duplex, estudio, bajo, chalet, adosado, pareado, casa]
+    HomeFeatures:
+      type: object
+      description: Características con claves cerradas (propuesta).
+      additionalProperties: false
+      properties:
+        terrace: { type: boolean }
+        balcony: { type: boolean }
+        garden: { type: boolean }
+        communalPool: { type: boolean }
+        privatePool: { type: boolean }
+        airConditioning: { type: boolean }
+        heating: { type: string, enum: [none, individual, central] }
+        exterior: { type: boolean }
+        accessible: { type: boolean, description: Accesible sin escalones desde la calle }
+        condition: { type: string, enum: [new, good, needs_renovation] }
+    LocationVisibility:
+      type: string
+      description: '`exact`: ubicación exacta pública; `area`: solo barrio o zona.'
+      enum: [exact, area]
+      default: area
+    HomeStatus:
+      type: string
+      enum: [draft, in_review, published, paused, in_operation, closed]
+    HomeRegime:
+      type: string
+      enum: [libre, VPPB, VPPL, VPO]
+    MatchStatus:
+      type: string
+      enum: [open, confirmed, in_operation, closed, expired]
+    ParticipantStatus:
+      type: string
+      enum: [pending, confirmed, withdrawn]
+    ReportStatus:
+      type: string
+      enum: [open, resolved, dismissed]
+    ConsentType:
+      type: string
+      description: Lista cerrada (propuesta); se revisa con el registro de actividades de tratamiento.
+      enum: [terms, privacy, analytics, marketing, third_party_referral]
+    Money:
+      type: integer
+      description: Importe en céntimos de euro
+      minimum: 0
+    GeoPoint:
+      type: object
+      required: [lat, lng]
+      properties:
+        lat: { type: number, minimum: -90, maximum: 90 }
+        lng: { type: number, minimum: -180, maximum: 180 }
+
+    Me:
+      type: object
+      required: [id, email, displayName, roles, meetsVppRequirements, isOver65, hasPublishedHome]
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        displayName: { type: string }
+        photoUrl: { type: [string, 'null'], format: uri }
+        municipality: { type: [string, 'null'] }
+        phone: { type: [string, 'null'] }
+        meetsVppRequirements: { type: boolean }
+        isOver65: { type: boolean }
+        roles:
+          type: array
+          items: { $ref: '#/components/schemas/Role' }
+        hasPublishedHome: { type: boolean, description: 'true = owner; false = seeker' }
+    MeInput:
+      type: object
+      required: [displayName]
+      properties:
+        displayName: { type: string, minLength: 1, maxLength: 60 }
+        municipality: { type: string, maxLength: 120 }
+        phone: { type: string, pattern: '^\+[1-9][0-9]{6,14}$', description: Formato E.164 }
+        meetsVppRequirements: { type: boolean }
+        isOver65: { type: boolean }
+        acceptedTermsVersion: { type: string, description: Obligatorio en el primer acceso }
+        acceptedPrivacyVersion: { type: string, description: Obligatorio en el primer acceso }
+    Consent:
+      type: object
+      required: [type, version, acceptedAt]
+      properties:
+        type: { $ref: '#/components/schemas/ConsentType' }
+        version: { type: string }
+        acceptedAt: { type: string, format: date-time }
+    ConsentInput:
+      type: object
+      required: [type, version]
+      properties:
+        type: { $ref: '#/components/schemas/ConsentType' }
+        version: { type: string, minLength: 1, maxLength: 40 }
+
+    HomeInput:
+      type: object
+      required: [type, regime, address, usefulM2, builtM2, bedrooms, bathrooms, hasLift, garage, storageRoom, valueMinCents, valueMaxCents, isPrimaryResidence]
+      properties:
+        type: { $ref: '#/components/schemas/HomeType' }
+        regime: { $ref: '#/components/schemas/HomeRegime' }
+        address:
+          type: object
+          description: Dirección exacta (se guarda cifrada; nunca se publica)
+          required: [placeId, formatted]
+          properties:
+            placeId: { type: string, description: Identificador de Google Places }
+            formatted: { type: string, maxLength: 300 }
+        usefulM2: { type: number, exclusiveMinimum: 0, maximum: 10000 }
+        builtM2: { type: number, exclusiveMinimum: 0, maximum: 10000 }
+        bedrooms: { type: integer, minimum: 0, maximum: 30 }
+        bathrooms: { type: integer, minimum: 0, maximum: 30 }
+        floor: { type: string, maxLength: 20 }
+        hasLift: { type: boolean }
+        garage: { type: boolean }
+        storageRoom: { type: boolean }
+        features: { $ref: '#/components/schemas/HomeFeatures' }
+        locationVisibility: { $ref: '#/components/schemas/LocationVisibility' }
+        energyRating: { type: string, enum: [A, B, C, D, E, F, G] }
+        yearBuilt: { type: integer, minimum: 1800, maximum: 2100 }
+        valueMinCents: { $ref: '#/components/schemas/Money' }
+        valueMaxCents: { $ref: '#/components/schemas/Money' }
+        isPrimaryResidence: { type: boolean }
+        mortgageOutstandingCents: { $ref: '#/components/schemas/Money' }
+        vppQualificationDate: { type: string, format: date }
+        vppProtectionEnd: { type: string, format: date }
+        vppMaxLegalPriceCents: { $ref: '#/components/schemas/Money' }
+    HomePatch:
+      type: object
+      description: Cualquier subconjunto de los campos de `HomeInput`.
+      minProperties: 1
+      properties:
+        type: { $ref: '#/components/schemas/HomeType' }
+        regime: { $ref: '#/components/schemas/HomeRegime' }
+        address: { $ref: '#/components/schemas/HomeInput/properties/address' }
+        usefulM2: { type: number, exclusiveMinimum: 0, maximum: 10000 }
+        builtM2: { type: number, exclusiveMinimum: 0, maximum: 10000 }
+        bedrooms: { type: integer, minimum: 0, maximum: 30 }
+        bathrooms: { type: integer, minimum: 0, maximum: 30 }
+        floor: { type: string, maxLength: 20 }
+        hasLift: { type: boolean }
+        garage: { type: boolean }
+        storageRoom: { type: boolean }
+        features: { $ref: '#/components/schemas/HomeFeatures' }
+        locationVisibility: { $ref: '#/components/schemas/LocationVisibility' }
+        energyRating: { type: string, enum: [A, B, C, D, E, F, G] }
+        yearBuilt: { type: integer, minimum: 1800, maximum: 2100 }
+        valueMinCents: { $ref: '#/components/schemas/Money' }
+        valueMaxCents: { $ref: '#/components/schemas/Money' }
+        isPrimaryResidence: { type: boolean }
+        mortgageOutstandingCents: { $ref: '#/components/schemas/Money' }
+        vppQualificationDate: { type: string, format: date }
+        vppProtectionEnd: { type: string, format: date }
+        vppMaxLegalPriceCents: { $ref: '#/components/schemas/Money' }
+    HomePublic:
+      type: object
+      description: Forma pública de una vivienda. Sin dirección postal exacta ni datos del propietario.
+      required: [id, type, regime, usefulM2, builtM2, bedrooms, bathrooms, valueMinCents, valueMaxCents, location, photos]
+      properties:
+        id: { type: string, format: uuid }
+        type: { $ref: '#/components/schemas/HomeType' }
+        regime: { $ref: '#/components/schemas/HomeRegime' }
+        usefulM2: { type: number }
+        builtM2: { type: number }
+        bedrooms: { type: integer }
+        bathrooms: { type: integer }
+        floor: { type: [string, 'null'] }
+        hasLift: { type: boolean }
+        garage: { type: boolean }
+        storageRoom: { type: boolean }
+        features: { $ref: '#/components/schemas/HomeFeatures' }
+        energyRating: { type: [string, 'null'] }
+        yearBuilt: { type: [integer, 'null'] }
+        valueMinCents: { $ref: '#/components/schemas/Money' }
+        valueMaxCents: { $ref: '#/components/schemas/Money' }
+        location:
+          type: object
+          description: Punto exacto si el propietario eligió `exact`; centro del barrio o zona si eligió `area`.
+          required: [visibility, point, areaName]
+          properties:
+            visibility: { $ref: '#/components/schemas/LocationVisibility' }
+            point: { $ref: '#/components/schemas/GeoPoint' }
+            areaName: { type: string, description: Barrio o zona }
+        photos:
+          type: array
+          items: { $ref: '#/components/schemas/Photo' }
+    Home:
+      description: Ficha completa, visible para el propietario y el admin.
+      allOf:
+        - $ref: '#/components/schemas/HomePublic'
+        - type: object
+          required: [status, isPrimaryResidence, address]
+          properties:
+            status: { $ref: '#/components/schemas/HomeStatus' }
+            isPrimaryResidence: { type: boolean }
+            mortgageOutstandingCents: { $ref: '#/components/schemas/Money' }
+            vppQualificationDate: { type: [string, 'null'], format: date }
+            vppProtectionEnd: { type: [string, 'null'], format: date }
+            vppMaxLegalPriceCents: { type: [integer, 'null'], minimum: 0 }
+            address: { type: string, description: Dirección exacta formateada }
+            moderationNote: { type: [string, 'null'], description: Motivo del último rechazo }
+            createdAt: { type: string, format: date-time }
+    Photo:
+      type: object
+      required: [id, url, position]
+      properties:
+        id: { type: string, format: uuid }
+        url: { type: string, format: uri }
+        position: { type: integer, minimum: 1, maximum: 20 }
+    PhotoUpload:
+      type: object
+      required: [photoId, uploadUrl, expiresAt]
+      properties:
+        photoId: { type: string, format: uuid }
+        uploadUrl: { type: string, format: uri }
+        expiresAt: { type: string, format: date-time }
+
+    SearchPreferences:
+      type: object
+      required: [maxToPayCents, minToReceiveCents]
+      properties:
+        center: { $ref: '#/components/schemas/GeoPoint' }
+        radiusKm: { type: number, exclusiveMinimum: 0, maximum: 200 }
+        municipalities:
+          type: array
+          maxItems: 50
+          items: { type: string, maxLength: 120 }
+        filters:
+          type: object
+          properties:
+            types:
+              type: array
+              items: { $ref: '#/components/schemas/HomeType' }
+            minUsefulM2: { type: number, minimum: 0 }
+            minBedrooms: { type: integer, minimum: 0 }
+            minBathrooms: { type: integer, minimum: 0 }
+            garage: { type: boolean }
+            lift: { type: boolean }
+            exterior: { type: boolean }
+        maxToPayCents: { $ref: '#/components/schemas/Money' }
+        minToReceiveCents: { $ref: '#/components/schemas/Money' }
+        valueReferencePct:
+          type: integer
+          minimum: 0
+          maximum: 100
+          default: 50
+          description: Punto del rango de valor de sus viviendas que se usa para calcular compensaciones (0 = mínimo, 100 = máximo), elegido por el usuario (RN-03)
+
+    LikeResult:
+      type: object
+      required: [liked]
+      properties:
+        liked: { type: boolean, const: true }
+        match:
+          description: Match creado por este like, si lo hay
+          oneOf:
+            - $ref: '#/components/schemas/Match'
+            - type: 'null'
+    Match:
+      type: object
+      required: [id, type, status, participants, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        type: { type: integer, enum: [2, 3] }
+        status: { $ref: '#/components/schemas/MatchStatus' }
+        chatId: { type: string, description: Identificador del chat de grupo en Firestore }
+        createdAt: { type: string, format: date-time }
+        participants:
+          type: array
+          minItems: 2
+          maxItems: 3
+          items: { $ref: '#/components/schemas/MatchParticipant' }
+    MatchParticipant:
+      type: object
+      required: [homeId, displayName, givesHomeId, receivesHomeId, compensationCents, status]
+      properties:
+        homeId: { type: string, format: uuid }
+        displayName: { type: string }
+        phone: { type: [string, 'null'], description: Solo si el participante lo autoriza }
+        exactAddress: { type: string, description: Dirección exacta de la vivienda que entrega (RN-08) }
+        givesHomeId: { type: string, format: uuid }
+        receivesHomeId: { type: string, format: uuid }
+        compensationCents:
+          type: integer
+          description: Positivo = paga; negativo = recibe. La suma del match es 0 (RN-04). Estimación orientativa.
+        status: { $ref: '#/components/schemas/ParticipantStatus' }
+
+    ReportInput:
+      type: object
+      required: [targetType, targetId, reason]
+      properties:
+        targetType: { type: string, enum: [user, home, message] }
+        targetId: { type: string, minLength: 1, maxLength: 128, description: 'uuid, o id del mensaje de Firestore' }
+        reason: { type: string, minLength: 1, maxLength: 1000 }
+    Report:
+      type: object
+      required: [id, targetType, targetId, reason, status, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        targetType: { type: string, enum: [user, home, message] }
+        targetId: { type: string }
+        reason: { type: string }
+        status: { $ref: '#/components/schemas/ReportStatus' }
+        resolution: { type: [string, 'null'] }
+        createdAt: { type: string, format: date-time }
+
+    AdminUser:
+      type: object
+      required: [id, email, displayName, roles, suspended, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        displayName: { type: string }
+        roles:
+          type: array
+          items: { $ref: '#/components/schemas/Role' }
+        suspended: { type: boolean }
+        createdAt: { type: string, format: date-time }
+    Metrics:
+      type: object
+      required: [signups, publishedHomesByZone, likes, matches, operations]
+      properties:
+        signups: { type: integer, minimum: 0 }
+        publishedHomesByZone:
+          type: array
+          items:
+            type: object
+            required: [zone, count]
+            properties:
+              zone: { type: string, description: Barrio o zona (`areaName`) }
+              count: { type: integer, minimum: 0 }
+        likes: { type: integer, minimum: 0 }
+        matches:
+          type: object
+          required: [direct, chain]
+          properties:
+            direct: { type: integer, minimum: 0 }
+            chain: { type: integer, minimum: 0 }
+        operations: { type: integer, minimum: 0 }
+    AuditEntry:
+      type: object
+      required: [id, actorId, action, entity, at]
+      properties:
+        id: { type: integer }
+        actorId: { type: string, format: uuid }
+        action: { type: string }
+        entity: { type: string }
+        entityId: { type: [string, 'null'] }
+        at: { type: string, format: date-time }
+
+    WaitlistEntry:
+      type: object
+      required: [email, municipality, homeType, lookingFor, consentAt]
+      properties:
+        email: { type: string, format: email }
+        municipality: { type: string }
+        homeType: { $ref: '#/components/schemas/HomeType' }
+        lookingFor: { type: string }
+        consentAt: { type: string, format: date-time }
+    WaitlistInput:
+      type: object
+      required: [email, municipality, homeType, lookingFor, consent]
+      properties:
+        email: { type: string, format: email, maxLength: 254 }
+        municipality: { type: string, minLength: 1, maxLength: 120 }
+        homeType: { $ref: '#/components/schemas/HomeType' }
+        lookingFor: { type: string, minLength: 1, maxLength: 500 }
+        consent: { type: boolean, const: true, description: Aceptación de la política de privacidad }

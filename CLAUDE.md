@@ -248,7 +248,7 @@ Se invocan con la herramienta `Agent` y su `subagent_type`.
 ## Comandos del catálogo
 
 `/harness:<nombre>` — generan y validan la documentación (`01-bootstrap-project`
-… `16-generate-agents-md`), los entregables en Word con la plantilla de Habitinder
+… `16-generate-agents-md`), los entregables en Word con la plantilla de ChangeHouse
 (`entregable-*`) y el trabajo diario
 (`implement-feature`, `review-change`). Guía y orden de ejecución en
 `.claude/harness/COMMANDS.md`.

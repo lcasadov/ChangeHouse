@@ -1,10 +1,7 @@
 ---
 description: "Use when creating or modifying server-side business logic (application use cases and domain services). Enforces naming, layer boundaries, transaction discipline, business validation and error handling. Stack-agnostic."
 paths:
-  - "backend/**/{application,domain,usecase,usecases}/**"
-  - "server/**/{application,domain,usecase,usecases}/**"
-  - "api/**/{application,domain,usecase,usecases}/**"
-  - "**/src/main/**/{application,domain}/**"
+  - "services/api/src/{application,domain}/**"
 ---
 
 # Convenciones de servicios y casos de uso

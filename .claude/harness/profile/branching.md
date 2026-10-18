@@ -1,4 +1,4 @@
-# Perfil de Habitinder — Estrategia de ramas
+# Perfil de ChangeHouse — Estrategia de ramas
 
 Modelo: **GitFlow simplificado**, con dos ramas permanentes.
 

@@ -1,11 +1,10 @@
 ---
 description: "Use when creating or modifying any client-side source file. Enforces cross-cutting UX, accessibility, feedback and responsive behavior standards. Stack-agnostic."
 paths:
-  - "frontend/src/**"
-  - "web/src/**"
-  - "client/src/**"
-  - "ui/src/**"
-  - "apps/*/src/**"
+  - "apps/mobile/app/**"
+  - "apps/mobile/src/**"
+  - "apps/landing/src/**"
+  - "packages/ui/src/**"
 ---
 
 # Convenciones transversales de UX y accesibilidad

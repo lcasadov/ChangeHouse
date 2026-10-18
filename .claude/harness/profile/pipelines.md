@@ -1,4 +1,4 @@
-# Perfil de Habitinder — Pipelines
+# Perfil de ChangeHouse — Pipelines
 
 Proveedor: **GitHub Actions**. Definiciones en `.github/workflows/`.
 

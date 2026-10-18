@@ -1,6 +1,6 @@
 # `docs/project.md` — Contrato de variables del proyecto
 
-> Valores del perfil de Habitinder: GitHub, GitHub Actions, CodeRabbit y Claude
+> Valores del perfil de ChangeHouse: GitHub, GitHub Actions, CodeRabbit y Claude
 > Code (ver `.claude/harness/profile/project.partial.md`). Es la **fuente única
 > de verdad** que consumen todos los agentes y reglas.
 >
@@ -57,11 +57,11 @@ diagrama de modelo de negocio no falla, **sigue adelante sin el dato**.
 
 | Campo | Valor |
 |---|---|
-| `$PROJECT_NAME` | `⚠️ PENDIENTE` |
-| Organización | `⚠️ PENDIENTE` |
-| `$PROJECT_DESCRIPTION` | `⚠️ PENDIENTE` |
+| `$PROJECT_NAME` | `ChangeHouse` |
+| Organización | `⚠️ SUPUESTO: cuenta personal lcasadov; ChangeHouse aún sin organización propia` |
+| `$PROJECT_DESCRIPTION` | Plataforma móvil y web de permuta de viviendas entre particulares: monorepo TypeScript con app Expo (Android, iOS y web), landing Astro y API Fastify |
 | Versión de esta plantilla | `harness v1.2.0` |
-| Última actualización | `⚠️ PENDIENTE` |
+| Última actualización | `2026-10-18` |
 
 ### Comandos transversales
 
@@ -71,19 +71,19 @@ todos con su directorio de trabajo.
 
 | Variable | Valor | Ejemplo |
 |---|---|---|
-| `$INSTALL_CMD` | `⚠️ PENDIENTE` | Instalación de dependencias |
-| `$RUN_CMD` | `⚠️ PENDIENTE` | Arranque en local |
-| `$LINT_CMD` | `⚠️ PENDIENTE` | Análisis estático y formato, o `N/A` |
+| `$INSTALL_CMD` | `⚠️ SUPUESTO: pnpm install` | Instalación de dependencias |
+| `$RUN_CMD` | `⚠️ SUPUESTO: pnpm dev` (Turborepo arranca app, landing y API) | Arranque en local |
+| `$LINT_CMD` | `⚠️ SUPUESTO: pnpm lint` (ESLint + Prettier) | Análisis estático y formato, o `N/A` |
 
 **Aplicabilidad de las secciones:**
 
 | Sección | ¿Aplica? | Justificación |
 |---|---|---|
-| Servidor | sí / no | |
-| Cliente | sí / no | |
-| Persistencia | sí / no | |
-| Infraestructura y despliegue | sí / no | |
-| Módulos heredados | sí / no | |
+| Servidor | sí | API Fastify en `services/api` (README §8–9) |
+| Cliente | sí | App Expo (Android, iOS, web) en `apps/mobile` y landing Astro en `apps/landing` |
+| Persistencia | sí | PostgreSQL 17 + PostGIS (Cloud SQL) y Firestore para el chat |
+| Infraestructura y despliegue | sí | Google Cloud + Firebase, GitHub Actions, EAS |
+| Módulos heredados | no | Proyecto nuevo: no hay código previo |
 
 > Si una sección no aplica, **elimina también los artefactos correspondientes**
 > de `.claude/agents/` y `.claude/rules/`. No dejes reglas huérfanas.
@@ -94,15 +94,15 @@ todos con su directorio de trabajo.
 
 | Variable | Valor | Valores admitidos / ejemplo |
 |---|---|---|
-| `$REPO_ROOT` | `⚠️ PENDIENTE` | Ruta absoluta a la raíz del repositorio |
+| `$REPO_ROOT` | `C:\proyectos\Habitinder` (copia local del desarrollador; el repositorio remoto es `ChangeHouse`) | Ruta absoluta a la raíz del repositorio |
 | `$VCS_PROVIDER` | `github` | `azure-devops` · `github` · `gitlab` · `bitbucket` |
-| `$REPO_ID` | `lcasadov/Habitinder` | Identificador del repositorio en el proveedor |
+| `$REPO_ID` | `lcasadov/ChangeHouse` | Identificador del repositorio en el proveedor |
 | `$BASE_BRANCH` | `develop` | Rama de integración: `develop` · `main` · `master` |
 | `$PROD_BRANCH` | `master` | Rama de producción: `main` · `master`. Origen de los `hotfix` |
 | `$LINKED_REPOS` | `ninguno` | Solo topología `multirepo`. Repositorios enlazados que comparten rama con este (ruta o nombre del submódulo), separados por coma. `ninguno` desactiva la rama espejo |
 | `$TRACKER` | `github-issues` | `azure-devops` · `github-issues` · `jira` · `linear` · `ninguno` |
 | `$TRACKER_ORG` | `lcasadov` (cuenta personal de GitHub) | Organización o cuenta en el gestor |
-| `$TRACKER_PROJECT` | `2` — Project «Habitinder» (https://github.com/users/lcasadov/projects/2), enlazado al repositorio. Id GraphQL `PVT_kwHOAGwvnc4BnofG` | Proyecto o tablero |
+| `$TRACKER_PROJECT` | `2` — Project «ChangeHouse» (https://github.com/users/lcasadov/projects/2), enlazado al repositorio. Id GraphQL `PVT_kwHOAGwvnc4BnofG` | Proyecto o tablero |
 | `$TRACKER_HIERARCHY` | `Epic > Feature > Story > Task` (etiquetas `tipo:*` + sub-issues) | Niveles de mayor a menor, p. ej. `Epic > Feature > User Story > Task`. Los nombres varían por proceso: **no los deduzcas** |
 | `$TRACKER_LIFECYCLE` | Ver tabla «Ciclo de vida de los elementos» | Estados y campos de fecha **por tipo** de elemento |
 | `$TRACKER_FIELDS` | Ver tabla «Campos de cada elemento» | Campos que se escriben en cada tipo, con su origen |
@@ -205,12 +205,12 @@ elemento», o un literal entre comillas. «Se escribe» es `al crear` o
 
 | Campo | Valor |
 |---|---|
-| Estrategia de versionado | `⚠️ PENDIENTE` |
-| ¿El versionado lee los mensajes de commit? | `⚠️ PENDIENTE` |
-| Palabras que provocan incremento mayor | `⚠️ PENDIENTE` |
-| Palabras que provocan incremento menor | `⚠️ PENDIENTE` |
-| Palabras que provocan incremento de parche | `⚠️ PENDIENTE` |
-| Fichero de configuración del versionado | `⚠️ PENDIENTE` |
+| Estrategia de versionado | SemVer `Major.Minor.Patch` con GitVersion (`.claude/harness/profile/versioning.md`) |
+| ¿El versionado lee los mensajes de commit? | sí |
+| Palabras que provocan incremento mayor | `breaking`, `BREAKING CHANGE`, `increment major` |
+| Palabras que provocan incremento menor | `feat`, `increment minor` |
+| Palabras que provocan incremento de parche | ninguna declarada en el perfil (el parche es el incremento por defecto) |
+| Fichero de configuración del versionado | `GitVersion.yml` en la raíz. ⚠️ Aún no existe: lo crea el agente `devops` con el primer workflow de build |
 
 > Si la respuesta a la segunda fila es **sí**, rellena las tres siguientes con
 > las palabras exactas y agrégalas a `$VERSION_BUMP_KEYWORDS`. Los agentes tienen
@@ -230,13 +230,43 @@ elemento», o un literal entre comillas. «Se escribe» es `al crear` o
 
 | Variable | Valor | Valores admitidos |
 |---|---|---|
-| `$ARCH_STYLE` | `⚠️ PENDIENTE` | `hexagonal` · `layered` · `feature-based` |
+| `$ARCH_STYLE` | `hexagonal` en la API (`services/api`) · `feature-based` en la app (`apps/mobile`). Heterogéneo por diseño (README §9) | `hexagonal` · `layered` · `feature-based` |
 
 **Estructura de directorios y reglas de dependencia:**
 
+> ⚠️ SUPUESTO: estructura declarada en el README §9. Aún no hay código; se
+> confirma al crear el scaffold del monorepo.
+
 ```
-⚠️ PENDIENTE — árbol real del proyecto con el rol de cada capa
+ChangeHouse/
+├── apps/
+│   ├── mobile/                  # Expo + Expo Router: Android, iOS y web (feature-based)
+│   │   ├── app/                 #   rutas de Expo Router: solo composición de pantallas
+│   │   └── src/features/<f>/    #   auth, homes, discover, matches, chat… (UI, hooks, api)
+│   └── landing/                 # Astro: web pública, blog y lista de espera
+├── services/
+│   └── api/                     # Fastify (hexagonal)
+│       └── src/
+│           ├── domain/          #   entidades, reglas, matching, simulador fiscal; sin dependencias externas
+│           ├── application/     #   casos de uso y puertos (interfaces); depende solo de domain
+│           ├── infrastructure/  #   adaptadores de salida: Drizzle, Firebase, Stripe, email
+│           └── interfaces/http/ #   adaptadores de entrada: rutas Fastify y validación Zod
+├── packages/
+│   ├── shared/                  # esquemas Zod, tipos y constantes comunes (app ↔ API)
+│   └── ui/                      # tokens de diseño y componentes compartidos
+├── db/migrations/               # migraciones SQL generadas con drizzle-kit
+├── infra/                       # servicios GCP y scripts de despliegue
+├── docs/
+└── openspec/
 ```
+
+Reglas de dependencia:
+
+- `domain` no importa nada fuera de `domain`: ni Fastify, ni Drizzle, ni Firebase, ni Stripe.
+- `application` importa `domain` y define los puertos; nunca importa `infrastructure` ni `interfaces`.
+- `infrastructure` implementa puertos de `application`; `interfaces/http` invoca casos de uso de `application`.
+- `apps/*` y `services/*` solo comparten código a través de `packages/*`; nunca se importan entre sí.
+- En `apps/mobile`, una feature no importa el interior de otra: lo común sube a `packages/ui` o `packages/shared`.
 
 **Invariantes** (obligatorios en cualquier estilo):
 
@@ -250,26 +280,26 @@ elemento», o un literal entre comillas. «Se escribe» es `al crear` o
 
 | Variable | Valor | Ejemplo |
 |---|---|---|
-| `$LANGUAGE` | `⚠️ PENDIENTE` | Lenguaje y versión |
-| `$FRAMEWORK` | `⚠️ PENDIENTE` | Framework principal y versión |
-| `$BUILD_TOOL` | `⚠️ PENDIENTE` | Herramienta de construcción |
-| `$SRC_ROOT` | `⚠️ PENDIENTE` | Raíz del código de servidor |
-| `$BUILD_VERIFY_CMD` | `⚠️ PENDIENTE` | Comando que compila y verifica |
-| `$TEST_CMD` | `⚠️ PENDIENTE` | Comando de la suite de pruebas |
+| `$LANGUAGE` | TypeScript 5 (modo `strict`) sobre Node.js 24 LTS | Lenguaje y versión |
+| `$FRAMEWORK` | Fastify (API) | Framework principal y versión |
+| `$BUILD_TOOL` | pnpm workspaces + Turborepo | Herramienta de construcción |
+| `$SRC_ROOT` | `⚠️ SUPUESTO: services/api/src` | Raíz del código de servidor |
+| `$BUILD_VERIFY_CMD` | `⚠️ SUPUESTO: pnpm build` | Comando que compila y verifica |
+| `$TEST_CMD` | `⚠️ SUPUESTO: pnpm test` (Vitest, todo el monorepo vía Turborepo) | Comando de la suite de pruebas |
 
 ### Persistencia
 
 | Variable | Valor | Ejemplo |
 |---|---|---|
-| `$DB` | `⚠️ PENDIENTE` | Motor de datos y versión |
-| `$ORM` | `⚠️ PENDIENTE` | Capa de acceso a datos, o `ninguno` |
-| `$MIGRATION_TOOL` | `⚠️ PENDIENTE` | Herramienta de migraciones de esquema |
+| `$DB` | PostgreSQL 17 + PostGIS (Cloud SQL). Chat en Cloud Firestore | Motor de datos y versión |
+| `$ORM` | Drizzle ORM | Capa de acceso a datos, o `ninguno` |
+| `$MIGRATION_TOOL` | drizzle-kit; migraciones en `db/migrations`, aplicadas con `⚠️ SUPUESTO: pnpm db:migrate` | Herramienta de migraciones de esquema |
 
 ### Módulos heredados
 
 | Variable | Valor |
 |---|---|
-| `$LEGACY_MODULES` | `⚠️ PENDIENTE` o `N/A` |
+| `$LEGACY_MODULES` | `N/A` — proyecto nuevo, sin código heredado |
 
 > Lista los módulos que **no** deben tocarse sin un análisis previo en
 > `docs/modules-analysis/<modulo>.md`. Si no hay código heredado, `N/A`.
@@ -280,23 +310,23 @@ elemento», o un literal entre comillas. «Se escribe» es `al crear` o
 
 | Variable | Valor | Ejemplo |
 |---|---|---|
-| `$UI_FRAMEWORK` | `⚠️ PENDIENTE` | Framework de interfaz y versión |
-| `$UI_LIBRARY` | `⚠️ PENDIENTE` | Librería de componentes, o `ninguna` |
-| `$BUNDLER` | `⚠️ PENDIENTE` | Empaquetador o herramienta de construcción |
-| `$FRONTEND_ROOT` | `⚠️ PENDIENTE` | Raíz del código de cliente |
-| `$STATE_MANAGEMENT` | `⚠️ PENDIENTE` | Gestión de estado global |
-| `$HTTP_CLIENT` | `⚠️ PENDIENTE` | Cliente de red configurado |
-| `$TYPECHECK_CMD` | `⚠️ PENDIENTE` | Comando de comprobación de tipos, o `N/A` |
+| `$UI_FRAMEWORK` | Expo (React Native) + Expo Router, `⚠️ SUPUESTO: última SDK estable al crear el scaffold`. Landing: Astro | Framework de interfaz y versión |
+| `$UI_LIBRARY` | `⚠️ SUPUESTO: ninguna de terceros; componentes propios en packages/ui` | Librería de componentes, o `ninguna` |
+| `$BUNDLER` | `⚠️ SUPUESTO: Metro (Expo) y Vite (Astro)` | Empaquetador o herramienta de construcción |
+| `$FRONTEND_ROOT` | `⚠️ SUPUESTO: apps/mobile` (app) y `⚠️ SUPUESTO: apps/landing` (landing) | Raíz del código de cliente |
+| `$STATE_MANAGEMENT` | TanStack Query (estado de servidor) + Zustand (estado local) | Gestión de estado global |
+| `$HTTP_CLIENT` | `fetch` nativo envuelto en un cliente tipado `openapi-fetch`, con tipos generados desde `docs/api/openapi.yaml` (`openapi-typescript`); TanStack Query encima | Cliente de red configurado |
+| `$TYPECHECK_CMD` | `⚠️ SUPUESTO: pnpm typecheck` (`tsc --noEmit` en cada paquete) | Comando de comprobación de tipos, o `N/A` |
 
 ### Presentación
 
 | Variable | Valor | Ejemplo |
 |---|---|---|
-| `$THEMES` | `⚠️ PENDIENTE` | Lista de temas soportados, con el predeterminado marcado |
-| `$STYLE_GUIDE_DOC` | `⚠️ PENDIENTE` | Ruta al documento de tokens y patrones |
-| `$I18N` | `⚠️ PENDIENTE` | Sistema, idiomas soportados y ruta de recursos |
-| `$A11Y_LEVEL` | `⚠️ PENDIENTE` | Nivel de accesibilidad exigido |
-| `$BROWSER_MATRIX` | `⚠️ PENDIENTE` | Navegadores y versiones mínimas soportadas |
+| `$THEMES` | claro (predeterminado) · oscuro; sigue la preferencia del sistema | Lista de temas soportados, con el predeterminado marcado |
+| `$STYLE_GUIDE_DOC` | `docs/style-guide.md` (tokens implementados en `packages/ui`) | Ruta al documento de tokens y patrones |
+| `$I18N` | `i18next` + `react-i18next` + `expo-localization`. Idiomas: `es-ES` en el MVP, preparado para inglés (RNF-42). Recursos en `apps/mobile/src/i18n/locales/<idioma>.json` (landing: i18n de Astro) | Sistema, idiomas soportados y ruta de recursos |
+| `$A11Y_LEVEL` | WCAG 2.2 AA | Nivel de accesibilidad exigido |
+| `$BROWSER_MATRIX` | Web: dos últimas versiones de Chrome, Safari, Firefox y Edge. Móvil: Android 10+, iOS 16+ | Navegadores y versiones mínimas soportadas |
 
 > **`$STYLE_GUIDE_DOC` es obligatorio si hay interfaz.** Los agentes tienen
 > prohibido usar valores literales de color, sombra, radio o espaciado: solo
@@ -316,16 +346,16 @@ sanear la deuda previa de golpe, pero **no se admite deuda nueva**.
 | `$COVERAGE_THRESHOLD` | `80%` | Umbral mínimo sobre código nuevo, p. ej. `80%` |
 | `$COVERAGE_SCOPE` | Código nuevo | Qué se mide y qué se excluye |
 | `$NEW_CODE_DEFINITION` | Líneas añadidas o modificadas por la Pull Request respecto a su rama de destino | Qué cuenta como código nuevo |
-| `$COVERAGE_CMD` | `⚠️ PENDIENTE` | Comando que genera el informe |
+| `$COVERAGE_CMD` | `⚠️ SUPUESTO: pnpm test:coverage` (Vitest con umbral de cobertura configurado) | Comando que genera el informe |
 | `$QG_PROVIDER` | `CodeRabbit` (revisión automática de Pull Requests en GitHub) | Herramienta de análisis estático y puerta de calidad |
-| `$QUALITY_GATE` | Checks de GitHub Actions (lint, tipos, pruebas, cobertura, `openspec-sync` y escaneo de dependencias sin vulnerabilidades críticas) en verde **y** revisión de CodeRabbit sin conversaciones abiertas, exigidos por la protección de rama de `$BASE_BRANCH` y `$PROD_BRANCH` (aplicada también a administradores) | Nombre de la puerta aplicada y criterio de bloqueo |
+| `$QUALITY_GATE` | Checks de GitHub Actions (lint, tipos, pruebas, cobertura, `openspec-sync` y escaneo de dependencias sin vulnerabilidades críticas) en verde **y** revisión de CodeRabbit sobre el HEAD de la PR en estado `APPROVED` o `COMMENTED` (nunca `CHANGES_REQUESTED`) y sin conversaciones abiertas, exigidos por la protección de rama de `$BASE_BRANCH` y `$PROD_BRANCH` (aplicada también a administradores) | Nombre de la puerta aplicada y criterio de bloqueo |
 | `$QG_LEVEL` | `N/A` — ver `.claude/harness/profile/quality-gates.md` | Nivel o perfil asignado al proyecto, si aplica |
-| `$CODE_STANDARDS_DOC` | `⚠️ PENDIENTE` | Ruta a los estándares de codificación |
-| `$TEST_FRAMEWORKS` | `⚠️ PENDIENTE` | Marcos de prueba por nivel |
-| `$TEST_UNIT_CMD` | `⚠️ PENDIENTE` | Comando de pruebas unitarias |
-| `$TEST_INTEGRATION_CMD` | `⚠️ PENDIENTE` | Comando de pruebas de integración |
-| `$TEST_E2E_CMD` | `⚠️ PENDIENTE` | Comando de pruebas de extremo a extremo |
-| `$PROPERTY_TESTING_LIB` | `⚠️ PENDIENTE` | Librería de pruebas basadas en propiedades, o `ninguna` |
+| `$CODE_STANDARDS_DOC` | `docs/code-standards.md` | Ruta a los estándares de codificación |
+| `$TEST_FRAMEWORKS` | Unitarias e integración: Vitest · BD real: Testcontainers (PostgreSQL) · Componentes: React Native Testing Library · E2E web: Playwright · E2E móvil: Maestro · Propiedades: fast-check | Marcos de prueba por nivel |
+| `$TEST_UNIT_CMD` | `⚠️ SUPUESTO: pnpm test` | Comando de pruebas unitarias |
+| `$TEST_INTEGRATION_CMD` | `⚠️ SUPUESTO: pnpm test:integration` (decidido; se verifica con el scaffold) | Comando de pruebas de integración |
+| `$TEST_E2E_CMD` | `⚠️ SUPUESTO: pnpm test:e2e` (decidido; Playwright en web y Maestro en móvil) | Comando de pruebas de extremo a extremo |
+| `$PROPERTY_TESTING_LIB` | fast-check (obligatoria en matching y simulador fiscal, RNF-33) | Librería de pruebas basadas en propiedades, o `ninguna` |
 | `$TEST_MANAGEMENT` | `ninguna` — los casos de prueba son los `#### Scenario:` de OpenSpec | Gestión de casos de prueba, o `ninguna` |
 
 ### Umbrales de la puerta de calidad
@@ -357,13 +387,13 @@ separando código nuevo de código existente.
 
 | Variable | Valor | Ejemplo |
 |---|---|---|
-| `$AUTH_MECHANISM` | `⚠️ PENDIENTE` | Mecanismo de autenticación y modelo de sesión |
-| `$ACCESS_SEGREGATION_MODEL` | `⚠️ PENDIENTE` | Modelo de segregación: por rol, organización, ámbito… |
-| `$RBAC_MATRIX_DOC` | `⚠️ PENDIENTE` | Ruta a la matriz de roles y permisos |
-| `$NORMATIVA` | `⚠️ PENDIENTE` | Marcos normativos aplicables, o `ninguno` |
-| `$DATOS_CATEGORIA_ESPECIAL` | `⚠️ PENDIENTE` | ¿Se tratan datos sensibles? Cuáles |
-| `$LOG_RETENTION` | `⚠️ PENDIENTE` | Retención de registros de auditoría |
-| `$EXPOSES_WEB_UI` | `⚠️ PENDIENTE` | `sí` / `no` — activa las comprobaciones de seguridad web |
+| `$AUTH_MECHANISM` | Firebase Authentication (email/contraseña, Google, Apple); la API verifica el ID token de Firebase en cada petición, sin sesión de servidor | Mecanismo de autenticación y modelo de sesión |
+| `$ACCESS_SEGREGATION_MODEL` | Por rol —`visitor` (sin token); `owner` y `seeker`, **derivados** de tener o no vivienda publicada; `agency` y `admin`, **asignados** y exclusivos— más propiedad o participación en el recurso (vivienda, match, operación asignada). Deny-by-default centralizado en la API | Modelo de segregación: por rol, organización, ámbito… |
+| `$RBAC_MATRIX_DOC` | `docs/rbac-matrix.md` | Ruta a la matriz de roles y permisos |
+| `$NORMATIVA` | RGPD, LOPDGDD, LSSI-CE, OWASP ASVS nivel 2 (API y web), OWASP MASVS (móvil), WCAG 2.2 AA, directrices de App Store y Google Play | Marcos normativos aplicables, o `ninguno` |
+| `$DATOS_CATEGORIA_ESPECIAL` | **Ninguna** categoría del art. 9 RGPD en el MVP (confirmado el 2026-10-18). El KYC de fase 2 puede tratar biometría: se reevaluará entonces como categoría especial. Datos personales sensibles no especiales: dirección exacta, teléfono, cargas hipotecarias, situación VPP, edad ≥ 65 | ¿Se tratan datos sensibles? Cuáles |
+| `$LOG_RETENTION` | Auditoría (`audit_log`): 2 años · Lista de espera: hasta el lanzamiento + 12 meses, o hasta la baja · Chat: mientras exista el match + 12 meses · Logs de aplicación: retención por defecto de Cloud Logging | Retención de registros de auditoría |
+| `$EXPOSES_WEB_UI` | sí (app web de Expo, landing Astro y panel de administración) | `sí` / `no` — activa las comprobaciones de seguridad web |
 | `$DAST_TOOL` | Análisis DAST asistido por IA: el agente `security` de Claude Code prueba la aplicación en ejecución en `DES`. Sin herramienta comercial | Herramienta de análisis dinámico, o `ninguna` |
 
 > `$NORMATIVA` y `$DATOS_CATEGORIA_ESPECIAL` determinan el rigor de la auditoría
@@ -379,13 +409,13 @@ separando código nuevo de código existente.
 | `$CI_PROVIDER` | `GitHub Actions` | Proveedor de integración continua |
 | `$PIPELINE_DIR` | `.github/workflows` | Ruta de las definiciones de pipeline |
 | `$ENVIRONMENTS` | `DES → PROD` (GitHub Environments) | Entornos y su orden de promoción |
-| `$DEPLOY_TARGET` | `⚠️ PENDIENTE` | Destino de despliegue |
-| `$CONTAINER_RUNTIME` | `⚠️ PENDIENTE` | Runtime de contenedores, o `ninguno` |
+| `$DEPLOY_TARGET` | Cloud Run (API) en `europe-southwest1`; Firebase Hosting (landing y app web); EAS Submit a Google Play y App Store | Destino de despliegue |
+| `$CONTAINER_RUNTIME` | Docker (imagen de la API para Cloud Run) | Runtime de contenedores, o `ninguno` |
 | `$ARTIFACT_REGISTRY` | Artefacto generado por el workflow de build de GitHub Actions: imagen en Artifact Registry (servicios) o artefacto del workflow (web y móvil). Es el que se despliega en todos los entornos | Registro de artefactos |
 | `$SECRETS_MANAGER` | Google Secret Manager en ejecución; secretos de GitHub Actions por environment solo para la CI, con Workload Identity Federation | Gestor de secretos |
-| `$IAC_TOOL` | `⚠️ PENDIENTE` | Infraestructura como código, o `ninguna` |
+| `$IAC_TOOL` | scripts `gcloud` en `infra/` durante el MVP; Terraform en fase 2 | Infraestructura como código, o `ninguna` |
 | `$APPROVAL_POLICY` | Aprobación manual obligatoria para producción: *required reviewers* en el GitHub Environment `PROD` | Qué entornos exigen aprobación manual |
-| `$OBSERVABILITY` | `⚠️ PENDIENTE` | Registro, métricas y trazas |
+| `$OBSERVABILITY` | Logs JSON estructurados en Cloud Logging sin datos personales; errores en Sentry (app y API) con alertas por correo; Firebase Analytics con consentimiento; alerta de presupuesto en Google Cloud | Registro, métricas y trazas |
 
 > **Ningún secreto se escribe en este fichero.** Solo la referencia al gestor y
 > el nombre lógico de cada secreto.
@@ -397,7 +427,7 @@ separando código nuevo de código existente.
 | Variable | Valor | Ejemplo |
 |---|---|---|
 | `$OPENSPEC_PATH` | `openspec` | Raíz de los artefactos OpenSpec |
-| `$API_CONTRACT` | `⚠️ PENDIENTE` | Ruta al contrato de la API |
+| `$API_CONTRACT` | `docs/api/openapi.yaml` (OpenAPI 3.1) | Ruta al contrato de la API |
 
 > `$API_CONTRACT` es la fuente de verdad de endpoints, campos, enumerados y
 > códigos de estado. **Los agentes no pueden inventar nada que no esté ahí.**
@@ -429,3 +459,31 @@ elige según la capacidad requerida descrita en `CLAUDE.md`.
       estructura real (ver `.claude/harness/RULES.md`)
 - [ ] Los artefactos de secciones marcadas `N/A` se han eliminado del proyecto
 - [ ] **Ningún secreto ni credencial figura en este fichero**
+
+---
+
+## Procedencia
+
+Generado por `/harness:01-bootstrap-project` el 2026-10-18. No hay código
+todavía: la fuente es el `README.md`. Los comandos y rutas quedan como
+`⚠️ SUPUESTO` hasta que exista el scaffold y se ejecuten.
+
+| Variable | Origen | Confianza |
+|---|---|---|
+| `$VCS_PROVIDER`, `$REPO_ID`, `$BASE_BRANCH`, `$PROD_BRANCH`, `$TRACKER*`, `$COMMIT_CONVENTION`, `$VERSIONING_TOOL`, `$VERSION_BUMP_KEYWORDS`, `$REVIEWER`, `$QG_PROVIDER`, `$QUALITY_GATE`, `$COVERAGE_*` (umbral, ámbito), `$CI_PROVIDER`, `$PIPELINE_DIR`, `$ENVIRONMENTS`, `$ARTIFACT_REGISTRY`, `$SECRETS_MANAGER`, `$APPROVAL_POLICY`, `$DAST_TOOL`, `$TEST_MANAGEMENT` | perfil | alta |
+| `$PROJECT_NAME` | decisión del usuario (2026-10-18) | alta |
+| Organización | deducido | baja |
+| `$PROJECT_DESCRIPTION`, `$LANGUAGE`, `$FRAMEWORK`, `$BUILD_TOOL`, `$DB`, `$ORM`, `$STATE_MANAGEMENT`, `$TEST_FRAMEWORKS`, `$PROPERTY_TESTING_LIB` | README §8 | alta |
+| `$ARCH_STYLE`, estructura de directorios | README §9 | media (sin código) |
+| `$INSTALL_CMD`, `$RUN_CMD`, `$LINT_CMD`, `$BUILD_VERIFY_CMD`, `$TEST_CMD`, `$TYPECHECK_CMD`, `$COVERAGE_CMD`, `$TEST_UNIT_CMD`, migraciones | README §8 «Comandos previstos» | baja (no ejecutados) |
+| `$SRC_ROOT`, `$FRONTEND_ROOT` | README §9 | media (rutas aún inexistentes) |
+| `$UI_FRAMEWORK` (versión de SDK), `$UI_LIBRARY`, `$BUNDLER` | deducido | baja |
+| `$THEMES`, `$A11Y_LEVEL`, `$BROWSER_MATRIX` | README §7 (RNF-40/41/43) | alta |
+| `$STYLE_GUIDE_DOC`, `$CODE_STANDARDS_DOC`, `$RBAC_MATRIX_DOC`, `$API_CONTRACT` | deducido (rutas que generan los prompts 06, 07, 09 y 10) | media |
+| `$AUTH_MECHANISM`, `$ACCESS_SEGREGATION_MODEL`, `$EXPOSES_WEB_UI` | README §4, §7, §8 | alta |
+| `$NORMATIVA` | README §7, §13 | alta |
+| `$DATOS_CATEGORIA_ESPECIAL` | decisión del usuario (2026-10-18) | alta |
+| `$DEPLOY_TARGET`, `$CONTAINER_RUNTIME`, `$IAC_TOOL`, `$OBSERVABILITY` | README §7, §12 | alta |
+| `$LEGACY_MODULES` | README (proyecto nuevo) | alta |
+| Versionado (tabla) | perfil `versioning.md` | alta |
+| `$HTTP_CLIENT`, `$I18N`, `$LOG_RETENTION`, `$TEST_INTEGRATION_CMD`, `$TEST_E2E_CMD`, roles de `$ACCESS_SEGREGATION_MODEL` | decisión del usuario (2026-10-18, validación) | alta (comandos sin ejecutar) |

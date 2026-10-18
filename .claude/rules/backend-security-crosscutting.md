@@ -1,10 +1,7 @@
 ---
 description: "Use when creating or modifying cross-cutting security infrastructure on the server side (central security configuration, authentication filters, token providers, permission evaluators). Stack-agnostic."
 paths:
-  - "backend/**/{config,configuration,security}/**"
-  - "server/**/{config,configuration,security}/**"
-  - "api/**/{config,configuration,security}/**"
-  - "**/src/main/**/{config,security}/**"
+  - "services/api/src/**/{config,configuration,security}/**"
 ---
 
 # Convenciones de seguridad transversal
