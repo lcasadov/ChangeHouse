@@ -727,8 +727,12 @@ Plantilla de descripción:
 
 **Nunca fusiones la PR** (`gh pr merge`): la fusión la hace una persona. Antes de declararla lista, ejecuta la
 «Verificación antes de fusionar» de `.claude/harness/profile/quality-gates.md`
-y muestra su resultado: checks en verde, CodeRabbit sin *changes requested* y
-cero conversaciones abiertas.
+y muestra su resultado: checks en verde, una revisión de CodeRabbit **sobre el
+HEAD** que no sea *changes requested*, y cero conversaciones abiertas.
+
+CodeRabbit no revisa este repositorio de forma automática: al abrir la PR, y tras
+el último push, pide la revisión con `gh pr comment <PR> --body "@coderabbitai
+review"`. Su check en verde con «Review skipped» **no** cuenta como revisión.
 
 #### 5.4 Cierre
 
