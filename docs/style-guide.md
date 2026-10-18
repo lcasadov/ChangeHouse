@@ -53,9 +53,10 @@ Contrastes calculados con la fórmula de WCAG 2.2 sobre `color.bg` del tema
 
 ### Tipografía
 
-⚠️ PENDIENTE: familia tipográfica de la app. Las plantillas usan Calibri, que
-no está disponible en Android ni en la web sin licencia. Propuesta: **Inter**
-(libre, buena legibilidad en pantalla) con la fuente del sistema como respaldo.
+Familia: **Inter** (libre, licencia SIL OFL), cargada con `expo-font` en la app
+y desde Google Fonts o empaquetada en la landing. Respaldo: la fuente del
+sistema (San Francisco en iOS, Roboto en Android). Las plantillas Word siguen
+con Calibri: son documentos, no interfaz.
 
 | Token | Uso | Tamaño / interlineado | Peso |
 |---|---|---|---|

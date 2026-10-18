@@ -444,7 +444,7 @@ proponen particionado, desnormalización ni caché.
 ## 5 · Datos sensibles
 
 `$NORMATIVA`: RGPD/LOPDGDD. `$DATOS_CATEGORIA_ESPECIAL`: ninguno del art. 9 en
-el MVP (⚠️ SUPUESTO).
+el MVP (confirmado).
 
 | Atributo | Clase | Protección |
 |---|---|---|

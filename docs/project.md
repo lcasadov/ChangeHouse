@@ -391,7 +391,7 @@ separando código nuevo de código existente.
 | `$ACCESS_SEGREGATION_MODEL` | Por rol —`visitor` (sin token); `owner` y `seeker`, **derivados** de tener o no vivienda publicada; `agency` y `admin`, **asignados** y exclusivos— más propiedad o participación en el recurso (vivienda, match, operación asignada). Deny-by-default centralizado en la API | Modelo de segregación: por rol, organización, ámbito… |
 | `$RBAC_MATRIX_DOC` | `docs/rbac-matrix.md` | Ruta a la matriz de roles y permisos |
 | `$NORMATIVA` | RGPD, LOPDGDD, LSSI-CE, OWASP ASVS nivel 2 (API y web), OWASP MASVS (móvil), WCAG 2.2 AA, directrices de App Store y Google Play | Marcos normativos aplicables, o `ninguno` |
-| `$DATOS_CATEGORIA_ESPECIAL` | `⚠️ SUPUESTO: ninguna categoría del art. 9 RGPD en el MVP; el KYC de fase 2 puede tratar biometría, que se tratará como categoría especial`. Datos personales sensibles no especiales: dirección exacta, teléfono, cargas hipotecarias, situación VPP, edad ≥ 65 | ¿Se tratan datos sensibles? Cuáles |
+| `$DATOS_CATEGORIA_ESPECIAL` | **Ninguna** categoría del art. 9 RGPD en el MVP (confirmado el 2026-10-18). El KYC de fase 2 puede tratar biometría: se reevaluará entonces como categoría especial. Datos personales sensibles no especiales: dirección exacta, teléfono, cargas hipotecarias, situación VPP, edad ≥ 65 | ¿Se tratan datos sensibles? Cuáles |
 | `$LOG_RETENTION` | Auditoría (`audit_log`): 2 años · Lista de espera: hasta el lanzamiento + 12 meses, o hasta la baja · Chat: mientras exista el match + 12 meses · Logs de aplicación: retención por defecto de Cloud Logging | Retención de registros de auditoría |
 | `$EXPOSES_WEB_UI` | sí (app web de Expo, landing Astro y panel de administración) | `sí` / `no` — activa las comprobaciones de seguridad web |
 | `$DAST_TOOL` | Análisis DAST asistido por IA: el agente `security` de Claude Code prueba la aplicación en ejecución en `DES`. Sin herramienta comercial | Herramienta de análisis dinámico, o `ninguna` |
@@ -482,7 +482,7 @@ todavía: la fuente es el `README.md`. Los comandos y rutas quedan como
 | `$STYLE_GUIDE_DOC`, `$CODE_STANDARDS_DOC`, `$RBAC_MATRIX_DOC`, `$API_CONTRACT` | deducido (rutas que generan los prompts 06, 07, 09 y 10) | media |
 | `$AUTH_MECHANISM`, `$ACCESS_SEGREGATION_MODEL`, `$EXPOSES_WEB_UI` | README §4, §7, §8 | alta |
 | `$NORMATIVA` | README §7, §13 | alta |
-| `$DATOS_CATEGORIA_ESPECIAL` | deducido de README §5, §10, §13 | baja |
+| `$DATOS_CATEGORIA_ESPECIAL` | decisión del usuario (2026-10-18) | alta |
 | `$DEPLOY_TARGET`, `$CONTAINER_RUNTIME`, `$IAC_TOOL`, `$OBSERVABILITY` | README §7, §12 | alta |
 | `$LEGACY_MODULES` | README (proyecto nuevo) | alta |
 | Versionado (tabla) | perfil `versioning.md` | alta |

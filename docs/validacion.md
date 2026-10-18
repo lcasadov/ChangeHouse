@@ -12,7 +12,7 @@
 
 Resumen: 🔴 2 · 🟠 9 · 🟡 11 · 🔵 3 — **25 problemas**.
 
-**Estado tras la ronda del 2026-10-18**: 21 resueltos y 4 pendientes o en curso (1 Node 24 y scaffold, 18 tipografía, 20 datos de categoría especial, 25 tras el scaffold). Además: preferencias de búsqueda por usuario con sustitución por vivienda.
+**Estado tras la ronda del 2026-10-18**: 23 resueltos y 2 en curso que dependen del scaffold del monorepo (1 comandos, 25 `paths` de las reglas). Además: preferencias de búsqueda por usuario con sustitución por vivienda.
 
 ---
 
@@ -23,7 +23,7 @@ Resumen: 🔴 2 · 🟠 9 · 🟡 11 · 🔵 3 — **25 problemas**.
 - **Ubicación**: `docs/project.md` §0, §3, §4, §5 (comandos)
 - **Descripción**: todos los comandos (`pnpm install`, `lint`, `typecheck`, `test`, `test:coverage`, `build`, `db:migrate`) son `⚠️ SUPUESTO`: no existe el monorepo y en esta máquina **no está instalado pnpm** y Node es la 22 (el contrato declara Node 24 LTS). Ningún agente puede cerrar una tarea sin ejecutarlos (`static-analysis`).
 - **Solución propuesta**: ejecutar el habilitador T-01 (scaffold) como primer change, instalar Node 24 y pnpm (`corepack enable`), y confirmar los comandos en el contrato.
-- **Estado**: en curso — pnpm 10 instalado; falta Node 24 (lo instala el usuario) y el scaffold T-01, siguiente change
+- **Estado**: en curso (2026-10-18) — Node 24.20.0 y pnpm 10.34.7 instalados; falta el scaffold T-01 para ejecutar y confirmar los comandos
 
 ### Problema 2 de 25
 
@@ -176,7 +176,7 @@ Resumen: 🔴 2 · 🟠 9 · 🟡 11 · 🔵 3 — **25 problemas**.
 - **Ubicación**: `docs/style-guide.md` §1 (tipografía)
 - **Descripción**: familia tipográfica pendiente (las plantillas Word usan Calibri, no disponible libremente en la app).
 - **Solución propuesta**: Inter con respaldo de la fuente del sistema.
-- **Estado**: pendiente — explicación de Inter enviada al usuario
+- **Estado**: resuelto (2026-10-18) — Inter, con la fuente del sistema como respaldo
 
 ### Problema 19 de 25
 
@@ -194,7 +194,7 @@ Resumen: 🔴 2 · 🟠 9 · 🟡 11 · 🔵 3 — **25 problemas**.
 - **Ubicación**: `docs/project.md` §6 `$DATOS_CATEGORIA_ESPECIAL`
 - **Descripción**: supuesto de que no hay datos del art. 9 RGPD en el MVP; condiciona el rigor de la auditoría de seguridad y la EIPD.
 - **Solución propuesta**: confirmar con asesoría legal.
-- **Estado**: pendiente — aclaración enviada al usuario
+- **Estado**: resuelto (2026-10-18) — ninguna categoría especial en el MVP; se reevalúa con el KYC de fase 2
 
 ### Problema 21 de 25
 
