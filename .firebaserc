@@ -1,0 +1,7 @@
+{
+  "projects": {
+    "default": "demo-changehouse",
+    "des": "changehouse-des",
+    "prod": "changehouse-prod"
+  }
+}

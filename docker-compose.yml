@@ -1,0 +1,20 @@
+# Entorno local: PostgreSQL 17 + PostGIS. Los emuladores de Firebase se arrancan con `pnpm emulators`.
+services:
+  db:
+    image: postgis/postgis:17-3.5
+    container_name: changehouse-db
+    environment:
+      POSTGRES_DB: changehouse
+      POSTGRES_USER: changehouse
+      POSTGRES_PASSWORD: changehouse # solo local; en DES y PROD la credencial vive en Secret Manager
+    ports:
+      - '5432:5432'
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U changehouse -d changehouse']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+volumes:
+  db-data:
