@@ -31,7 +31,7 @@ Ver `branching.md` y `versioning.md`.
 | Variable | Valor |
 |---|---|
 | `$QG_PROVIDER` | `CodeRabbit` (revisión automática de Pull Requests en GitHub) |
-| `$QUALITY_GATE` | Checks obligatorios de GitHub Actions (lint, tipos, pruebas y cobertura) **y** revisión de CodeRabbit sin hallazgos sin atender, exigidos por la protección de rama de `$BASE_BRANCH` y `$PROD_BRANCH` |
+| `$QUALITY_GATE` | Checks de GitHub Actions (lint, tipos, pruebas, cobertura, `openspec-sync` y escaneo de dependencias sin vulnerabilidades críticas) en verde **y** revisión de CodeRabbit sin conversaciones abiertas, exigidos por la protección de rama de `$BASE_BRANCH` y `$PROD_BRANCH` (aplicada también a administradores) |
 | `$QG_LEVEL` | `N/A` — CodeRabbit no tiene niveles; los umbrales están en `quality-gates.md` |
 | `$COVERAGE_THRESHOLD` | `80%` |
 | `$COVERAGE_SCOPE` | Código nuevo |

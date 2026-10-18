@@ -725,6 +725,11 @@ Plantilla de descripción:
 | Conflictos de fusión | Resolverlos en la rama antes de continuar |
 | OpenSpec con incidencias críticas | **No crear la PR.** Corregir y reintentar |
 
+**Nunca fusiones la PR** (`gh pr merge`): la fusión la hace una persona. Antes de declararla lista, ejecuta la
+«Verificación antes de fusionar» de `.claude/harness/profile/quality-gates.md`
+y muestra su resultado: checks en verde, CodeRabbit sin *changes requested* y
+cero conversaciones abiertas.
+
 #### 5.4 Cierre
 
 El cierre de los work items del change lo hace `openspec-archive-change`, no tú:

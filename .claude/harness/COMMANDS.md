@@ -59,6 +59,31 @@ que la herramienta espera y el ciclo de changes deja de funcionar.
 | `implement-feature` | Implementar un cambio de principio a fin |
 | `review-change` | Revisar un conjunto de cambios antes de integrarlo |
 
+## Entregables
+
+Generan documentos Word con la **plantilla de Habitinder**. Se ejecutan cuando se necesita
+el entregable, no en la secuencia de arranque, aunque dependen de que el contrato esté
+cerrado: la portada, la ficha y el pie salen de `docs/project.md`.
+
+| Comando | Produce | Plantilla |
+|---|---|---|
+| `entregable-documento-funcional` | Documento funcional: qué hace el sistema, para quién y con qué reglas | `documento-funcional.docx` |
+| `entregable-documento-arquitectura` | Documento de arquitectura: C4, datos, seguridad, despliegue y decisiones | `documento-arquitectura.docx` |
+| `entregable-informe-seguridad-primera-emision` | Informe SAST y SCA de un sistema sin informe previo | `informe-seguridad-primera-emision.docx` |
+| `entregable-informe-seguridad-reemision` | Informe SAST y SCA que contrasta con la verificación anterior | `informe-seguridad-reemision.docx` |
+
+Los cuatro enlazan [`entregables-formato.md`](entregables-formato.md), que define lo común:
+cómo usar la plantilla y sus marcadores, cómo generar el Word y cómo verificarlo. Salen a
+`docs/entregables/`.
+
+Las plantillas están en `.claude/harness/profile/entregables/` (valores visuales en su
+`formato.md`) y **traen ya montada la estructura de capítulos** de su comando, con el índice.
+
+**La estructura de cada entregable se declara una sola vez, en su comando**: los bloques
+`ficha`, `aprobacion` e `indice` del apartado «Estructura del documento».
+`.claude/harness/scripts/build-entregables.py` genera las plantillas a partir de ellos; si
+cambias un índice, regenéralas.
+
 ## Cómo se encadenan
 
 ```
@@ -125,7 +150,8 @@ Por el mismo motivo, el registro de tareas de un cambio es
 ## Añadir un prompt
 
 - Nómbralo `NN-verbo-objeto.prompt.md` si pertenece a la secuencia de arranque;
-  `verbo-objeto.prompt.md` si es de trabajo diario.
+  `verbo-objeto.prompt.md` si es de trabajo diario; `entregable-objeto.md` si genera un
+  documento Word.
 - Incluye front-matter con `description` y `agent`.
 - Declara **entradas**, **salida** y **prohibiciones**. Un prompt sin
   prohibiciones acaba inventando.

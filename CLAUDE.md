@@ -122,6 +122,8 @@ técnica previa de golpe, pero **tampoco se admite añadir deuda nueva**.
   cobertura, dependencias) **y** revisión de CodeRabbit (`$QG_PROVIDER`) sin
   hallazgos sin atender. La cobertura es necesaria, **no suficiente**.
 - La protección de rama **bloquea la integración** si la puerta no está en verde.
+  **Los agentes nunca fusionan**: lo hace una persona tras la verificación de
+  `.claude/harness/profile/quality-gates.md`.
 
 Bajar un umbral, excluir ficheros de la medición, desactivar reglas del linter o
 ignorar un comentario de CodeRabbit **no son decisiones de un agente**. Si crees
@@ -246,7 +248,8 @@ Se invocan con la herramienta `Agent` y su `subagent_type`.
 ## Comandos del catálogo
 
 `/harness:<nombre>` — generan y validan la documentación (`01-bootstrap-project`
-… `16-generate-agents-md`) y el trabajo diario
+… `16-generate-agents-md`), los entregables en Word con la plantilla de Habitinder
+(`entregable-*`) y el trabajo diario
 (`implement-feature`, `review-change`). Guía y orden de ejecución en
 `.claude/harness/COMMANDS.md`.
 

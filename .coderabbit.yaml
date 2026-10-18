@@ -6,7 +6,7 @@ language: es-ES
 reviews:
   profile: assertive
   # Pide cambios cuando hay hallazgos y aprueba cuando se resuelven.
-  # Junto con la protección de rama (conversaciones resueltas), bloquea la fusión.
+  # La protección de rama exige resolver sus conversaciones antes de fusionar.
   request_changes_workflow: true
   high_level_summary: true
   review_status: true

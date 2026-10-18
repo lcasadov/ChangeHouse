@@ -102,7 +102,7 @@ todos con su directorio de trabajo.
 | `$LINKED_REPOS` | `ninguno` | Solo topología `multirepo`. Repositorios enlazados que comparten rama con este (ruta o nombre del submódulo), separados por coma. `ninguno` desactiva la rama espejo |
 | `$TRACKER` | `github-issues` | `azure-devops` · `github-issues` · `jira` · `linear` · `ninguno` |
 | `$TRACKER_ORG` | `lcasadov` (cuenta personal de GitHub) | Organización o cuenta en el gestor |
-| `$TRACKER_PROJECT` | `⚠️ PENDIENTE` | Proyecto o tablero |
+| `$TRACKER_PROJECT` | `2` — Project «Habitinder» (https://github.com/users/lcasadov/projects/2), enlazado al repositorio. Id GraphQL `PVT_kwHOAGwvnc4BnofG` | Proyecto o tablero |
 | `$TRACKER_HIERARCHY` | `Epic > Feature > Story > Task` (etiquetas `tipo:*` + sub-issues) | Niveles de mayor a menor, p. ej. `Epic > Feature > User Story > Task`. Los nombres varían por proceso: **no los deduzcas** |
 | `$TRACKER_LIFECYCLE` | Ver tabla «Ciclo de vida de los elementos» | Estados y campos de fecha **por tipo** de elemento |
 | `$TRACKER_FIELDS` | Ver tabla «Campos de cada elemento» | Campos que se escriben en cada tipo, con su origen |
@@ -318,7 +318,7 @@ sanear la deuda previa de golpe, pero **no se admite deuda nueva**.
 | `$NEW_CODE_DEFINITION` | Líneas añadidas o modificadas por la Pull Request respecto a su rama de destino | Qué cuenta como código nuevo |
 | `$COVERAGE_CMD` | `⚠️ PENDIENTE` | Comando que genera el informe |
 | `$QG_PROVIDER` | `CodeRabbit` (revisión automática de Pull Requests en GitHub) | Herramienta de análisis estático y puerta de calidad |
-| `$QUALITY_GATE` | Checks obligatorios de GitHub Actions (lint, tipos, pruebas y cobertura) **y** revisión de CodeRabbit sin hallazgos sin atender, exigidos por la protección de rama | Nombre de la puerta aplicada y criterio de bloqueo |
+| `$QUALITY_GATE` | Checks de GitHub Actions (lint, tipos, pruebas, cobertura, `openspec-sync` y escaneo de dependencias sin vulnerabilidades críticas) en verde **y** revisión de CodeRabbit sin conversaciones abiertas, exigidos por la protección de rama de `$BASE_BRANCH` y `$PROD_BRANCH` (aplicada también a administradores) | Nombre de la puerta aplicada y criterio de bloqueo |
 | `$QG_LEVEL` | `N/A` — ver `.claude/harness/profile/quality-gates.md` | Nivel o perfil asignado al proyecto, si aplica |
 | `$CODE_STANDARDS_DOC` | `⚠️ PENDIENTE` | Ruta a los estándares de codificación |
 | `$TEST_FRAMEWORKS` | `⚠️ PENDIENTE` | Marcos de prueba por nivel |

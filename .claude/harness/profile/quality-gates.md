@@ -1,7 +1,8 @@
 # Perfil de Habitinder — Puerta de calidad
 
 > La puerta se compone de **checks de GitHub Actions** y de la revisión
-> automática de **CodeRabbit**, ambos exigidos por la protección de rama.
+> automática de **CodeRabbit**, ambos exigidos por la protección de rama de
+> `$BASE_BRANCH` y `$PROD_BRANCH`.
 
 ## Componentes de la puerta
 
@@ -12,8 +13,8 @@
 | Pruebas | `$TEST_CMD` en GitHub Actions | Check requerido |
 | Cobertura sobre código nuevo | `$COVERAGE_CMD` con umbral configurado en la herramienta | Check requerido |
 | Dependencias vulnerables | Escaneo de dependencias en la CI (severidad crítica) | Check requerido |
-| Revisión automática | CodeRabbit (`coderabbitai[bot]`) | Hallazgos sin atender = PR no lista |
-| Revisión humana | `$REVIEWER` | Aprobación requerida |
+| Coherencia de OpenSpec | `openspec-sync` en GitHub Actions | Check requerido |
+| Revisión automática | CodeRabbit (`coderabbitai[bot]`) | Cero conversaciones abiertas y revisión no en *changes requested* |
 
 ## Umbrales
 
@@ -50,17 +51,43 @@ Lo que no puede es empeorar. Cada cambio deja el conjunto igual o mejor.
 
 ## Requisitos de configuración
 
-- Los checks deben estar marcados como **requeridos** en la protección de rama
-  de `$BASE_BRANCH` y `$PROD_BRANCH`. Un check que no es requerido no bloquea:
-  produce verdes falsos.
 - El umbral de cobertura se configura **en la herramienta de pruebas** (por
   ejemplo, `coverage.thresholds` en Vitest), para que el propio comando falle.
 - CodeRabbit debe estar instalado en el repositorio y su configuración
   (`.coderabbit.yaml`) debe cubrir `$BASE_BRANCH` y `$PROD_BRANCH` como ramas de
   destino. Con `request_changes_workflow: true` su revisión pide cambios y
-  aprueba al resolverse. Lo que **bloquea** la fusión es la protección de rama
-  con *Require conversation resolution before merging*: cada comentario de
-  CodeRabbit queda como conversación abierta hasta que se corrige o se responde
-  y se resuelve. La protección se aplica también a administradores.
-- La puerta es **bloqueante** tanto en integración continua como en la Pull
-  Request.
+  aprueba al resolverse.
+
+## Protección de rama
+
+`$BASE_BRANCH` y `$PROD_BRANCH` están protegidas (configurado el 2026-10-18):
+
+- Cambios solo mediante Pull Request; sin *force push* ni borrado.
+- *Require conversation resolution before merging*: cada comentario de
+  CodeRabbit es una conversación abierta hasta que se corrige o se responde y
+  se resuelve.
+- Checks de GitHub Actions requeridos y rama al día con la de destino. Hoy el
+  único check requerido es `openspec-sync`; lint, tipos, pruebas, cobertura y
+  escaneo de dependencias se añaden como requeridos cuando exista `ci.yml`.
+- Aplicada también a administradores: nadie se la salta.
+
+Cambiar la protección (quitar un check requerido, desactivar la resolución de
+conversaciones) es decisión de una persona, se documenta y lleva fecha de
+revisión.
+
+## Verificación antes de fusionar
+
+La protección impide fusionar si algo falla, pero **los agentes nunca fusionan**
+(`gh pr merge`). Antes de declarar una PR lista, comprueba y deja constancia de:
+
+```bash
+gh pr checks <PR>                       # todos en verde, ninguno pendiente
+# Revisión de CodeRabbit más reciente sobre el HEAD actual: APPROVED o COMMENTED, nunca CHANGES_REQUESTED.
+# Si devuelve null, CodeRabbit aún no ha revisado el último commit: espera.
+gh pr view <PR> --json headRefOid,reviews \n  --jq '(.headRefOid) as $head | [.reviews[] | select(.author.login=="coderabbitai" and .commit.oid==$head)] | max_by(.submittedAt) | .state'
+gh api graphql -f query='query($o:String!,$r:String!,$n:Int!){repository(owner:$o,name:$r){pullRequest(number:$n){reviewThreads(first:100){nodes{isResolved}}}}}' \n  -F o=lcasadov -F r=Habitinder -F n=<PR> \n  --jq '[.data.repository.pullRequest.reviewThreads.nodes[]|select(.isResolved==false)]|length'   # debe ser 0
+```
+
+Si algo no cumple, la PR **no se fusiona**: se corrige la causa. Los agentes
+tienen prohibido fusionar; lo hace una persona tras esta verificación.
+
