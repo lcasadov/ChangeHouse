@@ -71,9 +71,9 @@ todos con su directorio de trabajo.
 
 | Variable | Valor | Ejemplo |
 |---|---|---|
-| `$INSTALL_CMD` | `⚠️ SUPUESTO: pnpm install` | Instalación de dependencias |
-| `$RUN_CMD` | `⚠️ SUPUESTO: pnpm dev` (Turborepo arranca app, landing y API) | Arranque en local |
-| `$LINT_CMD` | `⚠️ SUPUESTO: pnpm lint` (ESLint + Prettier) | Análisis estático y formato, o `N/A` |
+| `$INSTALL_CMD` | `pnpm install` (verificado 2026-10-19) | Instalación de dependencias |
+| `$RUN_CMD` | `pnpm dev` (Turborepo arranca app, landing y API) | Arranque en local |
+| `$LINT_CMD` | `pnpm lint` (ESLint 9 en cada paquete; formato con `pnpm format:check`) — verificado | Análisis estático y formato, o `N/A` |
 
 **Aplicabilidad de las secciones:**
 
@@ -234,8 +234,7 @@ elemento», o un literal entre comillas. «Se escribe» es `al crear` o
 
 **Estructura de directorios y reglas de dependencia:**
 
-> ⚠️ SUPUESTO: estructura declarada en el README §9. Aún no hay código; se
-> confirma al crear el scaffold del monorepo.
+> Estructura creada con el scaffold del monorepo (2026-10-19, issue #8).
 
 ```
 ChangeHouse/
@@ -280,12 +279,12 @@ Reglas de dependencia:
 
 | Variable | Valor | Ejemplo |
 |---|---|---|
-| `$LANGUAGE` | TypeScript 5 (modo `strict`) sobre Node.js 24 LTS | Lenguaje y versión |
-| `$FRAMEWORK` | Fastify (API) | Framework principal y versión |
+| `$LANGUAGE` | TypeScript 5.9 (modo `strict`, `noUncheckedIndexedAccess`) sobre Node.js 24 LTS | Lenguaje y versión |
+| `$FRAMEWORK` | Fastify 5 (API) | Framework principal y versión |
 | `$BUILD_TOOL` | pnpm workspaces + Turborepo | Herramienta de construcción |
-| `$SRC_ROOT` | `⚠️ SUPUESTO: services/api/src` | Raíz del código de servidor |
-| `$BUILD_VERIFY_CMD` | `⚠️ SUPUESTO: pnpm build` | Comando que compila y verifica |
-| `$TEST_CMD` | `⚠️ SUPUESTO: pnpm test` (Vitest, todo el monorepo vía Turborepo) | Comando de la suite de pruebas |
+| `$SRC_ROOT` | `services/api/src` | Raíz del código de servidor |
+| `$BUILD_VERIFY_CMD` | `pnpm build` — verificado | Comando que compila y verifica |
+| `$TEST_CMD` | `pnpm test` (todo el monorepo vía Turborepo) — verificado | Comando de la suite de pruebas |
 
 ### Persistencia
 
@@ -293,7 +292,7 @@ Reglas de dependencia:
 |---|---|---|
 | `$DB` | PostgreSQL 17 + PostGIS (Cloud SQL). Chat en Cloud Firestore | Motor de datos y versión |
 | `$ORM` | Drizzle ORM | Capa de acceso a datos, o `ninguno` |
-| `$MIGRATION_TOOL` | drizzle-kit; migraciones en `db/migrations`, aplicadas con `⚠️ SUPUESTO: pnpm db:migrate` | Herramienta de migraciones de esquema |
+| `$MIGRATION_TOOL` | drizzle-kit; migraciones en `db/migrations`, aplicadas con `pnpm db:migrate` (se crea con la primera tabla) | Herramienta de migraciones de esquema |
 
 ### Módulos heredados
 
@@ -310,13 +309,13 @@ Reglas de dependencia:
 
 | Variable | Valor | Ejemplo |
 |---|---|---|
-| `$UI_FRAMEWORK` | Expo (React Native) + Expo Router, `⚠️ SUPUESTO: última SDK estable al crear el scaffold`. Landing: Astro | Framework de interfaz y versión |
-| `$UI_LIBRARY` | `⚠️ SUPUESTO: ninguna de terceros; componentes propios en packages/ui` | Librería de componentes, o `ninguna` |
-| `$BUNDLER` | `⚠️ SUPUESTO: Metro (Expo) y Vite (Astro)` | Empaquetador o herramienta de construcción |
-| `$FRONTEND_ROOT` | `⚠️ SUPUESTO: apps/mobile` (app) y `⚠️ SUPUESTO: apps/landing` (landing) | Raíz del código de cliente |
+| `$UI_FRAMEWORK` | Expo SDK 58 (React Native 0.88, React 19.3) + Expo Router 58. Landing: Astro 7 | Framework de interfaz y versión |
+| `$UI_LIBRARY` | ninguna de terceros; componentes propios en `packages/ui` | Librería de componentes, o `ninguna` |
+| `$BUNDLER` | Metro (Expo) y Vite (Astro) | Empaquetador o herramienta de construcción |
+| `$FRONTEND_ROOT` | `apps/mobile` (app) y `apps/landing` (landing) | Raíz del código de cliente |
 | `$STATE_MANAGEMENT` | TanStack Query (estado de servidor) + Zustand (estado local) | Gestión de estado global |
 | `$HTTP_CLIENT` | `fetch` nativo envuelto en un cliente tipado `openapi-fetch`, con tipos generados desde `docs/api/openapi.yaml` (`openapi-typescript`); TanStack Query encima | Cliente de red configurado |
-| `$TYPECHECK_CMD` | `⚠️ SUPUESTO: pnpm typecheck` (`tsc --noEmit` en cada paquete) | Comando de comprobación de tipos, o `N/A` |
+| `$TYPECHECK_CMD` | `pnpm typecheck` (`tsc --noEmit`; `astro check` en la landing) — verificado | Comando de comprobación de tipos, o `N/A` |
 
 ### Presentación
 
@@ -346,15 +345,15 @@ sanear la deuda previa de golpe, pero **no se admite deuda nueva**.
 | `$COVERAGE_THRESHOLD` | `80%` | Umbral mínimo sobre código nuevo, p. ej. `80%` |
 | `$COVERAGE_SCOPE` | Código nuevo | Qué se mide y qué se excluye |
 | `$NEW_CODE_DEFINITION` | Líneas añadidas o modificadas por la Pull Request respecto a su rama de destino | Qué cuenta como código nuevo |
-| `$COVERAGE_CMD` | `⚠️ SUPUESTO: pnpm test:coverage` (Vitest con umbral de cobertura configurado) | Comando que genera el informe |
+| `$COVERAGE_CMD` | `pnpm test:coverage` (umbral del 80 % en cada paquete: `coverage.thresholds` de Vitest y `coverageThreshold` de Jest en la app) — verificado | Comando que genera el informe |
 | `$QG_PROVIDER` | `CodeRabbit` (revisión automática de Pull Requests en GitHub) | Herramienta de análisis estático y puerta de calidad |
 | `$QUALITY_GATE` | Checks de GitHub Actions (lint, tipos, pruebas, cobertura, `openspec-sync` y escaneo de dependencias sin vulnerabilidades críticas) en verde **y** revisión de CodeRabbit sobre el HEAD de la PR en estado `APPROVED` o `COMMENTED` (nunca `CHANGES_REQUESTED`) y sin conversaciones abiertas, exigidos por la protección de rama de `$BASE_BRANCH` y `$PROD_BRANCH` (aplicada también a administradores) | Nombre de la puerta aplicada y criterio de bloqueo |
 | `$QG_LEVEL` | `N/A` — ver `.claude/harness/profile/quality-gates.md` | Nivel o perfil asignado al proyecto, si aplica |
 | `$CODE_STANDARDS_DOC` | `docs/code-standards.md` | Ruta a los estándares de codificación |
-| `$TEST_FRAMEWORKS` | Unitarias e integración: Vitest · BD real: Testcontainers (PostgreSQL) · Componentes: React Native Testing Library · E2E web: Playwright · E2E móvil: Maestro · Propiedades: fast-check | Marcos de prueba por nivel |
-| `$TEST_UNIT_CMD` | `⚠️ SUPUESTO: pnpm test` | Comando de pruebas unitarias |
-| `$TEST_INTEGRATION_CMD` | `⚠️ SUPUESTO: pnpm test:integration` (decidido; se verifica con el scaffold) | Comando de pruebas de integración |
-| `$TEST_E2E_CMD` | `⚠️ SUPUESTO: pnpm test:e2e` (decidido; Playwright en web y Maestro en móvil) | Comando de pruebas de extremo a extremo |
+| `$TEST_FRAMEWORKS` | Unitarias e integración: Vitest · BD real: Testcontainers (PostgreSQL) · Componentes: React Native Testing Library sobre `jest-expo` (Vitest no soporta React Native) · E2E web: Playwright · E2E móvil: Maestro · Propiedades: fast-check | Marcos de prueba por nivel |
+| `$TEST_UNIT_CMD` | `pnpm test` | Comando de pruebas unitarias |
+| `$TEST_INTEGRATION_CMD` | `pnpm test:integration` (Vitest, ficheros `*.int.test.ts`) — verificado | Comando de pruebas de integración |
+| `$TEST_E2E_CMD` | `pnpm test:e2e` (Playwright en web y Maestro en móvil; se configura con el primer flujo E2E) | Comando de pruebas de extremo a extremo |
 | `$PROPERTY_TESTING_LIB` | fast-check (obligatoria en matching y simulador fiscal, RNF-33) | Librería de pruebas basadas en propiedades, o `ninguna` |
 | `$TEST_MANAGEMENT` | `ninguna` — los casos de prueba son los `#### Scenario:` de OpenSpec | Gestión de casos de prueba, o `ninguna` |
 
@@ -466,7 +465,7 @@ elige según la capacidad requerida descrita en `CLAUDE.md`.
 
 Generado por `/harness:01-bootstrap-project` el 2026-10-18. No hay código
 todavía: la fuente es el `README.md`. Los comandos y rutas quedan como
-`⚠️ SUPUESTO` hasta que exista el scaffold y se ejecuten.
+`⚠️ SUPUESTO` hasta que existiera el scaffold; verificados el 2026-10-19 (issue #8).
 
 | Variable | Origen | Confianza |
 |---|---|---|

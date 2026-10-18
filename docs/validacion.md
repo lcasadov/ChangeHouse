@@ -12,7 +12,7 @@
 
 Resumen: 🔴 2 · 🟠 9 · 🟡 11 · 🔵 3 — **25 problemas**.
 
-**Estado tras la ronda del 2026-10-18**: 23 resueltos y 2 en curso que dependen del scaffold del monorepo (1 comandos, 25 `paths` de las reglas). Además: preferencias de búsqueda por usuario con sustitución por vivienda.
+**Estado a 2026-10-19**: 24 resueltos y 1 parcial (25, `paths` de reglas que casarán a medida que exista código).
 
 ---
 
@@ -23,7 +23,7 @@ Resumen: 🔴 2 · 🟠 9 · 🟡 11 · 🔵 3 — **25 problemas**.
 - **Ubicación**: `docs/project.md` §0, §3, §4, §5 (comandos)
 - **Descripción**: todos los comandos (`pnpm install`, `lint`, `typecheck`, `test`, `test:coverage`, `build`, `db:migrate`) son `⚠️ SUPUESTO`: no existe el monorepo y en esta máquina **no está instalado pnpm** y Node es la 22 (el contrato declara Node 24 LTS). Ningún agente puede cerrar una tarea sin ejecutarlos (`static-analysis`).
 - **Solución propuesta**: ejecutar el habilitador T-01 (scaffold) como primer change, instalar Node 24 y pnpm (`corepack enable`), y confirmar los comandos en el contrato.
-- **Estado**: en curso (2026-10-18) — Node 24.20.0 y pnpm 10.34.7 instalados; falta el scaffold T-01 para ejecutar y confirmar los comandos
+- **Estado**: resuelto (2026-10-19) — scaffold creado (issue #8); `install`, `lint`, `typecheck`, `test`, `test:coverage`, `test:integration`, `build` y `format:check` verificados
 
 ### Problema 2 de 25
 
@@ -239,4 +239,4 @@ Resumen: 🔴 2 · 🟠 9 · 🟡 11 · 🔵 3 — **25 problemas**.
 - **Ubicación**: `.claude/rules/*.md` (`paths`)
 - **Descripción**: los patrones de `paths` ya apuntan a la estructura declarada, pero no casan con ningún fichero porque aún no hay código. Esperado; se revisa tras el scaffold.
 - **Solución propuesta**: repetir el prompt 15 tras T-01.
-- **Estado**: pendiente — tras el scaffold
+- **Estado**: parcial (2026-10-19) — con el scaffold casan los `paths` de 6 reglas; el resto casará cuando existan auth, hooks, servicios de cliente y workflows
