@@ -82,7 +82,7 @@ está detrás **para** decidir si me interesa apuntarme
 **Alcance**: propuesta de valor, «cómo funciona», historia del fundador y FAQ (RF-100). Blog fuera.
 **Dependencias**: T-01, T-06, T-07
 **Prioridad**: alta — condición de la fase 0
-**Riesgos o dudas**: textos y FAQ los redacta el negocio; dominio: changehouse.com está registrado por un tercero
+**Riesgos o dudas**: textos y FAQ los redacta el negocio; comprar el dominio changehouse.app
 
 ### [Captación > Lista de espera] Apuntarse a la lista de espera
 
@@ -389,4 +389,4 @@ flowchart TD
 
 ## Preguntas abiertas
 
-1. Dominio: changehouse.com está registrado por un tercero desde 1999.
+1. Compra del dominio changehouse.app (el `.app` exige HTTPS en todo el dominio).

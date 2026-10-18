@@ -30,10 +30,10 @@ info:
     - Errores en `application/problem+json` (RFC 9457) con `correlationId`.
       Nunca trazas, consultas SQL ni nombres de tabla.
 servers:
-  - url: https://api.des.changehouse.example/v1
-    description: DES (⚠️ dominio pendiente de compra; elegido changehouse.com)
-  - url: https://api.changehouse.example/v1
-    description: PROD (⚠️ dominio pendiente de compra; elegido changehouse.com)
+  - url: https://api.des.changehouse.app/v1
+    description: DES (⚠️ dominio changehouse.app pendiente de compra)
+  - url: https://api.changehouse.app/v1
+    description: PROD (⚠️ dominio changehouse.app pendiente de compra)
 security:
   - firebaseIdToken: []
 tags:
@@ -1087,7 +1087,7 @@ components:
       description: Formato único de error (RFC 9457).
       required: [type, title, status, correlationId]
       properties:
-        type: { type: string, format: uri-reference, examples: ['https://changehouse.example/problems/invalid-transition'] }
+        type: { type: string, format: uri-reference, examples: ['https://changehouse.app/problems/invalid-transition'] }
         title: { type: string }
         status: { type: integer }
         detail: { type: string }
@@ -1103,7 +1103,7 @@ components:
               field: { type: string }
               message: { type: string }
       examples:
-        - type: https://changehouse.example/problems/invalid-transition
+        - type: https://changehouse.app/problems/invalid-transition
           title: Transición no válida
           status: 409
           code: HOME_NOT_EDITABLE

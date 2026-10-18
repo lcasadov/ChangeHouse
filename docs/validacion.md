@@ -12,7 +12,7 @@
 
 Resumen: 🔴 2 · 🟠 9 · 🟡 11 · 🔵 3 — **25 problemas**.
 
-**Estado tras la ronda del 2026-10-18**: 20 resueltos, 1 parcial (23, dominio) y 4 pendientes o en curso (1 Node 24 y scaffold, 18 tipografía, 20 datos de categoría especial, 25 tras el scaffold). Además: preferencias de búsqueda por usuario con sustitución por vivienda.
+**Estado tras la ronda del 2026-10-18**: 21 resueltos y 4 pendientes o en curso (1 Node 24 y scaffold, 18 tipografía, 20 datos de categoría especial, 25 tras el scaffold). Además: preferencias de búsqueda por usuario con sustitución por vivienda.
 
 ---
 
@@ -221,7 +221,7 @@ Resumen: 🔴 2 · 🟠 9 · 🟡 11 · 🔵 3 — **25 problemas**.
 - **Ubicación**: `docs/api/openapi.yaml` `servers` ↔ `docs/project.md`
 - **Descripción**: dominios de DES y PROD sin decidir (se usan marcadores `changehouse.example`).
 - **Solución propuesta**: decidir el dominio (comprobar disponibilidad y marca de «ChangeHouse»).
-- **Estado**: parcial (2026-10-18) — elegido changehouse.com, pero está registrado por un tercero desde 1999 (vence el 17/12/2026); hay que comprarlo al titular o elegir otro
+- **Estado**: resuelto (2026-10-18) — dominio `changehouse.app` (libre a fecha de hoy; pendiente de compra por el responsable). API en `api.changehouse.app` y `api.des.changehouse.app`
 
 ### Problema 24 de 25
 

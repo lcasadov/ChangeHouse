@@ -321,7 +321,7 @@ sequenceDiagram
 | Brecha | Impacto | Cuándo se cierra |
 |---|---|---|
 | No hay código: dependencias e invariantes sin verificar | Este documento puede divergir del scaffold | Al crear el monorepo; repetir este prompt |
-| SMTP de Gmail para la extensión Trigger Email | Límite de unos 500 envíos al día y remitente `@gmail.com`; la contraseña de aplicación va en Secret Manager | Provisional: pasar a Google Workspace con el dominio propio cuando se compre |
+| SMTP de Gmail para la extensión Trigger Email | Límite de unos 500 envíos al día y remitente `@gmail.com`; la contraseña de aplicación va en Secret Manager | Provisional: pasar a Google Workspace con `changehouse.app` cuando se compre |
 | Herramienta de reglas de dependencia sin elegir | I-1 a I-6 sin automatizar | Scaffold del monorepo |
 | Ubicación del portal de gestoría (app web de Expo o aplicación aparte) | Afecta a `apps/` y a la matriz de permisos | Fase 2 |
 | Proveedor de KYC | Adaptador `IdentityVerifier` de KYC sin decidir | Fase 2 |
