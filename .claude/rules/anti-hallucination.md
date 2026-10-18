@@ -1,15 +1,9 @@
 ---
 paths:
-  - "backend/**"
-  - "server/**"
-  - "api/**"
-  - "frontend/**"
-  - "web/**"
-  - "client/**"
-  - "ui/**"
-  - "src/**"
-  - "apps/*/src/**"
-  - "lib/**"
+  - "services/**"
+  - "apps/**"
+  - "packages/**"
+  - "db/**"
 ---
 
 # Reglas anti-alucinación — código fuente

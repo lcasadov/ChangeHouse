@@ -1,10 +1,7 @@
 ---
 description: "Use when creating or modifying outbound API adapters on the client side. Enforces naming, structure, API contract discipline and test coverage. Stack-agnostic."
 paths:
-  - "frontend/**/{api,http,services,clients}/**"
-  - "web/**/{api,http,services,clients}/**"
-  - "client/**/{api,http,services}/**"
-  - "**/infrastructure/out/{api,http}/**"
+  - "apps/mobile/src/**/{api,services}/**"
 ---
 
 # Convenciones de adaptadores de salida de API

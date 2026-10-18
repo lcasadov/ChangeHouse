@@ -1,11 +1,8 @@
 ---
 description: "Use when creating or modifying authentication/authorization services outside the central security configuration. Reinforces identity, session and credential handling, RBAC consistency and auth-focused testing. Stack-agnostic."
 paths:
-  - "backend/**/auth/**"
-  - "server/**/auth/**"
-  - "api/**/auth/**"
-  - "**/{application,domain}/**/auth/**"
-  - "**/{authentication,authorization,identity}/**"
+  - "services/api/src/**/auth/**"
+  - "services/api/src/**/{authentication,authorization,identity}/**"
 ---
 
 # Convenciones de servicios de autenticación y autorización

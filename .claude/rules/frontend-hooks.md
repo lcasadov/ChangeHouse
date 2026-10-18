@@ -1,10 +1,8 @@
 ---
 description: "Use when creating or modifying reusable UI logic units (hooks, composables). Enforces naming, structure, side-effect discipline, error/loading state exposure and test coverage. Stack-agnostic."
 paths:
-  - "frontend/**/{hooks,composables}/**"
-  - "web/**/{hooks,composables}/**"
-  - "client/**/{hooks,composables}/**"
-  - "**/src/**/{hooks,composables}/**"
+  - "apps/mobile/src/**/hooks/**"
+  - "packages/ui/src/**/hooks/**"
 ---
 
 # Convenciones de lógica de interfaz reutilizable

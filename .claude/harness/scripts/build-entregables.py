@@ -16,6 +16,7 @@ Requiere python-docx y Pillow.
 from __future__ import annotations
 
 import argparse
+import math
 import re
 import sys
 from dataclasses import dataclass
@@ -117,32 +118,42 @@ def _rgb(hexa: str) -> tuple[int, int, int]:
     return tuple(int(hexa[i:i + 2], 16) for i in (0, 2, 4))
 
 
-def _casa(d: ImageDraw.ImageDraw, x: int, y: int, ancho: int, color) -> None:
-    alto_tejado = int(ancho * 0.45)
-    d.polygon([(x - 12, y + alto_tejado), (x + ancho // 2, y), (x + ancho + 12, y + alto_tejado)], fill=color)
-    d.rectangle([x + 8, y + alto_tejado, x + ancho - 8, y + alto_tejado + int(ancho * 0.7)], fill=color)
-    puerta = ancho // 4
-    d.rectangle([x + ancho // 2 - puerta // 2, y + alto_tejado + int(ancho * 0.32),
-                 x + ancho // 2 + puerta // 2, y + alto_tejado + int(ancho * 0.7)], fill=_rgb(CORAL))
-
-
-def _flecha(d: ImageDraw.ImageDraw, x1: int, x2: int, y: int, color, grosor: int = 16) -> None:
-    d.line([(x1, y), (x2, y)], fill=color, width=grosor)
-    punta = 30 if x2 > x1 else -30
-    d.polygon([(x2 + punta, y), (x2, y - 26), (x2, y + 26)], fill=color)
+def _arco_con_flecha(d: ImageDraw.ImageDraw, centro: tuple[int, int], radio: int, desde: float,
+                     hasta: float, grosor: int, color) -> None:
+    """Arco en sentido horario de ``desde`` a ``hasta`` (grados, 0 = las 3 en punto) con punta final."""
+    cx, cy = centro
+    d.arc([cx - radio, cy - radio, cx + radio, cy + radio], desde, hasta, fill=color, width=grosor)
+    theta = math.radians(hasta)
+    medio = radio - grosor / 2  # el arco se dibuja hacia dentro del rectángulo
+    px, py = cx + medio * math.cos(theta), cy + medio * math.sin(theta)
+    radial = (math.cos(theta), math.sin(theta))
+    tangente = (-math.sin(theta), math.cos(theta))
+    largo, ancho = grosor * 1.6, grosor * 1.25
+    d.polygon([
+        (px + tangente[0] * largo, py + tangente[1] * largo),
+        (px + radial[0] * ancho, py + radial[1] * ancho),
+        (px - radial[0] * ancho, py - radial[1] * ancho),
+    ], fill=color)
 
 
 def dibujar_logo(ruta: Path) -> None:
-    img = Image.new("RGBA", (512, 512), (0, 0, 0, 0))
+    """Casa blanca dentro de un ciclo de dos flechas: cambio de casa y cadenas de intercambio."""
+    s = 2048  # se dibuja a 4x y se reduce para suavizar los bordes
+    img = Image.new("RGBA", (s, s), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
-    d.rounded_rectangle([0, 0, 511, 511], radius=110, fill=_rgb(CORAL))
-    blanco = _rgb(WHITE)
-    _casa(d, 70, 120, 150, blanco)
-    _casa(d, 292, 120, 150, blanco)
-    navy = _rgb(NAVY)
-    _flecha(d, 150, 330, 395, navy)
-    _flecha(d, 362, 182, 445, navy)
-    img.save(ruta)
+    d.rounded_rectangle([0, 0, s - 1, s - 1], radius=440, fill=_rgb(CORAL))
+
+    navy, blanco = _rgb(NAVY), _rgb(WHITE)
+    centro, radio, grosor = (1024, 1040), 760, 125
+    _arco_con_flecha(d, centro, radio, 205, 320, grosor, navy)
+    _arco_con_flecha(d, centro, radio, 25, 140, grosor, navy)
+
+    d.polygon([(1024, 520), (600, 900), (1448, 900)], fill=blanco)          # tejado
+    d.rectangle([720, 900, 1328, 1420], fill=blanco)                         # cuerpo
+    d.rectangle([950, 1150, 1098, 1420], fill=_rgb(CORAL))                   # puerta
+    d.rectangle([780, 990, 900, 1100], fill=_rgb(CORAL))                     # ventana
+    d.rectangle([1148, 990, 1268, 1100], fill=_rgb(CORAL))                   # ventana
+    img.resize((512, 512), Image.LANCZOS).save(ruta)
 
 
 def dibujar_portada(ruta: Path, logo: Path) -> None:

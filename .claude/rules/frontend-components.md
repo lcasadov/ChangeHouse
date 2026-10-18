@@ -1,11 +1,10 @@
 ---
 description: "Use when creating or modifying UI components, pages or views. Enforces naming, file structure, theming, accessibility and test coverage. Stack-agnostic."
 paths:
-  - "frontend/**/{components,pages,views,screens}/**"
-  - "web/**/{components,pages,views,screens}/**"
-  - "client/**/{components,pages,views}/**"
-  - "ui/**/{components,pages,views}/**"
-  - "**/src/**/{components,pages,views,screens}/**"
+  - "apps/mobile/app/**"
+  - "apps/mobile/src/**/{components,screens}/**"
+  - "apps/landing/src/{components,pages,layouts}/**"
+  - "packages/ui/src/**"
 ---
 
 # Convenciones de componentes de interfaz
