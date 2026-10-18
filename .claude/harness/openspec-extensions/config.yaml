@@ -1,0 +1,101 @@
+# Configuración de referencia del catálogo para OpenSpec.
+#
+# Se copia a `openspec/config.yaml` del proyecto destino. Si ya existe, se
+# FUSIONA: conserva el `schema` y el `context` propios y añade estas claves.
+#
+# Este fichero es del proyecto, no del generador: `openspec update` no lo toca.
+# Por eso las extensiones viven aquí y no dentro de los SKILL.md generados.
+#
+# OpenSpec entrega su contenido al agente a través de `openspec instructions`,
+# que invocan los ocho skills:
+#   context              → en todas las operaciones
+#   rules.<artefacto>    → al crear ese artefacto
+#   operations.apply     → al implementar y al verificar (verify usa las
+#                          instrucciones de apply)
+#   operations.archive   → al archivar
+# `operations` solo admite `apply` y `archive`; cualquier otra clave se ignora
+# con un aviso.
+
+schema: spec-driven
+
+context: |
+  Extensiones del catálogo de gobierno (obligatorias):
+  - Los valores del proyecto ($TRACKER, $TRACKER_HIERARCHY, $TRACKER_LIFECYCLE,
+    $TRACKER_FIELDS, $OPENSPEC_PATH, $COMMIT_CONVENTION) están en docs/project.md.
+    Si falta uno, para y pregunta; no lo inventes. Los estados, los campos de
+    fecha y los campos obligatorios cambian según el tipo de elemento: léelos
+    siempre de $TRACKER_LIFECYCLE y $TRACKER_FIELDS.
+  - Al terminar CUALQUIER operación que modifique ficheros bajo openspec/,
+    ejecuta .claude/harness/openspec-extensions/plan-sync.md. Es una regeneración
+    completa: ejecutarla de más no hace daño; no ejecutarla, sí.
+  - La sincronización con $TRACKER sigue .claude/harness/openspec-extensions/tracker-sync.md.
+    Si $TRACKER vale `ninguno`, omítela.
+  - Antes de implementar la primera tarea de una sesión (no al verificar), la
+    revisión de hallazgos recientes de calidad sigue
+    .claude/harness/openspec-extensions/quality-sync.md.
+  - Si revisas un change existente y cambian tasks.md o sus specs delta, aplica
+    tracker-sync.md, sección «Al proponer un change»: crea lo que falte y
+    actualiza lo que exista, sin duplicar.
+  - Un hook de fin de sesión comprueba que plan y tracker están al día. Si te
+    bloquea, corrige lo que indica; no intentes esquivarlo.
+
+rules:
+  proposal:
+    - >-
+      Si $TRACKER no vale `ninguno`, incluye una sección `## Trazabilidad` con una
+      fila por nivel de $TRACKER_HIERARCHY y las columnas Nivel · Decisión ·
+      Motivo. Decisión es `nuevo` o `existente #<id>`. Antes de rellenarla, busca
+      en $TRACKER los elementos existentes como indica tracker-sync.md, sección
+      «Localizar lo existente». No crees nada todavía: la tabla se revisa con la
+      propuesta.
+    - >-
+      Si $TRACKER_FIELDS usa el origen `trazabilidad`, añade en `## Trazabilidad`
+      una tabla de Stories con una fila por `### Requirement:` del spec delta y
+      las columnas Requirement · Decisión · Story Points · Prioridad, con las
+      escalas que indique $TRACKER_FIELDS. Complétala cuando existan los specs
+      delta.
+  tasks:
+    - >-
+      Cada tarea lleva un identificador estable (B1, F2, T3…) y, si implementa un
+      requisito, `ref:` con el título exacto de su `### Requirement:`. Sin
+      identificador, renombrar una tarea duplica su elemento en el tracker.
+    - >-
+      Si $TRACKER_FIELDS usa los orígenes `est` o `disc`, cada tarea termina
+      también con `est:` (horas estimadas, en la escala que indique
+      $TRACKER_FIELDS) y `disc:` (una etiqueta de $TRACKER_DISCIPLINE_TAGS).
+      Ejemplo: `- [ ] B1 Validar el formato del DNI en el alta. ref: Alta de
+      cliente · est: 3h · disc: back`. Al marcarla `- [x]`, añade `real:` si las
+      horas reales difieren de la estimación.
+    - >-
+      Tras escribir tasks.md, ejecuta tracker-sync.md, sección «Al proponer un
+      change», y después plan-sync.md. Antes de escribir en $TRACKER, muestra el
+      árbol que vas a crear y reutilizar y espera confirmación.
+
+operations:
+  apply:
+    guidance:
+      - >-
+        Antes de tocar la primera tarea sin marcar de la sesión (no al
+        verificar), aplica quality-sync.md: repasa los hallazgos del último PR
+        fusionado hacia $BASE_BRANCH y decide si alguno debe pasar a
+        <stack>.local.md.
+      - >-
+        Al empezar una tarea y al marcarla `- [x]`, aplica tracker-sync.md,
+        sección «Al implementar»: estado y fecha de inicio al empezar; estado
+        final y fecha de fin al marcarla. La Story no se cierra aquí.
+      - >-
+        Si corriges un Bug y su prueba pasa, llévalo a su estado final con su
+        fecha de fin, como indica esa misma sección.
+      - >-
+        Si estás verificando el change (y no implementando), aplica en su lugar
+        tracker-sync.md, sección «Al verificar»: un Bug por hallazgo bloqueante.
+      - >-
+        Al completar o al pausar, ejecuta plan-sync.md. Pausar también cuenta:
+        es lo que mantiene visible un change a medias.
+  archive:
+    guidance:
+      - >-
+        Antes de mostrar el resumen, aplica tracker-sync.md, sección «Al
+        archivar»: Stories y Feature a su estado final; la Epic solo si ya no le
+        quedan hijos abiertos de ningún change. Después, plan-sync.md. Si quedan
+        tareas sin completar, para y pregunta antes de cerrar nada.

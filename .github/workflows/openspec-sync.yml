@@ -1,0 +1,22 @@
+# Comprueba que PLAN.md y GitHub Issues reflejan el estado de los changes de OpenSpec.
+# Es la última red si el hook Stop de Claude Code (.claude/settings.json) estaba desactivado.
+name: OpenSpec sync
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  openspec-sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Comprobar sincronización de OpenSpec
+        run: node .claude/hooks/openspec-sync-check.cjs --ci

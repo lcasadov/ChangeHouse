@@ -1,0 +1,63 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# Revisión automática de Pull Requests. Forma parte de la puerta de calidad
+# ($QUALITY_GATE en docs/project.md): sus hallazgos deben atenderse antes de fusionar.
+language: es-ES
+
+reviews:
+  profile: assertive
+  # Pide cambios cuando hay hallazgos y aprueba cuando se resuelven.
+  # Junto con la protección de rama (conversaciones resueltas), bloquea la fusión.
+  request_changes_workflow: true
+  high_level_summary: true
+  review_status: true
+  collapse_walkthrough: true
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - develop
+      - master
+  path_filters:
+    - "!**/pnpm-lock.yaml"
+    - "!**/*.snap"
+    - "!**/dist/**"
+    - "!**/.expo/**"
+  path_instructions:
+    - path: "**/*.{ts,tsx}"
+      instructions: >-
+        Aplica las reglas de calidad de .claude/skills/code-quality/ (SKILL.md,
+        typescript-react.md y typescript-react.local.md). Señala cualquier
+        prueba debilitada (aserciones relajadas, casos omitidos o deshabilitados)
+        y cualquier cambio de comportamiento sin prueba que lo cubra.
+    - path: "services/api/**"
+      instructions: >-
+        Arquitectura hexagonal: el dominio no importa infraestructura, no hay
+        lógica de negocio en los adaptadores HTTP y la autorización es
+        deny-by-default y centralizada. No se aceptan endpoints, campos ni
+        códigos de estado que no figuren en el contrato de API.
+    - path: "apps/**"
+      instructions: >-
+        Sin valores literales de color, sombra, radio o espaciado: solo tokens
+        del sistema de diseño. Todo texto visible pasa por i18n. Revisa
+        accesibilidad (etiquetas, foco, contraste).
+    - path: ".github/workflows/**"
+      instructions: >-
+        Sin secretos en el fichero; permissions mínimos y explícitos; las
+        puertas (tests, cobertura, lint) bloquean, no avisan. El despliegue
+        consume el artefacto construido, no recompila.
+    - path: "openspec/**"
+      instructions: >-
+        Cada requisito usa SHALL/MUST y tiene al menos un Scenario en
+        GIVEN/WHEN/THEN. En tasks.md, las tareas de prueba van antes que las de
+        implementación y cada tarea lleva identificador estable.
+
+knowledge_base:
+  code_guidelines:
+    enabled: true
+    filePatterns:
+      - "CLAUDE.md"
+      - ".claude/rules/**/*.md"
+      - ".claude/skills/code-quality/**/*.md"
+
+chat:
+  auto_reply: true
