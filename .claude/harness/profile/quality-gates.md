@@ -66,7 +66,9 @@ Lo que no puede es empeorar. Cada cambio deja el conjunto igual o mejor.
 - *Require conversation resolution before merging*: cada comentario de
   CodeRabbit es una conversación abierta hasta que se corrige o se responde y
   se resuelve.
-- Checks de GitHub Actions requeridos y rama al día con la de destino.
+- Checks de GitHub Actions requeridos y rama al día con la de destino. Hoy el
+  único check requerido es `openspec-sync`; lint, tipos, pruebas, cobertura y
+  escaneo de dependencias se añaden como requeridos cuando exista `ci.yml`.
 - Aplicada también a administradores: nadie se la salta.
 
 Cambiar la protección (quitar un check requerido, desactivar la resolución de
@@ -80,7 +82,9 @@ La protección impide fusionar si algo falla, pero **los agentes nunca fusionan*
 
 ```bash
 gh pr checks <PR>                       # todos en verde, ninguno pendiente
-gh pr view <PR> --json reviewDecision,reviews \n  --jq '.reviews[] | select(.author.login=="coderabbitai") | .state'   # último estado: APPROVED o COMMENTED, nunca CHANGES_REQUESTED
+# Revisión de CodeRabbit más reciente sobre el HEAD actual: APPROVED o COMMENTED, nunca CHANGES_REQUESTED.
+# Si devuelve null, CodeRabbit aún no ha revisado el último commit: espera.
+gh pr view <PR> --json headRefOid,reviews \n  --jq '(.headRefOid) as $head | [.reviews[] | select(.author.login=="coderabbitai" and .commit.oid==$head)] | max_by(.submittedAt) | .state'
 gh api graphql -f query='query($o:String!,$r:String!,$n:Int!){repository(owner:$o,name:$r){pullRequest(number:$n){reviewThreads(first:100){nodes{isResolved}}}}}' \n  -F o=lcasadov -F r=Habitinder -F n=<PR> \n  --jq '[.data.repository.pullRequest.reviewThreads.nodes[]|select(.isResolved==false)]|length'   # debe ser 0
 ```
 

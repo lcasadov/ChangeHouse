@@ -318,7 +318,7 @@ sanear la deuda previa de golpe, pero **no se admite deuda nueva**.
 | `$NEW_CODE_DEFINITION` | Líneas añadidas o modificadas por la Pull Request respecto a su rama de destino | Qué cuenta como código nuevo |
 | `$COVERAGE_CMD` | `⚠️ PENDIENTE` | Comando que genera el informe |
 | `$QG_PROVIDER` | `CodeRabbit` (revisión automática de Pull Requests en GitHub) | Herramienta de análisis estático y puerta de calidad |
-| `$QUALITY_GATE` | Checks de GitHub Actions (lint, tipos, pruebas y cobertura) en verde **y** revisión de CodeRabbit sin conversaciones abiertas, exigidos por la protección de rama de `$BASE_BRANCH` y `$PROD_BRANCH` (aplicada también a administradores) | Nombre de la puerta aplicada y criterio de bloqueo |
+| `$QUALITY_GATE` | Checks de GitHub Actions (lint, tipos, pruebas, cobertura, `openspec-sync` y escaneo de dependencias sin vulnerabilidades críticas) en verde **y** revisión de CodeRabbit sin conversaciones abiertas, exigidos por la protección de rama de `$BASE_BRANCH` y `$PROD_BRANCH` (aplicada también a administradores) | Nombre de la puerta aplicada y criterio de bloqueo |
 | `$QG_LEVEL` | `N/A` — ver `.claude/harness/profile/quality-gates.md` | Nivel o perfil asignado al proyecto, si aplica |
 | `$CODE_STANDARDS_DOC` | `⚠️ PENDIENTE` | Ruta a los estándares de codificación |
 | `$TEST_FRAMEWORKS` | `⚠️ PENDIENTE` | Marcos de prueba por nivel |
