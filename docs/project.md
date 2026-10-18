@@ -315,7 +315,7 @@ Reglas de dependencia:
 | `$BUNDLER` | `⚠️ SUPUESTO: Metro (Expo) y Vite (Astro)` | Empaquetador o herramienta de construcción |
 | `$FRONTEND_ROOT` | `⚠️ SUPUESTO: apps/mobile` (app) y `⚠️ SUPUESTO: apps/landing` (landing) | Raíz del código de cliente |
 | `$STATE_MANAGEMENT` | TanStack Query (estado de servidor) + Zustand (estado local) | Gestión de estado global |
-| `$HTTP_CLIENT` | `⚠️ PENDIENTE` | Cliente de red configurado |
+| `$HTTP_CLIENT` | `fetch` nativo envuelto en un cliente tipado `openapi-fetch`, con tipos generados desde `docs/api/openapi.yaml` (`openapi-typescript`); TanStack Query encima | Cliente de red configurado |
 | `$TYPECHECK_CMD` | `⚠️ SUPUESTO: pnpm typecheck` (`tsc --noEmit` en cada paquete) | Comando de comprobación de tipos, o `N/A` |
 
 ### Presentación
@@ -324,7 +324,7 @@ Reglas de dependencia:
 |---|---|---|
 | `$THEMES` | claro (predeterminado) · oscuro; sigue la preferencia del sistema | Lista de temas soportados, con el predeterminado marcado |
 | `$STYLE_GUIDE_DOC` | `docs/style-guide.md` (tokens implementados en `packages/ui`) | Ruta al documento de tokens y patrones |
-| `$I18N` | Idiomas: `es-ES` en el MVP, todos los textos externalizados para añadir inglés (RNF-42). Librería y ruta de recursos: `⚠️ PENDIENTE` | Sistema, idiomas soportados y ruta de recursos |
+| `$I18N` | `i18next` + `react-i18next` + `expo-localization`. Idiomas: `es-ES` en el MVP, preparado para inglés (RNF-42). Recursos en `apps/mobile/src/i18n/locales/<idioma>.json` (landing: i18n de Astro) | Sistema, idiomas soportados y ruta de recursos |
 | `$A11Y_LEVEL` | WCAG 2.2 AA | Nivel de accesibilidad exigido |
 | `$BROWSER_MATRIX` | Web: dos últimas versiones de Chrome, Safari, Firefox y Edge. Móvil: Android 10+, iOS 16+ | Navegadores y versiones mínimas soportadas |
 
@@ -348,13 +348,13 @@ sanear la deuda previa de golpe, pero **no se admite deuda nueva**.
 | `$NEW_CODE_DEFINITION` | Líneas añadidas o modificadas por la Pull Request respecto a su rama de destino | Qué cuenta como código nuevo |
 | `$COVERAGE_CMD` | `⚠️ SUPUESTO: pnpm test:coverage` (Vitest con umbral de cobertura configurado) | Comando que genera el informe |
 | `$QG_PROVIDER` | `CodeRabbit` (revisión automática de Pull Requests en GitHub) | Herramienta de análisis estático y puerta de calidad |
-| `$QUALITY_GATE` | Checks de GitHub Actions (lint, tipos, pruebas, cobertura, `openspec-sync` y escaneo de dependencias sin vulnerabilidades críticas) en verde **y** revisión de CodeRabbit sin conversaciones abiertas, exigidos por la protección de rama de `$BASE_BRANCH` y `$PROD_BRANCH` (aplicada también a administradores) | Nombre de la puerta aplicada y criterio de bloqueo |
+| `$QUALITY_GATE` | Checks de GitHub Actions (lint, tipos, pruebas, cobertura, `openspec-sync` y escaneo de dependencias sin vulnerabilidades críticas) en verde **y** revisión de CodeRabbit sobre el HEAD de la PR en estado `APPROVED` o `COMMENTED` (nunca `CHANGES_REQUESTED`) y sin conversaciones abiertas, exigidos por la protección de rama de `$BASE_BRANCH` y `$PROD_BRANCH` (aplicada también a administradores) | Nombre de la puerta aplicada y criterio de bloqueo |
 | `$QG_LEVEL` | `N/A` — ver `.claude/harness/profile/quality-gates.md` | Nivel o perfil asignado al proyecto, si aplica |
 | `$CODE_STANDARDS_DOC` | `docs/code-standards.md` | Ruta a los estándares de codificación |
 | `$TEST_FRAMEWORKS` | Unitarias e integración: Vitest · BD real: Testcontainers (PostgreSQL) · Componentes: React Native Testing Library · E2E web: Playwright · E2E móvil: Maestro · Propiedades: fast-check | Marcos de prueba por nivel |
 | `$TEST_UNIT_CMD` | `⚠️ SUPUESTO: pnpm test` | Comando de pruebas unitarias |
-| `$TEST_INTEGRATION_CMD` | `⚠️ PENDIENTE` | Comando de pruebas de integración |
-| `$TEST_E2E_CMD` | `⚠️ PENDIENTE` | Comando de pruebas de extremo a extremo |
+| `$TEST_INTEGRATION_CMD` | `⚠️ SUPUESTO: pnpm test:integration` (decidido; se verifica con el scaffold) | Comando de pruebas de integración |
+| `$TEST_E2E_CMD` | `⚠️ SUPUESTO: pnpm test:e2e` (decidido; Playwright en web y Maestro en móvil) | Comando de pruebas de extremo a extremo |
 | `$PROPERTY_TESTING_LIB` | fast-check (obligatoria en matching y simulador fiscal, RNF-33) | Librería de pruebas basadas en propiedades, o `ninguna` |
 | `$TEST_MANAGEMENT` | `ninguna` — los casos de prueba son los `#### Scenario:` de OpenSpec | Gestión de casos de prueba, o `ninguna` |
 
@@ -388,11 +388,11 @@ separando código nuevo de código existente.
 | Variable | Valor | Ejemplo |
 |---|---|---|
 | `$AUTH_MECHANISM` | Firebase Authentication (email/contraseña, Google, Apple); la API verifica el ID token de Firebase en cada petición, sin sesión de servidor | Mecanismo de autenticación y modelo de sesión |
-| `$ACCESS_SEGREGATION_MODEL` | Por rol (`visitante`, `propietario`, `buscador`, `gestoria`, `admin`) más propiedad o participación en el recurso (vivienda, match, operación asignada). Deny-by-default centralizado en la API | Modelo de segregación: por rol, organización, ámbito… |
+| `$ACCESS_SEGREGATION_MODEL` | Por rol —`visitor` (sin token); `owner` y `seeker`, **derivados** de tener o no vivienda publicada; `agency` y `admin`, **asignados** y exclusivos— más propiedad o participación en el recurso (vivienda, match, operación asignada). Deny-by-default centralizado en la API | Modelo de segregación: por rol, organización, ámbito… |
 | `$RBAC_MATRIX_DOC` | `docs/rbac-matrix.md` | Ruta a la matriz de roles y permisos |
 | `$NORMATIVA` | RGPD, LOPDGDD, LSSI-CE, OWASP ASVS nivel 2 (API y web), OWASP MASVS (móvil), WCAG 2.2 AA, directrices de App Store y Google Play | Marcos normativos aplicables, o `ninguno` |
 | `$DATOS_CATEGORIA_ESPECIAL` | `⚠️ SUPUESTO: ninguna categoría del art. 9 RGPD en el MVP; el KYC de fase 2 puede tratar biometría, que se tratará como categoría especial`. Datos personales sensibles no especiales: dirección exacta, teléfono, cargas hipotecarias, situación VPP, edad ≥ 65 | ¿Se tratan datos sensibles? Cuáles |
-| `$LOG_RETENTION` | `⚠️ PENDIENTE` | Retención de registros de auditoría |
+| `$LOG_RETENTION` | Auditoría (`audit_log`): 2 años · Lista de espera: hasta el lanzamiento + 12 meses, o hasta la baja · Chat: mientras exista el match + 12 meses · Logs de aplicación: retención por defecto de Cloud Logging | Retención de registros de auditoría |
 | `$EXPOSES_WEB_UI` | sí (app web de Expo, landing Astro y panel de administración) | `sí` / `no` — activa las comprobaciones de seguridad web |
 | `$DAST_TOOL` | Análisis DAST asistido por IA: el agente `security` de Claude Code prueba la aplicación en ejecución en `DES`. Sin herramienta comercial | Herramienta de análisis dinámico, o `ninguna` |
 
@@ -486,4 +486,4 @@ todavía: la fuente es el `README.md`. Los comandos y rutas quedan como
 | `$DEPLOY_TARGET`, `$CONTAINER_RUNTIME`, `$IAC_TOOL`, `$OBSERVABILITY` | README §7, §12 | alta |
 | `$LEGACY_MODULES` | README (proyecto nuevo) | alta |
 | Versionado (tabla) | perfil `versioning.md` | alta |
-| `$HTTP_CLIENT`, `$I18N`, `$LOG_RETENTION`, `$TEST_INTEGRATION_CMD`, `$TEST_E2E_CMD` | sin evidencia | — (pendiente) |
+| `$HTTP_CLIENT`, `$I18N`, `$LOG_RETENTION`, `$TEST_INTEGRATION_CMD`, `$TEST_E2E_CMD`, roles de `$ACCESS_SEGREGATION_MODEL` | decisión del usuario (2026-10-18, validación) | alta (comandos sin ejecutar) |
