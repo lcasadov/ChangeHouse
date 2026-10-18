@@ -1,0 +1,38 @@
+# Construye una vez y publica los artefactos versionados que se despliegan en DES y PROD.
+name: Build
+
+on:
+  push:
+    branches: [develop, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build-artifacts
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    outputs:
+      version: ${{ steps.version.outputs.semVer }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # GitVersion necesita el historial completo
+      - uses: gittools/actions/gitversion/setup@7417b1089e2c7de93510f1901d656ddf60bb024f # v4.7.0
+        with:
+          versionSpec: '6.x'
+      - id: version
+        uses: gittools/actions/gitversion/execute@7417b1089e2c7de93510f1901d656ddf60bb024f # v4.7.0
+      - uses: ./.github/actions/setup
+      - run: pnpm build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: changehouse-${{ steps.version.outputs.semVer }}
+          path: |
+            services/api/dist
+            apps/landing/dist
+            apps/mobile/dist
+          if-no-files-found: error
+          retention-days: 30

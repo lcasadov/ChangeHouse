@@ -1,0 +1,7 @@
+# Versionado SemVer con GitVersion (.claude/harness/profile/versioning.md).
+# Los mensajes de commit pueden forzar el incremento: ver $VERSION_BUMP_KEYWORDS.
+workflow: GitFlow/v1
+major-version-bump-message: '\b(breaking|BREAKING CHANGE|increment major)\b'
+minor-version-bump-message: '\b(feat|increment minor)\b'
+patch-version-bump-message: '\bincrement patch\b'
+no-bump-message: '\bincrement none\b'
