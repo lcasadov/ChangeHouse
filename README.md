@@ -180,7 +180,7 @@ Prioridad: **M** (MVP, imprescindible) · **S** (fase 2) · **C** (fase 3+).
 | RF-42 | Vista alternativa en lista y en mapa | S |
 | RF-43 | Guardado de favoritos | S |
 | RF-44 | Los descartes no vuelven a mostrarse salvo que la vivienda cambie de forma relevante (precio, fotos) | M |
-| RF-45 | Límite diario de likes configurable (anti-spam) | M |
+| RF-45 | Límite diario de likes configurable (anti-spam); 10 por usuario y día de inicio | M |
 
 ### 5.5 Matching
 
@@ -351,7 +351,7 @@ Todo el proyecto en **TypeScript**, organizado como **monorepo**.
 | Autenticación | Firebase Authentication (email, Google, Apple) |
 | Ficheros | Cloud Storage (bucket público de fotos vía CDN; bucket privado de documentos) |
 | Pagos | Stripe (Checkout / Payment Links para la comisión de éxito) |
-| Email transaccional | Extensión Trigger Email de Firebase (requiere un SMTP de salida, *pendiente de elegir*) |
+| Email transaccional | Extensión Trigger Email de Firebase con SMTP de Gmail (provisional hasta tener dominio propio) |
 | Errores | Sentry (app y API) |
 | Analítica | Firebase Analytics (con consentimiento) |
 | Pruebas | Vitest (unitarias e integración), fast-check (propiedades), Testcontainers (PostgreSQL real), React Native Testing Library, Playwright (web/landing), Maestro (E2E móvil) |
@@ -571,7 +571,7 @@ Requisitos del algoritmo:
 | Revisión de código | — | ✅ CodeRabbit en las pull requests de GitHub |
 | Gestor de tareas | — | ✅ GitHub Issues + GitHub Projects |
 | Rama base / producción | — | ✅ `develop` / `master` |
-| Proveedor de email transaccional | — | ✅ Extensión Trigger Email de Firebase (⚠️ falta elegir el SMTP de salida) |
+| Proveedor de email transaccional | — | ✅ Extensión Trigger Email de Firebase con SMTP de Gmail (provisional) |
 | Proveedor de KYC | Veriff · Onfido · Didit | Fase 2 |
 | Importe de la comisión de éxito | Fijo por parte vs. porcentaje | Validar con usuarios y gestorías |
 | Portal de gestoría | Dentro de la app web de Expo vs. aplicación web separada | Fase 2 |

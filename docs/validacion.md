@@ -12,7 +12,7 @@
 
 Resumen: 🔴 2 · 🟠 9 · 🟡 11 · 🔵 3 — **25 problemas**.
 
-**Estado tras la ronda del 2026-10-18**: 16 resueltos, 1 propuesta aplicada por confirmar (15), 3 parciales (9, 19, 21) y 5 pendientes o en curso (1, 18, 20, 23, 25).
+**Estado tras la ronda del 2026-10-18**: 20 resueltos, 1 parcial (23, dominio) y 4 pendientes o en curso (1 Node 24 y scaffold, 18 tipografía, 20 datos de categoría especial, 25 tras el scaffold). Además: preferencias de búsqueda por usuario con sustitución por vivienda.
 
 ---
 
@@ -95,7 +95,7 @@ Resumen: 🔴 2 · 🟠 9 · 🟡 11 · 🔵 3 — **25 problemas**.
 - **Ubicación**: README §16 (email transaccional) ↔ `docs/architecture.md` (adaptador `Mailer`) ↔ `docs/backlog.md` (lista de espera, avisos)
 - **Descripción**: sin proveedor de email no se pueden implementar la confirmación de la lista de espera ni RF-62.
 - **Solución propuesta**: decide el responsable: Resend, SendGrid o la extensión de Firebase. Criterio: región UE y contrato de encargado de tratamiento.
-- **Estado**: parcial (2026-10-18) — extensión Trigger Email de Firebase; **falta elegir el SMTP de salida**
+- **Estado**: resuelto (2026-10-18) — extensión Trigger Email de Firebase con SMTP de Gmail (cuenta y contraseña de aplicación las crea el responsable; provisional hasta tener dominio)
 
 ### Problema 10 de 25
 
@@ -131,7 +131,7 @@ Resumen: 🔴 2 · 🟠 9 · 🟡 11 · 🔵 3 — **25 problemas**.
 - **Ubicación**: `docs/api/openapi.yaml` `HomeType`, `features`, `ConsentType`; `docs/datamodel.md` `homes.type`
 - **Descripción**: listas abiertas: tipos de vivienda («piso, ático, dúplex, chalet, adosado…»), claves de `features` y tipos de consentimiento.
 - **Solución propuesta**: cerrar las listas con el responsable de producto antes del change de viviendas.
-- **Estado**: resuelto con propuesta (2026-10-18) — listas cerradas en `openapi.yaml` (`HomeType`, `HomeFeatures`, `ConsentType`); revisar
+- **Estado**: resuelto (2026-10-18) — listas cerradas aceptadas
 
 ### Problema 14 de 25
 
@@ -149,7 +149,7 @@ Resumen: 🔴 2 · 🟠 9 · 🟡 11 · 🔵 3 — **25 problemas**.
 - **Ubicación**: `docs/datamodel.md` R-5 ↔ `docs/api/openapi.yaml` `discoverHomes` ↔ RF-44
 - **Descripción**: RF-44 vuelve a mostrar un descarte si la vivienda «cambia de forma relevante», pero el modelo no guarda qué versión se descartó ni qué cambio es relevante.
 - **Solución propuesta**: `homes.relevant_changed_at` actualizado al cambiar valor o fotos, y `dismissals.dismissed_at` comparado con él. Confirmar qué cambios cuentan.
-- **Estado**: propuesta aplicada (2026-10-18) — `homes.relevant_changed_at` (cambio de valor o fotos); confirmar
+- **Estado**: resuelto (2026-10-18) — `homes.relevant_changed_at` aceptado
 
 ### Problema 16 de 25
 
@@ -185,7 +185,7 @@ Resumen: 🔴 2 · 🟠 9 · 🟡 11 · 🔵 3 — **25 problemas**.
 - **Ubicación**: `docs/rbac-matrix.md` §1 (exclusividad de roles) y §3 (bloqueos, suspendidos)
 - **Descripción**: tres supuestos de la matriz sin confirmar: admin y gestoría no pueden publicar ni dar me gusta; el bloqueo oculta mutuamente en descubrimiento e impide matches; un suspendido solo puede exportar sus datos.
 - **Solución propuesta**: confirmar los tres.
-- **Estado**: parcial (2026-10-18) — exclusividad de `agency`/`admin` confirmada; alcance del bloqueo y de la suspensión siguen como supuesto
+- **Estado**: resuelto (2026-10-18) — exclusividad, alcance del bloqueo y de la suspensión confirmados
 
 ### Problema 20 de 25
 
@@ -203,7 +203,7 @@ Resumen: 🔴 2 · 🟠 9 · 🟡 11 · 🔵 3 — **25 problemas**.
 - **Ubicación**: `docs/backlog.md` (límite diario, punto medio) ↔ README RF-45, RN-03
 - **Descripción**: valor del límite diario de likes y si el punto medio del rango de valor es global o por usuario.
 - **Solución propuesta**: decide producto. Propuesta: límite configurable por entorno (valor inicial a decidir) y punto medio global.
-- **Estado**: parcial (2026-10-18) — punto de referencia del rango **por usuario** (`valueReferencePct`, por defecto 50); falta el valor inicial del límite diario
+- **Estado**: resuelto (2026-10-18) — punto del rango por usuario; límite de 10 likes por usuario y día, configurable por entorno
 
 ### Problema 22 de 25
 
@@ -221,7 +221,7 @@ Resumen: 🔴 2 · 🟠 9 · 🟡 11 · 🔵 3 — **25 problemas**.
 - **Ubicación**: `docs/api/openapi.yaml` `servers` ↔ `docs/project.md`
 - **Descripción**: dominios de DES y PROD sin decidir (se usan marcadores `changehouse.example`).
 - **Solución propuesta**: decidir el dominio (comprobar disponibilidad y marca de «ChangeHouse»).
-- **Estado**: pendiente
+- **Estado**: parcial (2026-10-18) — elegido changehouse.com, pero está registrado por un tercero desde 1999 (vence el 17/12/2026); hay que comprarlo al titular o elegir otro
 
 ### Problema 24 de 25
 

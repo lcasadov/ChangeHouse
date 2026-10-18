@@ -31,9 +31,9 @@ info:
       Nunca trazas, consultas SQL ni nombres de tabla.
 servers:
   - url: https://api.des.changehouse.example/v1
-    description: DES (⚠️ dominio pendiente)
+    description: DES (⚠️ dominio pendiente de compra; elegido changehouse.com)
   - url: https://api.changehouse.example/v1
-    description: PROD (⚠️ dominio pendiente)
+    description: PROD (⚠️ dominio pendiente de compra; elegido changehouse.com)
 security:
   - firebaseIdToken: []
 tags:
@@ -386,7 +386,8 @@ paths:
     put:
       tags: [preferencias]
       operationId: putMySearchPreferences
-      summary: Define las preferencias de búsqueda (RF-30 a RF-33)
+      summary: Define las preferencias de búsqueda por defecto del usuario (RF-30 a RF-33)
+      description: Valen para todas sus viviendas salvo las que tengan preferencias propias.
       x-roles: [owner, seeker]
       requestBody:
         required: true
@@ -403,6 +404,56 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '422': { $ref: '#/components/responses/Unprocessable' }
 
+  /homes/{homeId}/search-preferences:
+    parameters:
+      - $ref: '#/components/parameters/HomeId'
+    get:
+      tags: [preferencias]
+      operationId: getHomeSearchPreferences
+      summary: Preferencias propias de una vivienda, si las tiene
+      x-roles: [resourceOwner]
+      responses:
+        '200':
+          description: Preferencias de la vivienda
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SearchPreferences' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404':
+          description: La vivienda no es del usuario, o no tiene preferencias propias (usa las del usuario)
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+    put:
+      tags: [preferencias]
+      operationId: putHomeSearchPreferences
+      summary: Define preferencias propias de una vivienda, que sustituyen a las del usuario para ella
+      x-roles: [resourceOwner]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SearchPreferences' }
+      responses:
+        '200':
+          description: Preferencias guardadas
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SearchPreferences' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+    delete:
+      tags: [preferencias]
+      operationId: deleteHomeSearchPreferences
+      summary: Elimina las preferencias propias de la vivienda; vuelve a usar las del usuario
+      x-roles: [resourceOwner]
+      responses:
+        '204': { description: Eliminadas }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   /discover:
     get:
       tags: [descubrimiento]
@@ -411,7 +462,8 @@ paths:
       description: |
         Viviendas `published`, que cumplen las preferencias del usuario, no
         descartadas (salvo cambio relevante), no propias y con compatibilidad
-        económica en ambos sentidos. Las VPP solo se muestran si el usuario
+        económica en ambos sentidos, con las preferencias de la vivienda si las
+        tiene o, si no, las del usuario. Las VPP solo se muestran si el usuario
         declara cumplir los requisitos. Un `seeker` puede mirar sin `homeId`
         (sin filtro de compatibilidad inversa), pero no da me gusta. Con
         `homeId`, la compatibilidad se calcula para esa vivienda del usuario.
@@ -1021,7 +1073,7 @@ components:
         application/problem+json:
           schema: { $ref: '#/components/schemas/Problem' }
     TooManyRequests:
-      description: Límite de peticiones o límite diario de likes superado (RF-45, RNF-06)
+      description: Límite de peticiones o límite diario de likes superado (10 por usuario y día, configurable por entorno; RF-45, RNF-06)
       headers:
         Retry-After:
           schema: { type: integer }

@@ -82,7 +82,7 @@ está detrás **para** decidir si me interesa apuntarme
 **Alcance**: propuesta de valor, «cómo funciona», historia del fundador y FAQ (RF-100). Blog fuera.
 **Dependencias**: T-01, T-06, T-07
 **Prioridad**: alta — condición de la fase 0
-**Riesgos o dudas**: textos y FAQ los redacta el negocio; dominio de la web pendiente
+**Riesgos o dudas**: textos y FAQ los redacta el negocio; dominio: changehouse.com está registrado por un tercero
 
 ### [Captación > Lista de espera] Apuntarse a la lista de espera
 
@@ -92,7 +92,7 @@ está detrás **para** decidir si me interesa apuntarme
 **Alcance**: formulario con consentimiento RGPD, protección anti-abuso, sin revelar si el email ya existía (RF-101). Consulta y exportación para el admin (`GET /admin/waitlist`).
 **Dependencias**: landing
 **Prioridad**: alta — mide el criterio de avance (~100 viviendas)
-**Riesgos o dudas**: mecanismo anti-bots; SMTP para el email de confirmación
+**Riesgos o dudas**: mecanismo anti-bots
 
 ### [Captación > Legal] Consultar aviso legal, privacidad, cookies y términos
 
@@ -166,7 +166,7 @@ está detrás **para** decidir si me interesa apuntarme
 **Alcance**: listado de mis viviendas, alta de varias, elegir desde qué vivienda descubro y doy me gusta (RF-20, adelantado al MVP por decisión del 2026-10-18)
 **Dependencias**: ficha
 **Prioridad**: media — amplía el MVP sin bloquear el match con una vivienda
-**Riesgos o dudas**: si las preferencias de búsqueda deben ser por vivienda en lugar de por usuario
+**Riesgos o dudas**: ninguno (preferencias por usuario con sustitución por vivienda, decidido)
 
 ### [Viviendas > Fotos] Añadir las fotos de mi vivienda
 
@@ -237,10 +237,10 @@ está detrás **para** decidir si me interesa apuntarme
 **Como** usuario **quiero** indicar zonas, filtros y cuánto estoy dispuesto a pagar o quiero recibir **para** ver solo viviendas que encajan
 
 **Capacidad**: `search-preferences` — nueva
-**Alcance**: zonas por municipio o radio, filtros, máximo a pagar y mínimo a recibir, y qué punto de mi rango de valor se usa para la compensación (RF-30 a RF-33, RN-03). Fecha de mudanza fuera (fase 2).
+**Alcance**: preferencias por defecto del usuario y, opcionalmente, propias de cada vivienda: zonas por municipio o radio, filtros, máximo a pagar y mínimo a recibir, y qué punto de mi rango de valor se usa para la compensación (RF-30 a RF-33, RN-03). Fecha de mudanza fuera (fase 2).
 **Dependencias**: perfil
 **Prioridad**: alta — sin preferencias no hay compatibilidad
-**Riesgos o dudas**: preferencias por usuario o por vivienda cuando haya varias (fase 3)
+**Riesgos o dudas**: ninguno adicional
 
 ### [Descubrimiento > Tarjetas] Descubrir viviendas compatibles
 
@@ -260,7 +260,7 @@ está detrás **para** decidir si me interesa apuntarme
 **Alcance**: me gusta (solo con vivienda publicada), descartar, deshacer (salvo si ya hay match), límite diario configurable (RF-41, RF-45, RN-01)
 **Dependencias**: tarjetas
 **Prioridad**: alta
-**Riesgos o dudas**: valor inicial del límite diario (configurable por entorno)
+**Riesgos o dudas**: ninguno (10 likes por usuario y día, configurable por entorno)
 
 ## Epic 6 · Matching
 
@@ -324,7 +324,7 @@ está detrás **para** decidir si me interesa apuntarme
 **Alcance**: push por FCM y email de eventos clave (RF-61, RF-62)
 **Dependencias**: match directo, chat
 **Prioridad**: alta
-**Riesgos o dudas**: SMTP de salida para la extensión Trigger Email de Firebase; preferencias de notificación del usuario
+**Riesgos o dudas**: cuenta de Gmail para el SMTP (la crea el responsable); preferencias de notificación del usuario
 
 ## Epic 8 · Administración
 
@@ -389,7 +389,4 @@ flowchart TD
 
 ## Preguntas abiertas
 
-1. Valor inicial del límite diario de likes.
-2. SMTP de salida para la extensión Trigger Email de Firebase.
-3. Preferencias de búsqueda por usuario o por vivienda, ahora que hay varias
-   viviendas por usuario.
+1. Dominio: changehouse.com está registrado por un tercero desde 1999.

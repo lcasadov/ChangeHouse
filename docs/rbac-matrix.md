@@ -57,7 +57,8 @@ Celda vacía = **denegado**. C consultar · A crear · M modificar · E eliminar
 | Dirección postal exacta ajena | | | C ³ | C ⁴ | C ⁵ |
 | Ubicación exacta ajena en el mapa | | C ¹⁰ | C ¹⁰ ³ | C | |
 | Fotos de vivienda propia | | A E ² | A E ² | | |
-| Preferencias de búsqueda propias | | C M | C M | | |
+| Preferencias de búsqueda propias (por defecto) | | C M | C M | | |
+| Preferencias de una vivienda propia | | C M E | C M E | | |
 | Descubrimiento | | C | C | | |
 | Me gusta | | | A ⁶ | | |
 | Descartar / deshacer | | A E | A E | | |
@@ -80,7 +81,7 @@ Celda vacía = **denegado**. C consultar · A crear · M modificar · E eliminar
 3. Solo si es `participant` del match o la operación.
 4. Solo para moderación y soporte, y queda registrado en `audit_log`.
 5. Solo si la operación está `assigned` a su gestoría.
-6. Solo si tiene vivienda `published` y no ha superado el límite diario (RF-45).
+6. Solo si tiene vivienda `published` y no ha superado el límite diario de 10 likes (RF-45, configurable por entorno).
 7. Solo si ese participante ha autorizado compartirlo (RF-53).
 8. Solo mensajes denunciados, para moderación.
 9. Exportación para contacto, con el consentimiento registrado.
@@ -116,9 +117,9 @@ Celda vacía = **denegado**. C consultar · A crear · M modificar · E eliminar
 - VPP: una vivienda VPP solo aparece en descubrimiento a usuarios con
   `meets_vpp_requirements = true` (RN-06).
 - Usuarios bloqueados: no se muestran mutuamente en descubrimiento ni pueden
-  formar match entre sí. ⚠️ SUPUESTO sobre el alcance del bloqueo.
+  formar match entre sí. Confirmado el 2026-10-18.
 - Usuario suspendido o borrado: toda petición autenticada devuelve 403, salvo
-  la exportación de datos. ⚠️ SUPUESTO.
+  la exportación de datos. Confirmado el 2026-10-18.
 
 **Segregación de funciones**
 
@@ -198,6 +199,9 @@ operación de la API sin filas en ese fichero hace fallar la prueba.
 | `deleteHomePhoto` | 401 | `resourceOwner` | `resourceOwner` | 403 | ajena → 404 |
 | `getMySearchPreferences` | 401 | ✅ | ✅ | 403 | `self` |
 | `putMySearchPreferences` | 401 | ✅ | ✅ | 403 | `self` |
+| `getHomeSearchPreferences` | 401 | `resourceOwner` | `resourceOwner` | 403 | ajena o sin preferencias propias → 404 |
+| `putHomeSearchPreferences` | 401 | `resourceOwner` | `resourceOwner` | 403 | ajena → 404 |
+| `deleteHomeSearchPreferences` | 401 | `resourceOwner` | `resourceOwner` | 403 | ajena → 404 |
 | `discoverHomes` | 401 | ✅ | ✅ | 403 | filtros RN-06, RN-11, bloqueos |
 | `likeHome` | 401 | 403 | ✅ | 403 | `fromHomeId` propia y publicada; RC-12, RC-13, RC-18 |
 | `dismissHome` | 401 | ✅ | ✅ | 403 | — |

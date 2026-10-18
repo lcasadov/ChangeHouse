@@ -19,7 +19,8 @@
 ```mermaid
 erDiagram
     users ||--o{ homes : "posee"
-    users ||--o| search_preferences : "define"
+    users ||--o{ search_preferences : "define"
+    homes ||--o| search_preferences : "sobrescribe"
     users ||--o{ consents : "acepta"
     homes ||--o{ home_photos : "tiene"
     homes ||--o{ likes : "da (from)"
@@ -100,6 +101,7 @@ erDiagram
     search_preferences {
         uuid id PK
         uuid user_id FK
+        uuid home_id FK "nulo = por defecto del usuario"
         geography areas
         text_array municipalities
         numeric radius_km
@@ -111,7 +113,8 @@ erDiagram
     }
     users ||--o{ homes : ""
     homes ||--o{ home_photos : ""
-    users ||--o| search_preferences : ""
+    users ||--o{ search_preferences : ""
+    homes ||--o| search_preferences : ""
 ```
 
 ### Grafo de interés y matches
@@ -285,7 +288,8 @@ confirmado. Identificadores: `uuid` v7 generado en la aplicación —
 
 | Atributo | Tipo | Significado |
 |---|---|---|
-| `user_id` | uuid FK, único | Una preferencia por usuario, común a todas sus viviendas. ⚠️ SUPUESTO: con varias viviendas por usuario podría hacer falta por vivienda |
+| `user_id` | uuid FK | Usuario dueño de las preferencias |
+| `home_id` | uuid FK, nulo | **Nulo** = preferencias por defecto del usuario, que valen para todas sus viviendas. **Con valor** = preferencias propias de esa vivienda, que sustituyen por completo a las de por defecto al buscar y emparejar desde ella |
 | `areas` | geography | Zona de interés (punto o polígono) |
 | `municipalities` | text[] | Municipios de interés. Ver R-2 |
 | `radius_km` | numeric | Radio alrededor del punto |
@@ -382,6 +386,7 @@ persistir). `audit_log` usa `bigint` identidad.
 | `homes.owner_id` → `users` | `RESTRICT` | El usuario se borra lógicamente; sus viviendas pasan a `closed` en el caso de uso |
 | `home_photos.home_id` → `homes` | `CASCADE` | Sin vivienda no hay fotos (el fichero se borra aparte) |
 | `search_preferences.user_id` → `users` | `CASCADE` | — |
+| `search_preferences.home_id` → `homes` | `CASCADE` | Las preferencias de una vivienda desaparecen con ella |
 | `likes.*`, `dismissals.*` → `homes` | `CASCADE` | Aristas sin sentido sin sus nodos |
 | `match_participants.match_id` → `matches` | `CASCADE` | — |
 | `match_participants.home_id`/`user_id` → `homes`/`users` | `RESTRICT` | El histórico de matches se conserva |
@@ -406,6 +411,7 @@ código):
 | `UNIQUE (firebase_uid)`, `UNIQUE (email)` en `users` | — |
 | `CHECK (position BETWEEN 1 AND 20)` en `home_photos` | RF-11 (el mínimo de 3 se valida en el caso de uso de publicación) |
 | `CHECK (value_reference_pct BETWEEN 0 AND 100)` en `search_preferences` | RN-03 (punto del rango por usuario) |
+| `UNIQUE (user_id) WHERE home_id IS NULL` y `UNIQUE (home_id)` en `search_preferences` | Una preferencia por defecto por usuario y como mucho una por vivienda |
 | `CHECK (blocker_id <> blocked_id)` en `user_blocks` | Sin auto-bloqueo |
 | `CHECK (assigned_role IS NULL OR NOT EXISTS viviendas)` — en el caso de uso, no en el esquema | `agency` y `admin` no publican viviendas (`docs/rbac-matrix.md` §1) |
 
@@ -427,7 +433,7 @@ transacción que crea el match, y se cubren con pruebas de propiedades.
 | Tarjetas de descubrimiento | viviendas `published` dentro de la zona, filtros, no descartadas, no propias, compatibilidad económica en ambos sentidos | GIST en `homes(approx_location)`; parcial `homes(status) WHERE status = 'published'`; PK de `dismissals` |
 | Matches de un usuario | `match_participants WHERE user_id = :u` | índice `match_participants(user_id)` |
 | Matches abiertos de una vivienda (para pausar al entrar en operación) | `match_participants WHERE home_id = :h` | PK `(match_id, home_id)` + índice `(home_id)` |
-| Límite diario de likes | likes de las viviendas de un usuario desde las 00:00 | índice `likes(from_home_id, created_at)` |
+| Límite diario de likes (10 por usuario y día, configurable por entorno) | likes de las viviendas de un usuario desde las 00:00 (Europe/Madrid) | índice `likes(from_home_id, created_at)` |
 | Moderación | `homes WHERE status = 'in_review' ORDER BY created_at` | parcial `homes(created_at) WHERE status = 'in_review'` |
 
 Volumetría declarada: **50.000 viviendas** con detección de ciclos < 1 s
