@@ -1,0 +1,126 @@
+{
+  "tracker": "github-issues",
+  "change": "add-landing",
+  "sprint": {
+    "path": "",
+    "created": false
+  },
+  "epic": {
+    "capability": "landing",
+    "id": 18,
+    "reused": false
+  },
+  "related_epics": [],
+  "feature": {
+    "id": 19,
+    "reused": false
+  },
+  "stories": [
+    {
+      "key": "Presentación de la propuesta de valor",
+      "id": 20,
+      "reused": false,
+      "prio": "P1"
+    },
+    {
+      "key": "Páginas legales",
+      "id": 21,
+      "reused": false,
+      "prio": "P1"
+    },
+    {
+      "key": "Consentimiento de cookies",
+      "id": 22,
+      "reused": false,
+      "prio": "P1"
+    },
+    {
+      "key": "Accesibilidad, temas y adaptación a pantalla",
+      "id": 23,
+      "reused": false,
+      "prio": "P2"
+    },
+    {
+      "key": "Descubrimiento en buscadores",
+      "id": 24,
+      "reused": false,
+      "prio": "P3"
+    }
+  ],
+  "tasks": [
+    {
+      "key": "T1",
+      "id": 25,
+      "parent": 20,
+      "state": "open"
+    },
+    {
+      "key": "L1",
+      "id": 26,
+      "parent": 20,
+      "state": "open"
+    },
+    {
+      "key": "L2",
+      "id": 27,
+      "parent": 20,
+      "state": "open"
+    },
+    {
+      "key": "T2",
+      "id": 28,
+      "parent": 21,
+      "state": "open"
+    },
+    {
+      "key": "L3",
+      "id": 29,
+      "parent": 21,
+      "state": "open"
+    },
+    {
+      "key": "T3",
+      "id": 30,
+      "parent": 22,
+      "state": "open"
+    },
+    {
+      "key": "L4",
+      "id": 31,
+      "parent": 22,
+      "state": "open"
+    },
+    {
+      "key": "T4",
+      "id": 32,
+      "parent": 23,
+      "state": "open"
+    },
+    {
+      "key": "L5",
+      "id": 33,
+      "parent": 23,
+      "state": "open"
+    },
+    {
+      "key": "T5",
+      "id": 34,
+      "parent": 24,
+      "state": "open"
+    },
+    {
+      "key": "L6",
+      "id": 35,
+      "parent": 24,
+      "state": "open"
+    },
+    {
+      "key": "V1",
+      "id": 36,
+      "parent": 23,
+      "state": "open"
+    }
+  ],
+  "bugs": [],
+  "pending": []
+}
