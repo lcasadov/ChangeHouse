@@ -16,28 +16,28 @@ oculta es comodidad, no control de acceso.
 
 | Rol técnico | Tipo | Descripción | Perfil |
 |---|---|---|---|
-| `visitante` | implícito (sin token) | Navega la landing y se apunta a la lista de espera | Cualquier persona |
-| `buscador` | **derivado** | Usuario registrado **sin** vivienda publicada: mira, no genera matches | Particular que aún no ha publicado |
-| `propietario` | **derivado** | Usuario registrado con al menos una vivienda `published`, `paused` o `in_operation` | Particular que quiere permutar |
-| `gestoria` | asignado (fase 2) | Profesional de una gestoría asociada; ve y tramita las operaciones asignadas | Gestoría |
+| `visitor` | implícito (sin token) | Navega la landing y se apunta a la lista de espera | Cualquier persona |
+| `seeker` | **derivado** | Usuario registrado **sin** vivienda publicada: mira, no genera matches | Particular que aún no ha publicado |
+| `owner` | **derivado** | Usuario registrado con al menos una vivienda `published`, `paused` o `in_operation` | Particular que quiere permutar |
+| `agency` | asignado (fase 2) | Profesional de una gestoría asociada; ve y tramita las operaciones asignadas | Gestoría |
 | `admin` | asignado | Equipo ChangeHouse: moderación, verificación, soporte, métricas | Equipo interno |
 
 **Roles derivados frente a asignados** (decisión de este documento, ver
-`docs/datamodel.md` R-4): `propietario` y `buscador` **no se guardan**; se
+`docs/datamodel.md` R-4): `owner` y `seeker` **no se guardan**; se
 calculan en cada petición a partir de las viviendas del usuario. Así un usuario
-pasa de buscador a propietario al publicar sin que nadie le cambie el rol.
-`gestoria` y `admin` se asignan y se guardan como *custom claims* de Firebase
+pasa de `seeker` a `owner` al publicar sin que nadie le cambie el rol.
+`agency` y `admin` se asignan y se guardan como *custom claims* de Firebase
 **y** en la base de datos; la API usa la base de datos como fuente de verdad.
 
-**Acumulación**: `propietario` y `buscador` son **exclusivos** entre sí. `admin`
-y `gestoria` son **exclusivos** con los demás: una cuenta de admin o de gestoría
-no publica viviendas ni da likes (segregación de funciones). ⚠️ SUPUESTO: pendiente de confirmar.
+**Acumulación**: `owner` y `seeker` son **exclusivos** entre sí. `admin`
+y `agency` son **exclusivos** con los demás: una cuenta de admin o de gestoría
+no publica viviendas ni da likes (segregación de funciones). Confirmado el 2026-10-18.
 
 Calificadores contextuales que se combinan con el rol:
 
 | Calificador | Significa |
 |---|---|
-| `owner` | Es el propietario del recurso (vivienda, foto) |
+| `resourceOwner` | Es el propietario del recurso (vivienda, foto) |
 | `participant` | Su vivienda forma parte del match |
 | `assigned` | La operación está asignada a su gestoría (fase 2) |
 | `self` | El recurso es su propia cuenta |
@@ -46,7 +46,7 @@ Calificadores contextuales que se combinan con el rol:
 
 Celda vacía = **denegado**. C consultar · A crear · M modificar · E eliminar.
 
-| Recurso | visitante | buscador | propietario | admin | gestoria (fase 2) |
+| Recurso | visitor | seeker | owner | admin | agency (fase 2) |
 |---|---|---|---|---|---|
 | Propia cuenta (`/me`) | | C A M E ¹ | C A M E ¹ | C M | C M |
 | Exportación de datos propios | | C | C | | C |
@@ -54,7 +54,8 @@ Celda vacía = **denegado**. C consultar · A crear · M modificar · E eliminar
 | Vivienda propia | | C A M ² | C A M ² | | |
 | Vivienda ajena publicada (forma pública) | | C | C | C | |
 | Vivienda ajena no publicada | | | | C | |
-| Dirección exacta ajena | | | C ³ | C ⁴ | C ⁵ |
+| Dirección postal exacta ajena | | | C ³ | C ⁴ | C ⁵ |
+| Ubicación exacta ajena en el mapa | | C ¹⁰ | C ¹⁰ ³ | C | |
 | Fotos de vivienda propia | | A E ² | A E ² | | |
 | Preferencias de búsqueda propias | | C M | C M | | |
 | Descubrimiento | | C | C | | |
@@ -69,7 +70,7 @@ Celda vacía = **denegado**. C consultar · A crear · M modificar · E eliminar
 | Usuarios (panel) | | | | C suspender | |
 | Métricas | | | | C | |
 | Log de auditoría | | | | C | |
-| Lista de espera | A | | | C ⁹ | |
+| Lista de espera | A | | | C exportar ⁹ | |
 | Operación (fase 2) | | | C ³ | C | C M ⁵ |
 | Documentos de operación (fase 2) | | | C A ³ | | C A ⁵ |
 | Gestorías (fase 2) | | | | C A M | |
@@ -83,6 +84,7 @@ Celda vacía = **denegado**. C consultar · A crear · M modificar · E eliminar
 7. Solo si ese participante ha autorizado compartirlo (RF-53).
 8. Solo mensajes denunciados, para moderación.
 9. Exportación para contacto, con el consentimiento registrado.
+10. Si el propietario eligió ubicación exacta (`exact`); si eligió `area`, solo el barrio o zona, salvo para participantes de un match.
 
 ## 3 · Reglas contextuales
 
@@ -91,8 +93,10 @@ Celda vacía = **denegado**. C consultar · A crear · M modificar · E eliminar
 - Un usuario solo modifica viviendas cuyo `owner_id` es su `id`.
 - Un usuario solo ve un match, su chat, las direcciones exactas y las
   compensaciones si una de sus viviendas es participante.
-- El like se emite **siempre desde la vivienda publicada del usuario**; el
-  cliente no elige la vivienda origen en el MVP (una vivienda por usuario).
+- Un usuario puede tener **varias viviendas** (RF-20). El me gusta se emite
+  **desde una vivienda propia y publicada** que el cliente indica
+  (`fromHomeId`); la API comprueba que es suya y que está publicada. Cada
+  vivienda participa en el matching de forma independiente.
 
 **Estado**
 
@@ -129,15 +133,15 @@ Cada regla es una prueba automática. Formato: el rol X **no puede** Y sobre Z.
 | ID | Regla |
 |---|---|
 | RC-01 | Ninguna operación salvo `POST /waitlist` responde con éxito sin un ID token válido de Firebase |
-| RC-02 | Un `buscador` no puede dar me gusta (403) |
+| RC-02 | Un `seeker` no puede dar me gusta (403) |
 | RC-03 | Un usuario no puede modificar, enviar, pausar ni reactivar una vivienda ajena (404) |
-| RC-04 | Un usuario no puede ver la dirección exacta de una vivienda si no participa en un match que la incluya (no aparece en la respuesta) |
+| RC-04 | Un usuario no puede ver la dirección postal exacta de una vivienda si no participa en un match que la incluya, ni su ubicación exacta si el propietario eligió `area` (no aparece en la respuesta) |
 | RC-05 | Un usuario no puede ver un match en el que no participa (404) |
 | RC-06 | Un usuario no puede confirmar ni retirarse de un match en el que no participa (404) |
 | RC-07 | Un usuario no puede ver una vivienda ajena en `draft`, `in_review`, `paused` ni `closed` (404) |
 | RC-08 | Un usuario sin `meets_vpp_requirements` no recibe viviendas VPP en descubrimiento |
 | RC-09 | Una vivienda en `in_operation` no aparece en descubrimiento |
-| RC-10 | Un `propietario` o `buscador` no puede invocar ningún endpoint `/admin/*` (403) |
+| RC-10 | Un `owner` o `seeker` no puede invocar ningún endpoint `/admin/*` (403) |
 | RC-11 | Un usuario no puede ver el teléfono de otro participante si este no lo ha autorizado |
 | RC-12 | Un usuario no puede dar me gusta a su propia vivienda (422) |
 | RC-13 | Un usuario no puede superar el límite diario de likes (429) |
@@ -145,6 +149,8 @@ Cada regla es una prueba automática. Formato: el rol X **no puede** Y sobre Z.
 | RC-15 | Ninguna moderación ni suspensión se completa sin una entrada en `audit_log` |
 | RC-16 | Un usuario no puede leer ni escribir en el chat de Firestore de un match en el que no participa (reglas de seguridad de Firestore) |
 | RC-17 | El cliente no puede fijar `status`, `owner_id`, roles ni compensaciones: la API los ignora o rechaza (400) |
+| RC-18 | Un usuario no puede dar me gusta, descartar ni descubrir desde una vivienda que no es suya o no está publicada (`fromHomeId`/`homeId` ajena → 404; propia no publicada → 409) |
+| RC-19 | Un `agency` o `admin` no puede crear viviendas (403) |
 
 ### Matriz como datos
 
@@ -158,10 +164,10 @@ services/api/test/authorization/rbac-matrix.json
 
 ```json
 [
-  { "operationId": "likeHome", "actor": "buscador", "expected": 403 },
-  { "operationId": "likeHome", "actor": "propietario", "expected": 201 },
-  { "operationId": "getMatch", "actor": "propietario:no-participant", "expected": 404 },
-  { "operationId": "adminListHomes", "actor": "propietario", "expected": 403 }
+  { "operationId": "likeHome", "actor": "seeker", "expected": 403 },
+  { "operationId": "likeHome", "actor": "owner", "expected": 201 },
+  { "operationId": "getMatch", "actor": "owner:no-participant", "expected": 404 },
+  { "operationId": "adminListHomes", "actor": "owner", "expected": 403 }
 ]
 ```
 
@@ -172,7 +178,7 @@ operación de la API sin filas en ese fichero hace fallar la prueba.
 
 `anon` = sin token. Resultado para cada actor cuando la petición es válida.
 
-| operationId | anon | buscador | propietario | admin | Condición |
+| operationId | anon | seeker | owner | admin | Condición |
 |---|---|---|---|---|---|
 | `getMe` | 401 | ✅ | ✅ | ✅ | `self` |
 | `upsertMe` | 401 | ✅ | ✅ | ✅ | `self`; cualquier usuario autenticado, también sin alta previa |
@@ -182,18 +188,18 @@ operación de la API sin filas en ese fichero hace fallar la prueba.
 | `acceptConsent` | 401 | ✅ | ✅ | ✅ | `self` |
 | `registerDevice` | 401 | ✅ | ✅ | ✅ | `self` |
 | `listMyHomes` | 401 | ✅ | ✅ | 403 | `self` |
-| `createHome` | 401 | ✅ | ✅ (409 si ya tiene) | 403 | — |
-| `getHome` | 401 | ✅ pública / 404 | ✅ pública / 404 | ✅ completa | completa si `owner`; pública si `published`; si no, 404 |
-| `updateHome` | 401 | `owner` | `owner` | 403 | ajena → 404; estado → 409 |
-| `submitHome` | 401 | `owner` | `owner` | 403 | ídem |
-| `pauseHome` | 401 | — | `owner` | 403 | ídem |
-| `resumeHome` | 401 | `owner` | `owner` | 403 | ídem |
-| `createHomePhotoUpload` | 401 | `owner` | `owner` | 403 | ajena → 404 |
-| `deleteHomePhoto` | 401 | `owner` | `owner` | 403 | ajena → 404 |
+| `createHome` | 401 | ✅ | ✅ | 403 | varias por usuario |
+| `getHome` | 401 | ✅ pública / 404 | ✅ pública / 404 | ✅ completa | completa si `resourceOwner`; pública si `published`; si no, 404 |
+| `updateHome` | 401 | `resourceOwner` | `resourceOwner` | 403 | ajena → 404; estado → 409 |
+| `submitHome` | 401 | `resourceOwner` | `resourceOwner` | 403 | ídem |
+| `pauseHome` | 401 | — | `resourceOwner` | 403 | ídem |
+| `resumeHome` | 401 | `resourceOwner` | `resourceOwner` | 403 | ídem |
+| `createHomePhotoUpload` | 401 | `resourceOwner` | `resourceOwner` | 403 | ajena → 404 |
+| `deleteHomePhoto` | 401 | `resourceOwner` | `resourceOwner` | 403 | ajena → 404 |
 | `getMySearchPreferences` | 401 | ✅ | ✅ | 403 | `self` |
 | `putMySearchPreferences` | 401 | ✅ | ✅ | 403 | `self` |
 | `discoverHomes` | 401 | ✅ | ✅ | 403 | filtros RN-06, RN-11, bloqueos |
-| `likeHome` | 401 | 403 | ✅ | 403 | RC-12, RC-13 |
+| `likeHome` | 401 | 403 | ✅ | 403 | `fromHomeId` propia y publicada; RC-12, RC-13, RC-18 |
 | `dismissHome` | 401 | ✅ | ✅ | 403 | — |
 | `undoLastAction` | 401 | ✅ | ✅ | 403 | estado → 409 |
 | `listMyMatches` | 401 | ✅ (vacío) | ✅ | 403 | solo los propios |
@@ -211,9 +217,10 @@ operación de la API sin filas en ese fichero hace fallar la prueba.
 | `adminSetUserSuspension` | 401 | 403 | 403 | ✅ | auditoría |
 | `adminGetMetrics` | 401 | 403 | 403 | ✅ | — |
 | `adminListAuditLog` | 401 | 403 | 403 | ✅ | — |
+| `adminListWaitlist` | 401 | 403 | 403 | ✅ | exportación CSV |
 | `joinWaitlist` | ✅ 202 | ✅ 202 | ✅ 202 | ✅ 202 | límite de peticiones, anti-bots |
 
-`gestoria` no tiene operaciones en el MVP: todas le devuelven 403 salvo las de
+`agency` no tiene operaciones en el MVP: todas le devuelven 403 salvo las de
 `self` (`getMe`, `upsertMe`, consentimientos, dispositivos, exportación).
 
 ## 6 · Comportamiento ante denegación

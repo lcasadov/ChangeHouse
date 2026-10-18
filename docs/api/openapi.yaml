@@ -2,6 +2,9 @@ openapi: 3.1.0
 info:
   title: ChangeHouse API
   version: 0.1.0
+  license:
+    name: Propietaria — todos los derechos reservados
+    url: https://github.com/lcasadov/ChangeHouse/blob/develop/LICENSE
   summary: API de la plataforma de permuta de viviendas ChangeHouse.
   description: |
     Contrato de la API Fastify (`services/api`). Es la fuente de verdad de
@@ -19,7 +22,7 @@ info:
     - Paginación por cursor opaco: `cursor` + `limit`; respuesta con `nextCursor`.
     - Autenticación: ID token de Firebase en `Authorization: Bearer`.
     - Roles autorizados por operación en `x-roles` (ver `docs/rbac-matrix.md`).
-      `owner` = propietario del recurso; `participant` = participante del match.
+      `resourceOwner` = propietario del recurso; `participant` = participante del match.
     - **401** sin token o token inválido. **403** cuando la existencia del
       recurso no es secreta (p. ej. endpoints de administración) pero el rol no
       basta. **404** cuando el usuario no puede ver el recurso: no se revela su
@@ -57,7 +60,7 @@ paths:
       tags: [cuenta]
       operationId: getMe
       summary: Perfil del usuario autenticado
-      x-roles: [propietario, buscador, gestoria, admin]
+      x-roles: [owner, seeker, agency, admin]
       responses:
         '200':
           description: Perfil
@@ -97,7 +100,7 @@ paths:
       description: |
         Borrado lógico y anonimización de datos personales. Las viviendas pasan
         a `closed` y los matches abiertos se cierran para todos (RN-10).
-      x-roles: [propietario, buscador]
+      x-roles: [owner, seeker]
       responses:
         '204': { description: Cuenta eliminada }
         '401': { $ref: '#/components/responses/Unauthorized' }
@@ -107,7 +110,7 @@ paths:
       tags: [cuenta]
       operationId: exportMyData
       summary: Exporta los datos personales del usuario (portabilidad, RF-05)
-      x-roles: [propietario, buscador, gestoria]
+      x-roles: [owner, seeker, agency]
       responses:
         '200':
           description: Exportación en JSON
@@ -122,7 +125,7 @@ paths:
       tags: [cuenta]
       operationId: listMyConsents
       summary: Consentimientos registrados del usuario
-      x-roles: [propietario, buscador, gestoria, admin]
+      x-roles: [owner, seeker, agency, admin]
       responses:
         '200':
           description: Consentimientos
@@ -136,7 +139,7 @@ paths:
       tags: [cuenta]
       operationId: acceptConsent
       summary: Registra la aceptación de una versión de un documento legal o tratamiento
-      x-roles: [propietario, buscador, gestoria, admin]
+      x-roles: [owner, seeker, agency, admin]
       requestBody:
         required: true
         content:
@@ -155,7 +158,7 @@ paths:
       tags: [cuenta]
       operationId: registerDevice
       summary: Registra o refresca el token FCM del dispositivo (RF-61)
-      x-roles: [propietario, buscador, gestoria, admin]
+      x-roles: [owner, seeker, agency, admin]
       requestBody:
         required: true
         content:
@@ -176,7 +179,7 @@ paths:
       tags: [viviendas]
       operationId: listMyHomes
       summary: Viviendas del usuario, en cualquier estado
-      x-roles: [propietario, buscador]
+      x-roles: [owner, seeker]
       responses:
         '200':
           description: Viviendas
@@ -190,8 +193,8 @@ paths:
     post:
       tags: [viviendas]
       operationId: createHome
-      summary: Crea una vivienda en borrador (RF-10)
-      x-roles: [propietario, buscador]
+      summary: Crea una vivienda en borrador (RF-10). Un usuario puede tener varias (RF-20)
+      x-roles: [owner, seeker]
       requestBody:
         required: true
         content:
@@ -205,8 +208,8 @@ paths:
               schema: { $ref: '#/components/schemas/Home' }
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '409':
-          description: El usuario ya tiene una vivienda (una por usuario en el MVP; varias en fase 3, RF-20)
+        '403':
+          description: Las cuentas `agency` y `admin` no publican viviendas
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -220,9 +223,11 @@ paths:
       summary: Detalle de una vivienda
       description: |
         El propietario ve la ficha completa. Otros usuarios solo ven viviendas
-        `published` y en su forma pública (`HomePublic`); la dirección exacta
-        solo se incluye para participantes de un match (RN-08).
-      x-roles: [owner, propietario, buscador, admin]
+        `published` y en su forma pública (`HomePublic`): la ubicación exacta
+        solo si el propietario eligió `locationVisibility: exact`; si no, el
+        barrio o zona. La dirección postal exacta solo se incluye para
+        participantes de un match (RN-08).
+      x-roles: [resourceOwner, owner, seeker, admin]
       responses:
         '200':
           description: Vivienda
@@ -241,7 +246,7 @@ paths:
       description: |
         Una vivienda `published` que cambia datos relevantes vuelve a `in_review`
         (moderación previa, RF-18). No se puede modificar en `in_operation` ni `closed`.
-      x-roles: [owner]
+      x-roles: [resourceOwner]
       requestBody:
         required: true
         content:
@@ -266,7 +271,7 @@ paths:
       operationId: submitHome
       summary: Envía la vivienda a moderación (`draft` → `in_review`)
       description: Exige al menos 3 fotos (RF-11) y los campos obligatorios completos.
-      x-roles: [owner]
+      x-roles: [resourceOwner]
       responses:
         '200':
           description: Vivienda en revisión
@@ -284,7 +289,7 @@ paths:
       tags: [viviendas]
       operationId: pauseHome
       summary: Pausa una vivienda publicada (`published` → `paused`)
-      x-roles: [owner]
+      x-roles: [resourceOwner]
       responses:
         '200':
           description: Vivienda pausada
@@ -301,7 +306,7 @@ paths:
       tags: [viviendas]
       operationId: resumeHome
       summary: Reactiva una vivienda pausada (`paused` → `published`)
-      x-roles: [owner]
+      x-roles: [resourceOwner]
       responses:
         '200':
           description: Vivienda publicada
@@ -322,7 +327,7 @@ paths:
         Devuelve una URL firmada de subida de corta duración. Tras la subida, la
         API comprime la imagen y elimina los metadatos EXIF de ubicación antes
         de publicarla.
-      x-roles: [owner]
+      x-roles: [resourceOwner]
       requestBody:
         required: true
         content:
@@ -353,7 +358,7 @@ paths:
       tags: [viviendas]
       operationId: deleteHomePhoto
       summary: Elimina una foto
-      x-roles: [owner]
+      x-roles: [resourceOwner]
       responses:
         '204': { description: Eliminada }
         '401': { $ref: '#/components/responses/Unauthorized' }
@@ -369,7 +374,7 @@ paths:
       tags: [preferencias]
       operationId: getMySearchPreferences
       summary: Preferencias de búsqueda del usuario
-      x-roles: [propietario, buscador]
+      x-roles: [owner, seeker]
       responses:
         '200':
           description: Preferencias
@@ -382,7 +387,7 @@ paths:
       tags: [preferencias]
       operationId: putMySearchPreferences
       summary: Define las preferencias de búsqueda (RF-30 a RF-33)
-      x-roles: [propietario, buscador]
+      x-roles: [owner, seeker]
       requestBody:
         required: true
         content:
@@ -407,9 +412,16 @@ paths:
         Viviendas `published`, que cumplen las preferencias del usuario, no
         descartadas (salvo cambio relevante), no propias y con compatibilidad
         económica en ambos sentidos. Las VPP solo se muestran si el usuario
-        declara cumplir los requisitos. El buscador puede mirar, pero no da likes.
-      x-roles: [propietario, buscador]
+        declara cumplir los requisitos. Un `seeker` puede mirar sin `homeId`
+        (sin filtro de compatibilidad inversa), pero no da me gusta. Con
+        `homeId`, la compatibilidad se calcula para esa vivienda del usuario.
+      x-roles: [owner, seeker]
       parameters:
+        - name: homeId
+          in: query
+          required: false
+          description: Vivienda propia y publicada desde la que se busca. Obligatoria para un `owner` con varias viviendas
+          schema: { type: string, format: uuid }
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
       responses:
@@ -437,18 +449,20 @@ paths:
       operationId: likeHome
       summary: Me gusta en una vivienda (RF-41, RN-01, RN-02)
       description: |
-        Crea la arista desde la vivienda publicada del usuario hacia la vivienda
-        indicada y busca ciclos de 2 y 3 en la misma transacción. Si se cierra
-        un ciclo compatible, devuelve el match creado.
-      x-roles: [propietario]
+        Crea la arista desde una vivienda publicada del usuario (`fromHomeId`)
+        hacia la vivienda indicada y busca ciclos de 2 y 3 en la misma
+        transacción. Cada vivienda del usuario participa de forma independiente
+        (RF-20). Si se cierra un ciclo compatible, devuelve el match creado.
+      x-roles: [owner]
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [targetHomeId]
+              required: [fromHomeId, targetHomeId]
               properties:
+                fromHomeId: { type: string, format: uuid, description: Vivienda propia y publicada que ofrece el usuario }
                 targetHomeId: { type: string, format: uuid }
       responses:
         '201':
@@ -459,7 +473,7 @@ paths:
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403':
-          description: El usuario no tiene vivienda publicada (buscador, RN-01)
+          description: El usuario no tiene vivienda publicada (`seeker`, RN-01) o es `agency`/`admin`
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -475,7 +489,7 @@ paths:
       tags: [descubrimiento]
       operationId: dismissHome
       summary: Descarta una vivienda (RF-41, RF-44)
-      x-roles: [propietario, buscador]
+      x-roles: [owner, seeker]
       requestBody:
         required: true
         content:
@@ -484,6 +498,7 @@ paths:
               type: object
               required: [targetHomeId]
               properties:
+                fromHomeId: { type: string, format: uuid, description: Vivienda propia desde la que se descarta; omitida para un `seeker` }
                 targetHomeId: { type: string, format: uuid }
       responses:
         '204': { description: Descartada }
@@ -496,7 +511,13 @@ paths:
       operationId: undoLastAction
       summary: Deshace el último me gusta o descarte (RF-41)
       description: No deshace un like que ya ha formado un match.
-      x-roles: [propietario, buscador]
+      x-roles: [owner, seeker]
+      parameters:
+        - name: homeId
+          in: query
+          required: false
+          description: Vivienda propia cuya última acción se deshace; omitida para un `seeker`
+          schema: { type: string, format: uuid }
       responses:
         '204': { description: Deshecho }
         '401': { $ref: '#/components/responses/Unauthorized' }
@@ -512,7 +533,7 @@ paths:
       tags: [matches]
       operationId: listMyMatches
       summary: Matches en los que participa el usuario
-      x-roles: [propietario]
+      x-roles: [owner]
       parameters:
         - name: status
           in: query
@@ -557,6 +578,10 @@ paths:
       tags: [matches]
       operationId: confirmMatch
       summary: El participante confirma interés (RF-54)
+      description: |
+        Cuando todos confirman, el match pasa a `confirmed`. En el MVP no se
+        pausan los demás matches de esas viviendas; el paso a operación con
+        gestoría (`in_operation`) llega en la fase 2.
       x-roles: [participant]
       responses:
         '200':
@@ -612,7 +637,7 @@ paths:
       tags: [moderacion]
       operationId: createReport
       summary: Denuncia un usuario, una vivienda o un mensaje (RF-63)
-      x-roles: [propietario, buscador]
+      x-roles: [owner, seeker]
       requestBody:
         required: true
         content:
@@ -633,7 +658,7 @@ paths:
       tags: [moderacion]
       operationId: blockUser
       summary: Bloquea a un usuario (RF-63)
-      x-roles: [propietario, buscador]
+      x-roles: [owner, seeker]
       requestBody:
         required: true
         content:
@@ -876,6 +901,37 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
+  /admin/waitlist:
+    get:
+      tags: [administracion]
+      operationId: adminListWaitlist
+      summary: Lista de espera, consultable y exportable (RF-101)
+      x-roles: [admin]
+      parameters:
+        - name: municipality
+          in: query
+          required: false
+          schema: { type: string, maxLength: 120 }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Página de altas
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/WaitlistEntry' }
+                  nextCursor: { type: [string, 'null'] }
+            text/csv:
+              schema: { type: string }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
   /waitlist:
     post:
       tags: [captacion]
@@ -886,7 +942,7 @@ paths:
         anti-bots (⚠️ mecanismo pendiente). Responde 202 también si el email ya
         existía, para no revelar quién está apuntado.
       security: []
-      x-roles: [visitante]
+      x-roles: [visitor]
       requestBody:
         required: true
         content:
@@ -1003,11 +1059,35 @@ components:
 
     Role:
       type: string
-      enum: [propietario, buscador, gestoria, admin]
+      description: |
+        Roles técnicos. `owner` (tiene al menos una vivienda publicada, pausada o
+        en operación) y `seeker` (no la tiene) se **derivan**; `agency` y `admin`
+        se **asignan** y son exclusivos con los demás.
+      enum: [owner, seeker, agency, admin]
     HomeType:
       type: string
-      description: ⚠️ Lista pendiente de cerrar (README RF-10 enumera «piso, ático, dúplex, chalet, adosado…»).
-      enum: [piso, atico, duplex, chalet, adosado]
+      description: Lista cerrada (propuesta a partir de README RF-10).
+      enum: [piso, atico, duplex, estudio, bajo, chalet, adosado, pareado, casa]
+    HomeFeatures:
+      type: object
+      description: Características con claves cerradas (propuesta).
+      additionalProperties: false
+      properties:
+        terrace: { type: boolean }
+        balcony: { type: boolean }
+        garden: { type: boolean }
+        communalPool: { type: boolean }
+        privatePool: { type: boolean }
+        airConditioning: { type: boolean }
+        heating: { type: string, enum: [none, individual, central] }
+        exterior: { type: boolean }
+        accessible: { type: boolean, description: Accesible sin escalones desde la calle }
+        condition: { type: string, enum: [new, good, needs_renovation] }
+    LocationVisibility:
+      type: string
+      description: '`exact`: ubicación exacta pública; `area`: solo barrio o zona.'
+      enum: [exact, area]
+      default: area
     HomeStatus:
       type: string
       enum: [draft, in_review, published, paused, in_operation, closed]
@@ -1025,7 +1105,7 @@ components:
       enum: [open, resolved, dismissed]
     ConsentType:
       type: string
-      description: ⚠️ Lista pendiente de validar con el registro de actividades de tratamiento.
+      description: Lista cerrada (propuesta); se revisa con el registro de actividades de tratamiento.
       enum: [terms, privacy, analytics, marketing, third_party_referral]
     Money:
       type: integer
@@ -1053,7 +1133,7 @@ components:
         roles:
           type: array
           items: { $ref: '#/components/schemas/Role' }
-        hasPublishedHome: { type: boolean, description: 'true = propietario; false = buscador' }
+        hasPublishedHome: { type: boolean, description: 'true = owner; false = seeker' }
     MeInput:
       type: object
       required: [displayName]
@@ -1100,10 +1180,8 @@ components:
         hasLift: { type: boolean }
         garage: { type: boolean }
         storageRoom: { type: boolean }
-        features:
-          type: object
-          description: Terraza, piscina comunitaria, estado… ⚠️ claves pendientes de cerrar
-          additionalProperties: { type: [boolean, string, number] }
+        features: { $ref: '#/components/schemas/HomeFeatures' }
+        locationVisibility: { $ref: '#/components/schemas/LocationVisibility' }
         energyRating: { type: string, enum: [A, B, C, D, E, F, G] }
         yearBuilt: { type: integer, minimum: 1800, maximum: 2100 }
         valueMinCents: { $ref: '#/components/schemas/Money' }
@@ -1129,7 +1207,8 @@ components:
         hasLift: { type: boolean }
         garage: { type: boolean }
         storageRoom: { type: boolean }
-        features: { $ref: '#/components/schemas/HomeInput/properties/features' }
+        features: { $ref: '#/components/schemas/HomeFeatures' }
+        locationVisibility: { $ref: '#/components/schemas/LocationVisibility' }
         energyRating: { type: string, enum: [A, B, C, D, E, F, G] }
         yearBuilt: { type: integer, minimum: 1800, maximum: 2100 }
         valueMinCents: { $ref: '#/components/schemas/Money' }
@@ -1141,8 +1220,8 @@ components:
         vppMaxLegalPriceCents: { $ref: '#/components/schemas/Money' }
     HomePublic:
       type: object
-      description: Forma pública de una vivienda. Sin dirección exacta ni datos del propietario.
-      required: [id, type, regime, usefulM2, builtM2, bedrooms, bathrooms, valueMinCents, valueMaxCents, approxLocation, photos]
+      description: Forma pública de una vivienda. Sin dirección postal exacta ni datos del propietario.
+      required: [id, type, regime, usefulM2, builtM2, bedrooms, bathrooms, valueMinCents, valueMaxCents, location, photos]
       properties:
         id: { type: string, format: uuid }
         type: { $ref: '#/components/schemas/HomeType' }
@@ -1155,18 +1234,19 @@ components:
         hasLift: { type: boolean }
         garage: { type: boolean }
         storageRoom: { type: boolean }
-        features: { type: object, additionalProperties: true }
+        features: { $ref: '#/components/schemas/HomeFeatures' }
         energyRating: { type: [string, 'null'] }
         yearBuilt: { type: [integer, 'null'] }
         valueMinCents: { $ref: '#/components/schemas/Money' }
         valueMaxCents: { $ref: '#/components/schemas/Money' }
-        approxLocation:
+        location:
           type: object
-          required: [center, radiusM]
+          description: Punto exacto si el propietario eligió `exact`; centro del barrio o zona si eligió `area`.
+          required: [visibility, point, areaName]
           properties:
-            center: { $ref: '#/components/schemas/GeoPoint' }
-            radiusM: { type: integer, minimum: 0 }
-            neighbourhood: { type: [string, 'null'] }
+            visibility: { $ref: '#/components/schemas/LocationVisibility' }
+            point: { $ref: '#/components/schemas/GeoPoint' }
+            areaName: { type: string, description: Barrio o zona }
         photos:
           type: array
           items: { $ref: '#/components/schemas/Photo' }
@@ -1225,6 +1305,12 @@ components:
             exterior: { type: boolean }
         maxToPayCents: { $ref: '#/components/schemas/Money' }
         minToReceiveCents: { $ref: '#/components/schemas/Money' }
+        valueReferencePct:
+          type: integer
+          minimum: 0
+          maximum: 100
+          default: 50
+          description: Punto del rango de valor de sus viviendas que se usa para calcular compensaciones (0 = mínimo, 100 = máximo), elegido por el usuario (RN-03)
 
     LikeResult:
       type: object
@@ -1307,7 +1393,7 @@ components:
             type: object
             required: [zone, count]
             properties:
-              zone: { type: string }
+              zone: { type: string, description: Barrio o zona (`areaName`) }
               count: { type: integer, minimum: 0 }
         likes: { type: integer, minimum: 0 }
         matches:
@@ -1328,6 +1414,15 @@ components:
         entityId: { type: [string, 'null'] }
         at: { type: string, format: date-time }
 
+    WaitlistEntry:
+      type: object
+      required: [email, municipality, homeType, lookingFor, consentAt]
+      properties:
+        email: { type: string, format: email }
+        municipality: { type: string }
+        homeType: { $ref: '#/components/schemas/HomeType' }
+        lookingFor: { type: string }
+        consentAt: { type: string, format: date-time }
     WaitlistInput:
       type: object
       required: [email, municipality, homeType, lookingFor, consent]

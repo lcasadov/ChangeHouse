@@ -34,6 +34,8 @@ erDiagram
     users ||--o{ documents : "sube"
     users ||--o{ reports : "denuncia"
     users ||--o{ audit_log : "actúa"
+    users ||--o{ user_blocks : "bloquea"
+    users ||--o{ user_devices : "registra"
 ```
 
 ### Cuentas y viviendas
@@ -50,7 +52,9 @@ erDiagram
         boolean meets_vpp_requirements
         boolean is_over_65
         kyc_status kyc_status
-        user_role role
+        assigned_role assigned_role "agency, admin o nulo"
+        timestamptz suspended_at
+        text suspension_reason
         timestamptz created_at
         timestamptz deleted_at "borrado lógico"
     }
@@ -79,7 +83,12 @@ erDiagram
         boolean is_primary_residence
         bigint mortgage_outstanding_cents
         bytea exact_address "cifrado"
+        location_visibility location_visibility "exact o area"
+        geography exact_location "cifrada si area"
         geography approx_location
+        text area_name "barrio o zona"
+        text moderation_note
+        timestamptz relevant_changed_at
         timestamptz created_at
     }
     home_photos {
@@ -97,6 +106,7 @@ erDiagram
         jsonb filters
         bigint max_to_pay_cents
         bigint min_to_receive_cents
+        smallint value_reference_pct "0-100, def. 50"
         date move_date
     }
     users ||--o{ homes : ""
@@ -123,6 +133,7 @@ erDiagram
         smallint type "2 o 3"
         match_status status
         text cycle_key UK "conjunto ordenado de viviendas"
+        text chat_id "chat en Firestore"
         timestamptz created_at
     }
     match_participants {
@@ -133,6 +144,7 @@ erDiagram
         uuid receives_home_id FK
         bigint compensation_cents
         participant_status status
+        boolean shares_phone
     }
     matches ||--|{ match_participants : ""
 ```
@@ -171,6 +183,8 @@ erDiagram
         uuid target_id
         text reason
         report_status status
+        text resolution
+        timestamptz created_at
     }
     consents {
         uuid user_id PK,FK
@@ -194,17 +208,28 @@ erDiagram
         text looking_for
         timestamptz consent_at
     }
+    user_blocks {
+        uuid blocker_id PK,FK
+        uuid blocked_id PK,FK
+        timestamptz created_at
+    }
+    user_devices {
+        text fcm_token PK
+        uuid user_id FK
+        device_platform platform
+        timestamptz updated_at
+    }
     agencies ||--o{ operations : ""
     operations ||--o{ documents : ""
 ```
 
 ## 2 · Diccionario de entidades
 
-Tipos de importe: **`bigint` en céntimos de euro** (sufijo `_cents`) —
-⚠️ SUPUESTO, ver Riesgos R-1. Identificadores: `uuid` v7 generado en la
-aplicación — ⚠️ SUPUESTO, ver §3.
+Tipos de importe: **`bigint` en céntimos de euro** (sufijo `_cents`),
+confirmado. Identificadores: `uuid` v7 generado en la aplicación —
+⚠️ SUPUESTO, ver §3.
 
-### `users` — persona registrada (propietario, buscador, gestoría o admin)
+### `users` — persona registrada (owner, seeker, agency o admin)
 
 | Atributo | Tipo | Oblig. | Significado |
 |---|---|---|---|
@@ -217,7 +242,8 @@ aplicación — ⚠️ SUPUESTO, ver §3.
 | `meets_vpp_requirements` | boolean | sí (def. `false`) | Declara cumplir los requisitos de acceso a VPP (RF-33, RN-06) |
 | `is_over_65` | boolean | sí (def. `false`) | Para la exención de mayores de 65 del simulador (RF-71) |
 | `kyc_status` | enum | sí (def. `none`) | Estado de verificación de identidad (fase 2). ⚠️ PENDIENTE: valores (propuesta `none`, `pending`, `verified`, `rejected`) |
-| `role` | enum | sí | `propietario`, `buscador`, `gestoria`, `admin`. Ver Riesgos R-4 |
+| `assigned_role` | enum | no | Rol **asignado**: `agency` o `admin`; nulo para particulares. `owner`/`seeker` no se guardan: se derivan de tener vivienda publicada (`docs/rbac-matrix.md` §1) |
+| `suspended_at`, `suspension_reason` | timestamptz, text | no | Suspensión por un admin; nulo si activo |
 | `created_at` | timestamptz | sí | Alta |
 | `deleted_at` | timestamptz | no | Borrado lógico; los datos personales se anonimizan al borrar (RF-05) |
 
@@ -226,7 +252,7 @@ aplicación — ⚠️ SUPUESTO, ver §3.
 | Atributo | Tipo | Oblig. | Significado |
 |---|---|---|---|
 | `owner_id` | uuid FK → users | sí | Propietario |
-| `type` | enum | sí | Piso, ático, dúplex, chalet, adosado… ⚠️ PENDIENTE: lista cerrada |
+| `type` | enum | sí | `piso`, `atico`, `duplex`, `estudio`, `bajo`, `chalet`, `adosado`, `pareado`, `casa` (propuesta de lista cerrada) |
 | `status` | enum | sí | `draft`, `in_review`, `published`, `paused`, `in_operation`, `closed` (RF-17) |
 | `regime` | enum | sí | `libre`, `VPPB`, `VPPL`, `VPO` (RF-14) |
 | `vpp_qualification_date` | date | si VPP | Fecha de calificación definitiva |
@@ -236,14 +262,19 @@ aplicación — ⚠️ SUPUESTO, ver §3.
 | `bedrooms`, `bathrooms` | smallint | sí | Dormitorios y baños |
 | `floor` | text | no | Planta (admite «bajo», «ático»…) |
 | `has_lift`, `garage`, `storage_room` | boolean | sí | Ascensor, garaje, trastero |
-| `features` | jsonb | no | Características adicionales (terraza, piscina comunitaria, estado…). Ver R-2 |
+| `features` | jsonb | no | Características con claves cerradas (ver `HomeFeatures` en `docs/api/openapi.yaml`): terraza, balcón, jardín, piscina comunitaria o privada, aire acondicionado, calefacción, exterior, accesible, estado de conservación |
 | `energy_rating` | text | no | Letra del certificado energético. ⚠️ SUPUESTO: A–G |
 | `year_built` | smallint | no | Año de construcción |
 | `value_min_cents`, `value_max_cents` | bigint | sí | Rango de valor declarado por el propietario (RF-12) |
 | `is_primary_residence` | boolean | sí | Vivienda habitual (simulador fiscal, RF-16) |
 | `mortgage_outstanding_cents` | bigint | no | Hipoteca pendiente aproximada (RF-15). ⚠️ El README menciona también la entidad y «otras cargas», sin columna: ver R-3 |
 | `exact_address` | bytea | sí | Dirección exacta **cifrada**; solo se revela a participantes de un match (RN-08) |
-| `approx_location` | geography(Point, 4326) | sí | Ubicación pública aproximada (RF-13). ⚠️ PENDIENTE: método de aproximación (centroide de barrio o desplazamiento aleatorio) |
+| `location_visibility` | enum | sí (def. `area`) | Lo que elige el propietario: `exact` (ubicación exacta pública en el mapa) o `area` (solo barrio o zona) |
+| `exact_location` | geography(Point, 4326) | sí | Punto exacto. Público solo si `location_visibility = exact` |
+| `approx_location` | geography(Point, 4326) | sí | Centro del barrio o zona: lo único público si `location_visibility = area` (RF-13) |
+| `area_name` | text | sí | Nombre del barrio o zona (de Google Places); también es la «zona» de las métricas |
+| `moderation_note` | text | no | Motivo del último rechazo de moderación, visible para el propietario |
+| `relevant_changed_at` | timestamptz | sí | Se actualiza cuando cambian el rango de valor o las fotos; un descarte anterior a esta fecha vuelve a mostrarse (RF-44) |
 
 ### `home_photos` — fotos de una vivienda (3–20, RF-11)
 
@@ -254,36 +285,43 @@ aplicación — ⚠️ SUPUESTO, ver §3.
 
 | Atributo | Tipo | Significado |
 |---|---|---|
-| `user_id` | uuid FK, único | Una preferencia por usuario. ⚠️ Con varias viviendas por usuario (RF-20, fase 3) quizá deba ser por vivienda |
+| `user_id` | uuid FK, único | Una preferencia por usuario, común a todas sus viviendas. ⚠️ SUPUESTO: con varias viviendas por usuario podría hacer falta por vivienda |
 | `areas` | geography | Zona de interés (punto o polígono) |
 | `municipalities` | text[] | Municipios de interés. Ver R-2 |
 | `radius_km` | numeric | Radio alrededor del punto |
 | `filters` | jsonb | Tipo, superficie mínima, dormitorios… (RF-31) |
 | `max_to_pay_cents` | bigint | Máximo que paga como compensación (RF-32) |
 | `min_to_receive_cents` | bigint | Mínimo que acepta recibir (RF-32) |
+| `value_reference_pct` | smallint | Punto del rango de valor que se usa para la compensación, elegido por el usuario: 0 = mínimo, 100 = máximo, 50 = punto medio por defecto (RN-03) |
 | `move_date` | date | Fecha deseada orientativa (fase 2) |
 
 ### `likes` — arista del grafo de interés
 
 `from_home_id` → `to_home_id`: el propietario de la vivienda origen quiere la
-vivienda destino. Clave primaria compuesta; `created_at`.
+vivienda destino. Clave primaria compuesta; `created_at`. Un usuario con varias
+viviendas da me gusta **desde una vivienda concreta**: cada vivienda participa
+en el matching de forma independiente (RF-20).
 
 ### `dismissals` — descartes (RF-44)
 
-`home_id` descarta `dismissed_home_id`. ⚠️ Para «volver a mostrar si cambia de
-forma relevante» falta registrar qué versión se descartó: ver R-5.
+`home_id` descarta `dismissed_home_id`. El descarte deja de aplicarse si
+`homes.relevant_changed_at` de la vivienda descartada es posterior a
+`created_at` del descarte (RF-44).
 
 ### `matches` — ciclo de interés recíproco y compatible
 
 `type` 2 o 3; `status` `open`, `confirmed`, `in_operation`, `closed`,
-`expired`; `cycle_key` único = identificadores de vivienda ordenados y
+`expired` (en el MVP, cuando todos confirman el match queda en `confirmed`
+sin pausar los demás matches de esas viviendas; `in_operation` llega en la
+fase 2); `chat_id`; `cycle_key` único = identificadores de vivienda ordenados y
 concatenados (evita duplicados, README §11).
 
 ### `match_participants` — cada vivienda de un match
 
 `gives_home_id` (la que entrega, igual a `home_id`), `receives_home_id`,
 `compensation_cents` (positivo = paga, negativo = recibe; la suma en un match
-es 0, RN-04), `status` `pending`, `confirmed`, `withdrawn`.
+es 0, RN-04), `status` `pending`, `confirmed`, `withdrawn`, y `shares_phone`
+(autoriza mostrar su teléfono a los demás participantes, RF-53).
 
 ### `operations` — permuta en tramitación (fase 2)
 
@@ -303,7 +341,18 @@ acceso por URL firmada de corta duración (RNF-03).
 ### `reports` — denuncias (RF-63)
 
 `reporter_id`, `target_type` (`user`, `home`, `message`), `target_id`
-(polimórfico, ver R-6), `reason`, `status`.
+(polimórfico, ver R-6), `reason`, `status` (`open`, `resolved`, `dismissed`),
+`resolution`, `created_at`.
+
+### `user_blocks` — bloqueos entre usuarios (RF-63)
+
+`blocker_id` bloquea a `blocked_id`. Los dos dejan de verse mutuamente en el
+descubrimiento y no pueden formar match entre sí.
+
+### `user_devices` — tokens de notificación push (RF-61)
+
+`fcm_token` (clave), `user_id`, `platform` (`android`, `ios`, `web`),
+`updated_at`. Se borran los tokens que FCM declara inválidos.
 
 ### `consents` — registro de consentimientos (RF-04, RNF-13)
 
@@ -314,7 +363,7 @@ nueva.
 ### `audit_log` — acciones administrativas y sensibles (RF-93)
 
 `actor_id`, `action`, `entity`, `entity_id`, `at`. Solo inserción.
-⚠️ PENDIENTE: retención (`$LOG_RETENTION`).
+Retención: 2 años (`$LOG_RETENTION`).
 
 ### `waitlist` — lista de espera de la landing (RF-101)
 
@@ -340,6 +389,7 @@ persistir). `audit_log` usa `bigint` identidad.
 | `operations.agency_id` → `agencies` | `RESTRICT` | Las gestorías se desactivan, no se borran |
 | `documents.operation_id` → `operations` | `RESTRICT` | Documentación legal: no se borra en cascada |
 | `consents.user_id`, `audit_log.actor_id`, `reports.reporter_id` → `users` | `RESTRICT` | Evidencia legal |
+| `user_blocks.*`, `user_devices.user_id` → `users` | `CASCADE` | Sin valor legal |
 
 **Restricciones que expresan reglas de negocio** (en el esquema, no solo en el
 código):
@@ -355,6 +405,9 @@ código):
 | `UNIQUE (match_id)` en `operations` | Una operación por match |
 | `UNIQUE (firebase_uid)`, `UNIQUE (email)` en `users` | — |
 | `CHECK (position BETWEEN 1 AND 20)` en `home_photos` | RF-11 (el mínimo de 3 se valida en el caso de uso de publicación) |
+| `CHECK (value_reference_pct BETWEEN 0 AND 100)` en `search_preferences` | RN-03 (punto del rango por usuario) |
+| `CHECK (blocker_id <> blocked_id)` en `user_blocks` | Sin auto-bloqueo |
+| `CHECK (assigned_role IS NULL OR NOT EXISTS viviendas)` — en el caso de uso, no en el esquema | `agency` y `admin` no publican viviendas (`docs/rbac-matrix.md` §1) |
 
 La suma cero de compensaciones (RN-04) y la compatibilidad económica (RN-03)
 afectan a varias filas: se garantizan en el **dominio**, dentro de la misma
@@ -362,7 +415,7 @@ transacción que crea el match, y se cubren con pruebas de propiedades.
 
 **Estrategia de borrado**: lógico en `users` (`deleted_at` + anonimización de
 `email`, `display_name`, `phone`), físico en datos derivados sin valor legal
-(fotos, likes, descartes, preferencias). Lo que es evidencia legal
+(fotos, likes, descartes, preferencias, bloqueos, dispositivos). Lo que es evidencia legal
 (`consents`, `audit_log`, `documents`, `operations`) no se borra.
 
 ## 4 · Consultas frecuentes y rendimiento
@@ -392,14 +445,15 @@ el MVP (⚠️ SUPUESTO).
 | `homes.exact_address` | Personal sensible (localiza el domicilio) | Cifrado en aplicación (clave en Secret Manager); solo se descifra para participantes de un match |
 | `users.phone` | Personal | Acceso restringido; solo se revela con autorización del usuario |
 | `users.email`, `display_name`, `firebase_uid` | Personal | Anonimización al borrar la cuenta |
+| `homes.exact_location` | Personal sensible si es privada | Solo pública si el propietario elige `exact`; si no, solo se expone `approx_location` (centro del barrio o zona) |
 | `users.is_over_65` | Personal (deriva la edad) | No se muestra a terceros; solo para el simulador |
 | `users.meets_vpp_requirements` | Personal (indica nivel de renta) | No se muestra a terceros |
 | `homes.mortgage_outstanding_cents` | Económico personal | No se muestra a terceros; solo para el simulador y la gestoría |
-| `homes.approx_location` | Personal aproximado | La aproximación debe impedir reidentificar el portal |
+| `homes.approx_location` | Personal aproximado | Centro del barrio o zona, nunca el punto exacto desplazado |
 | `home_photos` | Puede contener datos personales | Eliminación de EXIF de ubicación al subir (RF-11) |
 | `documents` | Notas simples, tasaciones | Bucket privado, URL firmada de corta duración; las notas simples no se vuelcan a la base de datos (README §13) |
-| `waitlist.email` | Personal | Consentimiento registrado; ⚠️ PENDIENTE: plazo de conservación |
-| `audit_log`, `consents` | Evidencia | Solo inserción; ⚠️ PENDIENTE: `$LOG_RETENTION` |
+| `waitlist.email` | Personal | Consentimiento registrado; se conserva hasta el lanzamiento + 12 meses o hasta la baja |
+| `audit_log`, `consents` | Evidencia | Solo inserción; auditoría 2 años; consentimientos mientras exista la cuenta y el plazo de prescripción |
 | KYC (fase 2) | Posible categoría especial (biometría) | Fuera del modelo hasta elegir proveedor; preferible no almacenar biometría propia |
 
 ## 6 · Evolución del esquema
@@ -419,12 +473,12 @@ el MVP (⚠️ SUPUESTO).
 
 | # | Riesgo | Propuesta |
 |---|---|---|
-| R-1 | El README no fija el tipo de los importes (`value_min`, `compensation`, `fee_amount`…). `float` produciría errores de redondeo | `bigint` en céntimos (o `numeric(12,2)`). ⚠️ Confirmar |
+| R-1 | ~~Tipo de los importes sin fijar~~ | **Resuelto**: `bigint` en céntimos |
 | R-2 | Campos multivalor en una columna: `features`, `filters`, `zones`, `areas`/`municipalities` | Aceptable para filtros flexibles; pero `agencies.zones` se usa para asignar gestoría por zona y debería ser una tabla `agency_zones` o geografía |
 | R-3 | Cargas «entidad» y «otras cargas» (RF-15) sin columna | Añadir `mortgage_entity` y `other_charges`, o confirmar que no se guardan |
-| R-4 | `users.role` único, pero un usuario es `propietario` o `buscador` según tenga vivienda publicada: es un estado derivado, no un rol asignado | Guardar solo roles asignados (`user`, `gestoria`, `admin`) y derivar propietario/buscador. ⚠️ Decidir en la matriz RBAC |
-| R-5 | `dismissals` no guarda la versión descartada; RF-44 exige volver a mostrar si cambian precio o fotos | Añadir `homes.relevant_version` (o `relevant_updated_at`) y guardarlo en el descarte |
+| R-4 | ~~Rol único guardado~~ | **Resuelto**: `assigned_role` (`agency`, `admin`); `owner`/`seeker` derivados |
+| R-5 | ~~Descartes sin versión~~ | **Resuelto**: `homes.relevant_changed_at` |
 | R-6 | `reports.target_id` polimórfico sin FK | Aceptable para denuncias; validar existencia en el caso de uso |
 | R-7 | `match_participants.user_id` duplica `homes.owner_id` | Útil como instantánea si la vivienda cambia de dueño; documentarlo como intencionado |
-| R-8 | `gestoria` necesita vincular usuario y `agencies`; no hay relación | Añadir `users.agency_id` o tabla `agency_members` (fase 2) |
+| R-8 | `agency` necesita vincular usuario y `agencies`; no hay relación | Añadir `users.agency_id` o tabla `agency_members` (fase 2) |
 | R-9 | Los mensajes de chat denunciados viven en Firestore | La moderación necesita copiar el mensaje denunciado a `reports` como evidencia |

@@ -156,7 +156,7 @@ Por el mismo motivo, el registro de tareas de un cambio es
 - Declara **entradas**, **salida** y **prohibiciones**. Un prompt sin
   prohibiciones acaba inventando.
 - Usa las variables del contrato, nunca tecnologías concretas. Si necesitas una
-  clave que no existe, añádela primero a `docs/project.template.md`.
+  clave que no existe, añádela primero a `.claude/harness/templates/project.template.md`.
 - **No dupliques lo que ya hace la herramienta OpenSpec.** El ciclo de propuesta,
   aplicación, verificación y archivado es suyo; los prompts cubren lo que ella no
   hace.

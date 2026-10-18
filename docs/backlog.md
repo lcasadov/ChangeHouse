@@ -89,10 +89,10 @@ está detrás **para** decidir si me interesa apuntarme
 **Como** visitante **quiero** dejar mi email, municipio, tipo de vivienda y qué busco **para** que me avisen cuando haya permutas en mi zona
 
 **Capacidad**: `waitlist` — nueva
-**Alcance**: formulario con consentimiento RGPD, protección anti-abuso, sin revelar si el email ya existía (RF-101). Exportación para el equipo incluida.
+**Alcance**: formulario con consentimiento RGPD, protección anti-abuso, sin revelar si el email ya existía (RF-101). Consulta y exportación para el admin (`GET /admin/waitlist`).
 **Dependencias**: landing
 **Prioridad**: alta — mide el criterio de avance (~100 viviendas)
-**Riesgos o dudas**: mecanismo anti-bots; plazo de conservación de los datos; proveedor de email para la confirmación
+**Riesgos o dudas**: mecanismo anti-bots; SMTP para el email de confirmación
 
 ### [Captación > Legal] Consultar aviso legal, privacidad, cookies y términos
 
@@ -153,10 +153,20 @@ está detrás **para** decidir si me interesa apuntarme
 **Como** propietario **quiero** dar de alta mi vivienda con sus características, rango de valor y cargas **para** que otros la descubran
 
 **Capacidad**: `homes` — nueva
-**Alcance**: alta en borrador por pasos, dirección con autocompletado guardada de forma privada, ubicación aproximada pública, rango de valor, cargas, vivienda habitual (RF-10, RF-12, RF-13, RF-15, RF-16). Envío a moderación.
+**Alcance**: alta en borrador por pasos, dirección con autocompletado guardada de forma privada, elección entre ubicación exacta pública o solo barrio o zona, rango de valor, cargas, vivienda habitual (RF-10, RF-12, RF-13, RF-15, RF-16). Envío a moderación.
 **Dependencias**: perfil, T-05
 **Prioridad**: alta
-**Riesgos o dudas**: lista cerrada de tipos de vivienda; método de aproximación de la ubicación
+**Riesgos o dudas**: revisar la lista cerrada de tipos y características propuesta en el contrato
+
+### [Viviendas > Varias viviendas] Gestionar varias viviendas
+
+**Como** propietario con más de una vivienda **quiero** publicarlas todas y que cada una participe por separado **para** aumentar mis posibilidades de permuta
+
+**Capacidad**: `homes` — nueva
+**Alcance**: listado de mis viviendas, alta de varias, elegir desde qué vivienda descubro y doy me gusta (RF-20, adelantado al MVP por decisión del 2026-10-18)
+**Dependencias**: ficha
+**Prioridad**: media — amplía el MVP sin bloquear el match con una vivienda
+**Riesgos o dudas**: si las preferencias de búsqueda deben ser por vivienda en lugar de por usuario
 
 ### [Viviendas > Fotos] Añadir las fotos de mi vivienda
 
@@ -227,7 +237,7 @@ está detrás **para** decidir si me interesa apuntarme
 **Como** usuario **quiero** indicar zonas, filtros y cuánto estoy dispuesto a pagar o quiero recibir **para** ver solo viviendas que encajan
 
 **Capacidad**: `search-preferences` — nueva
-**Alcance**: zonas por municipio o radio, filtros, máximo a pagar y mínimo a recibir (RF-30 a RF-33). Fecha de mudanza fuera (fase 2).
+**Alcance**: zonas por municipio o radio, filtros, máximo a pagar y mínimo a recibir, y qué punto de mi rango de valor se usa para la compensación (RF-30 a RF-33, RN-03). Fecha de mudanza fuera (fase 2).
 **Dependencias**: perfil
 **Prioridad**: alta — sin preferencias no hay compatibilidad
 **Riesgos o dudas**: preferencias por usuario o por vivienda cuando haya varias (fase 3)
@@ -250,7 +260,7 @@ está detrás **para** decidir si me interesa apuntarme
 **Alcance**: me gusta (solo con vivienda publicada), descartar, deshacer (salvo si ya hay match), límite diario configurable (RF-41, RF-45, RN-01)
 **Dependencias**: tarjetas
 **Prioridad**: alta
-**Riesgos o dudas**: valor del límite diario
+**Riesgos o dudas**: valor inicial del límite diario (configurable por entorno)
 
 ## Epic 6 · Matching
 
@@ -262,7 +272,7 @@ está detrás **para** decidir si me interesa apuntarme
 **Alcance**: detección del ciclo de 2 al dar me gusta, compatibilidad económica (punto medio del rango), suma de compensaciones cero, sin duplicados ante likes concurrentes (RF-50, RN-02 a RN-04)
 **Dependencias**: acciones de descubrimiento
 **Prioridad**: alta — **mayor riesgo del producto**; valida el concepto
-**Riesgos o dudas**: si el punto medio debe ser configurable por usuario o global
+**Riesgos o dudas**: el punto de referencia del rango lo elige cada usuario (decidido)
 
 ### [Matching > Cadena] Recibir un match en cadena de tres
 
@@ -291,10 +301,10 @@ está detrás **para** decidir si me interesa apuntarme
 **Como** participante **quiero** confirmar mi interés o retirarme **para** avanzar o liberar a los demás
 
 **Capacidad**: `matches` — nueva
-**Alcance**: confirmar, retirarse (cierra para todos y notifica), varios matches abiertos por vivienda (RF-54, RF-55, RN-10). Paso a operación fuera (fase 2); caducidad fuera (fase 2).
+**Alcance**: confirmar, retirarse (cierra para todos y notifica), varios matches abiertos por vivienda (RF-54, RN-10). Cuando todos confirman, el match queda `confirmed` sin pausar los demás. Paso a operación y pausa de otros matches (RF-55) fuera (fase 2); caducidad fuera (fase 2).
 **Dependencias**: detalle del match
 **Prioridad**: alta
-**Riesgos o dudas**: qué ocurre en el MVP cuando todos confirman, si la operación es de fase 2
+**Riesgos o dudas**: ninguno adicional
 
 ### [Comunicación > Chat] Chatear con los participantes del match
 
@@ -304,7 +314,7 @@ está detrás **para** decidir si me interesa apuntarme
 **Alcance**: chat en tiempo real por match, solo para participantes (RF-60, RC-16)
 **Dependencias**: match directo
 **Prioridad**: alta
-**Riesgos o dudas**: retención de los mensajes; moderación de imágenes
+**Riesgos o dudas**: borrado de los mensajes a los 12 meses del fin del match; moderación de imágenes
 
 ### [Comunicación > Avisos] Recibir avisos de matches y mensajes
 
@@ -314,7 +324,7 @@ está detrás **para** decidir si me interesa apuntarme
 **Alcance**: push por FCM y email de eventos clave (RF-61, RF-62)
 **Dependencias**: match directo, chat
 **Prioridad**: alta
-**Riesgos o dudas**: proveedor de email transaccional sin decidir; preferencias de notificación del usuario
+**Riesgos o dudas**: SMTP de salida para la extensión Trigger Email de Firebase; preferencias de notificación del usuario
 
 ## Epic 8 · Administración
 
@@ -326,7 +336,7 @@ está detrás **para** decidir si me interesa apuntarme
 **Alcance**: listado de usuarios, métricas por periodo, registro de auditoría (RF-90, RF-91, RF-93)
 **Dependencias**: moderación
 **Prioridad**: media
-**Riesgos o dudas**: métricas por zona: definición de «zona»
+**Riesgos o dudas**: ninguno (zona = barrio o zona de la vivienda)
 
 ---
 
@@ -347,7 +357,7 @@ matches (RF-57), plantillas de próximos pasos (RF-64), alta de gestorías
 flowchart LR
     E1[Epic 1 · Captación] --> E1a[Landing] & E1b[Lista de espera] & E1c[Legal] & E1d[Blog]
     E2[Epic 2 · Cuentas] --> E2a[Acceso] & E2b[Perfil] & E2c[Derechos RGPD]
-    E3[Epic 3 · Viviendas] --> E3a[Ficha] & E3b[Fotos] & E3c[VPP] & E3d[Estado]
+    E3[Epic 3 · Viviendas] --> E3a[Ficha] & E3e[Varias viviendas] & E3b[Fotos] & E3c[VPP] & E3d[Estado]
     E4[Epic 4 · Moderación] --> E4a[Viviendas] & E4b[Denuncias] & E4c[Usuarios]
     E5[Epic 5 · Descubrimiento] --> E5a[Preferencias] & E5b[Tarjetas] & E5c[Acciones]
     E6[Epic 6 · Matching] --> E6a[Directo] & E6b[Cadena]
@@ -364,6 +374,7 @@ flowchart TD
     T --> A[Acceso] --> P[Perfil] --> R[Derechos RGPD]
     P --> F[Ficha de vivienda] --> FO[Fotos]
     F --> V[VPP]
+    F --> VV[Varias viviendas]
     F --> MV[Moderación de viviendas] --> ES[Estado del anuncio]
     P --> PR[Preferencias]
     PR --> TJ[Tarjetas]
@@ -378,9 +389,7 @@ flowchart TD
 
 ## Preguntas abiertas
 
-1. Qué ocurre en el MVP cuando todos los participantes confirman, si la
-   operación con gestoría es de fase 2.
-2. Valor del límite diario de likes.
-3. Si el punto medio del rango de valor es global o configurable por usuario.
-4. Proveedor de email transaccional (bloquea lista de espera y avisos).
-5. Retención de los mensajes de chat.
+1. Valor inicial del límite diario de likes.
+2. SMTP de salida para la extensión Trigger Email de Firebase.
+3. Preferencias de búsqueda por usuario o por vivienda, ahora que hay varias
+   viviendas por usuario.

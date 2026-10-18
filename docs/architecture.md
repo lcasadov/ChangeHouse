@@ -35,7 +35,7 @@ flowchart LR
     end
 
     STRIPE[Stripe]
-    MAIL[Email transaccional<br/>⚠️ proveedor pendiente]
+    MAIL[Email transaccional<br/>Firebase Trigger Email + SMTP ⚠️]
     SENTRY[Sentry]
     PLACES[Google Places / Maps]
     STORES[App Store · Google Play<br/>vía EAS Submit]
@@ -148,7 +148,7 @@ flowchart LR
       A4[Firestore]
       A5[Cloud Storage]
       A6[Stripe]
-      A7[Email ⚠️ proveedor pendiente]
+      A7[Email: Firestore → extensión Trigger Email]
     end
     R --> UC
     WH --> UC
@@ -178,7 +178,8 @@ apps/mobile/
 ├── app/                    # rutas de Expo Router: componen pantallas, sin lógica
 └── src/
     ├── features/<feature>/ # components/, hooks/, api/ (TanStack Query), store (Zustand)
-    └── lib/                # cliente HTTP, i18n, configuración de Firebase
+    ├── i18n/locales/       # es-ES.json (i18next + react-i18next + expo-localization)
+    └── lib/                # cliente HTTP (openapi-fetch tipado desde OpenAPI), configuración de Firebase
 ```
 
 ## 4 · Separación de responsabilidades
@@ -209,6 +210,9 @@ scaffold):
 | **PostgreSQL + PostGIS** para el dominio | Firestore para todo | Coste fijo de Cloud SQL (~10–30 €/mes); a cambio, integridad referencial, consultas geográficas y ciclos con SQL transaccional |
 | **Firestore para el chat** | Chat sobre PostgreSQL + WebSockets | Dos almacenes de datos y reglas de seguridad de Firestore que mantener alineadas con la API; a cambio, tiempo real sin servidor propio |
 | **Firebase Authentication** | Auth propia; Auth0; Supabase Auth | Dependencia del proveedor; a cambio, login social (Google, Apple) gestionado |
+| **Email con la extensión Trigger Email de Firebase** | Resend; SendGrid directo | Necesita un SMTP detrás y un documento de Firestore por email; a cambio, todo en el ecosistema Firebase y reintentos gestionados |
+| **i18next** | Lingui; FormatJS | — ; ecosistema más amplio y compatible con Expo |
+| **`openapi-fetch` tipado desde el contrato** | Axios; cliente escrito a mano | Paso de generación de tipos en el build; a cambio, la app no puede llamar a un endpoint que no esté en el contrato |
 | **Drizzle ORM + drizzle-kit** | Prisma; Kysely; SQL a mano | Ecosistema más joven que Prisma; a cambio, SQL explícito, tipos ligeros y soporte de PostGIS con tipos propios |
 | **Hexagonal en API, feature-based en app** | Un único estilo para todo | Dos convenciones que aprender; a cambio, rigor donde hay negocio y sencillez donde no |
 | **Monorepo pnpm + Turborepo** | Repositorios separados | Configuración inicial más compleja; a cambio, esquemas Zod compartidos y cambios atómicos app + API |
@@ -247,11 +251,11 @@ sequenceDiagram
     participant N as Notifier (FCM + email)
     participant C as ChatChannel (Firestore)
 
-    U->>App: Me gusta en vivienda B
-    App->>API: POST like (ID token)
-    API->>API: Verifica token y autorización (A es propietario de su vivienda)
+    U->>App: Me gusta en vivienda B desde su vivienda A
+    App->>API: POST /me/likes {fromHomeId: A, targetHomeId: B} (ID token)
+    API->>API: Verifica token y autorización
     API->>UC: darLike(A→B)
-    UC->>DB: BEGIN; inserta arista (límite diario RF-45)
+    UC->>DB: BEGIN; comprueba que la vivienda origen es suya y está publicada; inserta arista (límite diario RF-45)
     UC->>DB: Busca ciclos de 2 y 3 que contienen A→B
     DB-->>UC: Candidatos
     loop Cada ciclo candidato
@@ -317,7 +321,7 @@ sequenceDiagram
 | Brecha | Impacto | Cuándo se cierra |
 |---|---|---|
 | No hay código: dependencias e invariantes sin verificar | Este documento puede divergir del scaffold | Al crear el monorepo; repetir este prompt |
-| Proveedor de email transaccional sin decidir | Adaptador `Mailer` sin implementación | Decisión pendiente (README §16) |
+| La extensión Trigger Email de Firebase necesita un servidor SMTP de salida | Sin SMTP no se envían emails transaccionales (los de Firebase Auth —verificación y contraseña— sí funcionan) | Elegir el SMTP (decisión pendiente) |
 | Herramienta de reglas de dependencia sin elegir | I-1 a I-6 sin automatizar | Scaffold del monorepo |
 | Ubicación del portal de gestoría (app web de Expo o aplicación aparte) | Afecta a `apps/` y a la matriz de permisos | Fase 2 |
 | Proveedor de KYC | Adaptador `IdentityVerifier` de KYC sin decidir | Fase 2 |

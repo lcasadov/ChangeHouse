@@ -83,7 +83,7 @@ cambiar de casa. Segmentos prioritarios:
 
 | Funcionalidad | Qué hace | Para quién | Fase |
 |---|---|---|---|
-| Ficha de vivienda | Publicar la vivienda con fotos, características, régimen (libre o VPP), cargas y un **rango de valor** declarado. La dirección exacta queda oculta | Propietario | MVP |
+| Ficha de vivienda | Publicar una o varias viviendas con fotos, características, régimen (libre o VPP), cargas y un **rango de valor** declarado. El propietario elige mostrar la ubicación exacta o solo el barrio o zona; la dirección postal solo se revela tras el match | Propietario | MVP |
 | Preferencias | Zonas, filtros y **cuánto se está dispuesto a pagar o se quiere recibir** como diferencia | Propietario, buscador | MVP |
 | Descubrimiento | Tarjetas de viviendas compatibles: me gusta, descartar, ver detalle | Propietario, buscador | MVP |
 | Match directo y en cadena | Detecta interés recíproco entre 2 o 3 viviendas económicamente compatibles, notifica a todos y abre un chat de grupo | Propietario | MVP |

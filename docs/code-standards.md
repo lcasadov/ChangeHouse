@@ -44,11 +44,10 @@ Las impone una herramienta; no se discuten en revisión.
 | Rutas HTTP | plural, `kebab-case` | `/me/search-preferences` | `/searchPreference` |
 | Hooks propios | prefijo `use` | `useDiscoverHomes` | `discoverHomesHook` |
 
-**Idioma**: identificadores en **inglés**; comentarios, mensajes de commit y
-documentación en **español**; textos visibles siempre vía i18n.
-⚠️ Conflicto detectado: los roles del README están en español (`propietario`,
-`buscador`, `gestoria`) y el resto de enumerados en inglés (`published`,
-`in_operation`). Ver «Pendiente de decidir».
+**Idioma**: identificadores y valores de enumerados en **inglés** —también los
+roles: `visitor`, `seeker`, `owner`, `agency`, `admin`—; comentarios,
+mensajes de commit y documentación en **español**; textos visibles siempre
+vía i18n (`i18next`), que traduce también los roles y estados.
 
 ## 3 · Organización
 
@@ -150,7 +149,7 @@ en la API pública de `packages/*`. En español.
 
 ## Pendiente de decidir
 
-1. Idioma de los valores de enumerados de dominio: roles en español (como el
-   README) o todo en inglés (`owner`, `seeker`, `agency`, `admin`).
-2. Activar `noUncheckedIndexedAccess` y `exactOptionalPropertyTypes`.
-3. Herramienta de fronteras: `eslint-plugin-boundaries` o `dependency-cruiser`.
+1. Activar `noUncheckedIndexedAccess` y `exactOptionalPropertyTypes`.
+2. Herramienta de fronteras: `eslint-plugin-boundaries` o `dependency-cruiser`.
+
+Se deciden al crear el scaffold del monorepo (T-01).

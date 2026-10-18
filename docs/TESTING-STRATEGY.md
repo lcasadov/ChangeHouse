@@ -28,7 +28,7 @@
 - Visibilidad: dirección exacta y contacto solo para participantes (RN-08); VPP
   solo para quien cumple requisitos (RN-06); viviendas en operación fuera del
   descubrimiento (RN-11).
-- Permisos: las 17 reglas críticas RC-01…RC-17 de `docs/rbac-matrix.md`.
+- Permisos: las 19 reglas críticas RC-01…RC-19 de `docs/rbac-matrix.md`.
 - Nunca se proponen valores de escritura (RN-07).
 
 **Normativa** (`$NORMATIVA`): RGPD/LOPDGDD (consentimiento registrado,
@@ -165,14 +165,14 @@ describe('matching / detección de ciclos', () => {
 | Regla | Prueba (caso negativo) |
 |---|---|
 | RC-01 | Cada operación sin token → 401 (salvo `joinWaitlist`) |
-| RC-02 | `buscador` → `likeHome` → 403 |
+| RC-02 | `seeker` → `likeHome` → 403 |
 | RC-03 | Usuario B → `updateHome` sobre vivienda de A → 404 |
-| RC-04 | `getHome` de vivienda ajena sin match → la respuesta no contiene `address` |
+| RC-04 | `getHome` de vivienda ajena sin match → la respuesta no contiene `address`; con `locationVisibility: area`, `location.point` es el centro del barrio o zona |
 | RC-05/06 | No participante → `getMatch`/`confirmMatch` → 404 |
 | RC-07 | Vivienda ajena en `draft` → `getHome` → 404 |
 | RC-08 | Usuario sin requisitos VPP → `discoverHomes` no devuelve viviendas VPP |
 | RC-09 | Vivienda `in_operation` → nunca en `discoverHomes` |
-| RC-10 | `propietario` → cada `/admin/*` → 403 |
+| RC-10 | `owner` → cada `/admin/*` → 403 |
 | RC-11 | Participante sin autorización → `phone` es `null` para los demás |
 | RC-12 | Like a vivienda propia → 422 |
 | RC-13 | Like n.º límite + 1 en el día → 429 |
@@ -180,6 +180,8 @@ describe('matching / detección de ciclos', () => {
 | RC-15 | Moderación y suspensión → existe la entrada en `audit_log` |
 | RC-16 | Reglas de Firestore en el emulador: no participante no lee ni escribe el chat |
 | RC-17 | Enviar `status`, `ownerId` o roles en el cuerpo → 400 o se ignora |
+| RC-18 | `likeHome` con `fromHomeId` ajena → 404; con vivienda propia no publicada → 409 |
+| RC-19 | `agency` y `admin` → `createHome` → 403 |
 
 - Validación de entrada: pruebas de los esquemas Zod con valores límite y
   maliciosos.
@@ -192,8 +194,8 @@ describe('matching / detección de ciclos', () => {
 |---|---|---|
 | `pnpm test` (`$TEST_UNIT_CMD`, `$TEST_CMD`) | Unitarias y de componentes de todos los paquetes | ⚠️ SUPUESTO (README) |
 | `pnpm test:coverage` (`$COVERAGE_CMD`) | Lo anterior con cobertura y umbral | ⚠️ SUPUESTO (README) |
-| `$TEST_INTEGRATION_CMD` | Integración con Testcontainers y emulador de Firestore | ⚠️ PENDIENTE — recomendación: `pnpm test:integration` |
-| `$TEST_E2E_CMD` | Playwright (web) y Maestro (móvil) | ⚠️ PENDIENTE — recomendación: `pnpm test:e2e` |
+| `pnpm test:integration` (`$TEST_INTEGRATION_CMD`) | Integración con Testcontainers y emulador de Firestore | ⚠️ SUPUESTO (decidido; se verifica con el scaffold) |
+| `pnpm test:e2e` (`$TEST_E2E_CMD`) | Playwright (web) y Maestro (móvil) | ⚠️ SUPUESTO (decidido; se verifica con el scaffold) |
 
 | Momento | Qué se ejecuta |
 |---|---|
@@ -213,7 +215,7 @@ pasar la puerta.
 | Ámbito | Propiedades |
 |---|---|
 | Compensaciones | La suma de compensaciones de un ciclo es siempre 0 (RN-04); cada compensación es (valor recibido − valor entregado) |
-| Compatibilidad económica | Ningún match aceptado viola el máximo a pagar ni el mínimo a recibir de ningún participante (RN-03) |
+| Compatibilidad económica | Ningún match aceptado viola el máximo a pagar ni el mínimo a recibir de ningún participante (RN-03), con el punto de referencia del rango elegido por cada usuario (`valueReferencePct`) |
 | Detector de ciclos | Sobre grafos aleatorios: nunca devuelve ciclos de longitud > 3 (RN-05); todo ciclo devuelto existe en el grafo; un ciclo y sus rotaciones producen la misma clave canónica |
 | Idempotencia | Crear el mismo ciclo dos veces (o por likes concurrentes) produce un único match |
 | VPP | Ninguna vivienda VPP aceptada supera su precio máximo legal (RN-06) |

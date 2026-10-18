@@ -152,14 +152,14 @@ Prioridad: **M** (MVP, imprescindible) · **S** (fase 2) · **C** (fase 3+).
 | RF-10 | Alta de vivienda: tipo (piso, ático, dúplex, chalet, adosado…), dirección (autocompletado), superficie útil y construida, dormitorios, baños, planta, ascensor, garaje, trastero, terraza, piscina comunitaria, estado, año de construcción, certificado energético | M |
 | RF-11 | Fotos (mín. 3, máx. 20), con compresión y eliminación de metadatos EXIF de ubicación | M |
 | RF-12 | **Valor declarado por el propietario** como rango (mín.–máx.) | M |
-| RF-13 | Ubicación pública **aproximada** (barrio o radio); la dirección exacta solo se revela tras el match | M |
+| RF-13 | El propietario elige mostrar la **ubicación exacta** o solo el **barrio o zona**; la dirección postal exacta solo se revela tras el match | M |
 | RF-14 | Régimen de la vivienda: libre / **VPP** (VPPB, VPPL, VPO); para VPP: fecha de calificación definitiva, plazo de protección, precio máximo legal si se conoce | M |
 | RF-15 | Cargas declaradas: hipoteca pendiente (importe aproximado, entidad), otras cargas | M |
 | RF-16 | ¿Es vivienda habitual del propietario? (necesario para el simulador fiscal) | M |
 | RF-17 | Estado del anuncio: borrador, en revisión, publicado, pausado, en operación, cerrado | M |
 | RF-18 | Moderación previa a la publicación (manual en MVP) | M |
 | RF-19 | Verificación de titularidad mediante nota simple aportada por el usuario (ver restricciones en [§13](#13--cumplimiento-legal)) | S |
-| RF-20 | Un usuario puede tener varias viviendas; cada una participa en el matching de forma independiente | C |
+| RF-20 | Un usuario puede tener varias viviendas; cada una participa en el matching de forma independiente | M |
 
 ### 5.3 Preferencias de búsqueda
 
@@ -351,7 +351,7 @@ Todo el proyecto en **TypeScript**, organizado como **monorepo**.
 | Autenticación | Firebase Authentication (email, Google, Apple) |
 | Ficheros | Cloud Storage (bucket público de fotos vía CDN; bucket privado de documentos) |
 | Pagos | Stripe (Checkout / Payment Links para la comisión de éxito) |
-| Email transaccional | Proveedor SMTP/API (p. ej. Resend o SendGrid) — *pendiente de decidir* |
+| Email transaccional | Extensión Trigger Email de Firebase (requiere un SMTP de salida, *pendiente de elegir*) |
 | Errores | Sentry (app y API) |
 | Analítica | Firebase Analytics (con consentimiento) |
 | Pruebas | Vitest (unitarias e integración), fast-check (propiedades), Testcontainers (PostgreSQL real), React Native Testing Library, Playwright (web/landing), Maestro (E2E móvil) |
@@ -570,8 +570,8 @@ Requisitos del algoritmo:
 | Repositorio y CI | — | ✅ GitHub + GitHub Actions (el *harness* se ha adaptado a GitHub y a Claude Code) |
 | Revisión de código | — | ✅ CodeRabbit en las pull requests de GitHub |
 | Gestor de tareas | — | ✅ GitHub Issues + GitHub Projects |
-| Rama base / producción | `develop` / `main` (o `master`) | ⚠️ PENDIENTE |
-| Proveedor de email transaccional | Resend · SendGrid · Firebase Extensions | ⚠️ PENDIENTE |
+| Rama base / producción | — | ✅ `develop` / `master` |
+| Proveedor de email transaccional | — | ✅ Extensión Trigger Email de Firebase (⚠️ falta elegir el SMTP de salida) |
 | Proveedor de KYC | Veriff · Onfido · Didit | Fase 2 |
 | Importe de la comisión de éxito | Fijo por parte vs. porcentaje | Validar con usuarios y gestorías |
 | Portal de gestoría | Dentro de la app web de Expo vs. aplicación web separada | Fase 2 |
@@ -594,3 +594,10 @@ Requisitos del algoritmo:
 | **ITP** | Impuesto de Transmisiones Patrimoniales, lo paga quien adquiere |
 | **Plusvalía municipal** | Impuesto sobre el incremento de valor de los terrenos de naturaleza urbana |
 | **Exención por reinversión** | Exención en IRPF de la ganancia por transmitir la vivienda habitual si se reinvierte en otra vivienda habitual |
+
+---
+
+## Licencia
+
+Copyright © 2026 lcasadov — ChangeHouse. **Todos los derechos reservados.** El repositorio es
+público solo para consulta; ver [`LICENSE`](LICENSE).
