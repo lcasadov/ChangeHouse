@@ -206,7 +206,7 @@ criterio usó el informe previo antes de comparar.
 
 #### pnpm: el gestor de este proyecto
 
-Habitinder es un monorepo **pnpm** (`apps/*`, `services/*`, `packages/*`). Analiza cada
+ChangeHouse es un monorepo **pnpm** (`apps/*`, `services/*`, `packages/*`). Analiza cada
 paquete del espacio de trabajo y el conjunto:
 
 ```powershell

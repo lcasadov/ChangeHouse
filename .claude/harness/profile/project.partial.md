@@ -1,4 +1,4 @@
-# Perfil de Habitinder — valores del contrato
+# Perfil de ChangeHouse — valores del contrato
 
 > Vuelca estas claves sobre `docs/project.md`. Lo que aparece como
 > `⚠️ PENDIENTE` varía entre proyectos y debes completarlo.

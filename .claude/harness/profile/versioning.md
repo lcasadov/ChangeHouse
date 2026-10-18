@@ -1,4 +1,4 @@
-# Perfil de Habitinder — Versionado
+# Perfil de ChangeHouse — Versionado
 
 Esquema: **SemVer** — `Major.Minor.Patch`.
 Herramienta: **GitVersion**, mediante un fichero `GitVersion.yml` en la raíz del

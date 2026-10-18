@@ -1,6 +1,6 @@
 # `docs/project.md` — Contrato de variables del proyecto
 
-> Valores del perfil de Habitinder: GitHub, GitHub Actions, CodeRabbit y Claude
+> Valores del perfil de ChangeHouse: GitHub, GitHub Actions, CodeRabbit y Claude
 > Code (ver `.claude/harness/profile/project.partial.md`). Es la **fuente única
 > de verdad** que consumen todos los agentes y reglas.
 >
@@ -96,13 +96,13 @@ todos con su directorio de trabajo.
 |---|---|---|
 | `$REPO_ROOT` | `⚠️ PENDIENTE` | Ruta absoluta a la raíz del repositorio |
 | `$VCS_PROVIDER` | `github` | `azure-devops` · `github` · `gitlab` · `bitbucket` |
-| `$REPO_ID` | `lcasadov/Habitinder` | Identificador del repositorio en el proveedor |
+| `$REPO_ID` | `lcasadov/ChangeHouse` | Identificador del repositorio en el proveedor |
 | `$BASE_BRANCH` | `develop` | Rama de integración: `develop` · `main` · `master` |
 | `$PROD_BRANCH` | `master` | Rama de producción: `main` · `master`. Origen de los `hotfix` |
 | `$LINKED_REPOS` | `ninguno` | Solo topología `multirepo`. Repositorios enlazados que comparten rama con este (ruta o nombre del submódulo), separados por coma. `ninguno` desactiva la rama espejo |
 | `$TRACKER` | `github-issues` | `azure-devops` · `github-issues` · `jira` · `linear` · `ninguno` |
 | `$TRACKER_ORG` | `lcasadov` (cuenta personal de GitHub) | Organización o cuenta en el gestor |
-| `$TRACKER_PROJECT` | `2` — Project «Habitinder» (https://github.com/users/lcasadov/projects/2), enlazado al repositorio. Id GraphQL `PVT_kwHOAGwvnc4BnofG` | Proyecto o tablero |
+| `$TRACKER_PROJECT` | `2` — Project «ChangeHouse» (https://github.com/users/lcasadov/projects/2), enlazado al repositorio. Id GraphQL `PVT_kwHOAGwvnc4BnofG` | Proyecto o tablero |
 | `$TRACKER_HIERARCHY` | `Epic > Feature > Story > Task` (etiquetas `tipo:*` + sub-issues) | Niveles de mayor a menor, p. ej. `Epic > Feature > User Story > Task`. Los nombres varían por proceso: **no los deduzcas** |
 | `$TRACKER_LIFECYCLE` | Ver tabla «Ciclo de vida de los elementos» | Estados y campos de fecha **por tipo** de elemento |
 | `$TRACKER_FIELDS` | Ver tabla «Campos de cada elemento» | Campos que se escriben en cada tipo, con su origen |

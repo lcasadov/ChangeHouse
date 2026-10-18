@@ -1,4 +1,4 @@
-# Perfil de Habitinder — Puerta de calidad
+# Perfil de ChangeHouse — Puerta de calidad
 
 > La puerta se compone de **checks de GitHub Actions** y de la revisión
 > automática de **CodeRabbit**, ambos exigidos por la protección de rama de
@@ -85,7 +85,7 @@ gh pr checks <PR>                       # todos en verde, ninguno pendiente
 # Revisión de CodeRabbit más reciente sobre el HEAD actual: APPROVED o COMMENTED, nunca CHANGES_REQUESTED.
 # Si devuelve null, CodeRabbit aún no ha revisado el último commit: espera.
 gh pr view <PR> --json headRefOid,reviews \n  --jq '(.headRefOid) as $head | [.reviews[] | select(.author.login=="coderabbitai" and .commit.oid==$head)] | max_by(.submittedAt) | .state'
-gh api graphql -f query='query($o:String!,$r:String!,$n:Int!){repository(owner:$o,name:$r){pullRequest(number:$n){reviewThreads(first:100){nodes{isResolved}}}}}' \n  -F o=lcasadov -F r=Habitinder -F n=<PR> \n  --jq '[.data.repository.pullRequest.reviewThreads.nodes[]|select(.isResolved==false)]|length'   # debe ser 0
+gh api graphql -f query='query($o:String!,$r:String!,$n:Int!){repository(owner:$o,name:$r){pullRequest(number:$n){reviewThreads(first:100){nodes{isResolved}}}}}' \n  -F o=lcasadov -F r=ChangeHouse -F n=<PR> \n  --jq '[.data.repository.pullRequest.reviewThreads.nodes[]|select(.isResolved==false)]|length'   # debe ser 0
 ```
 
 Si algo no cumple, la PR **no se fusiona**: se corrige la causa. Los agentes

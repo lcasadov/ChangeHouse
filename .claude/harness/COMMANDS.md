@@ -61,7 +61,7 @@ que la herramienta espera y el ciclo de changes deja de funcionar.
 
 ## Entregables
 
-Generan documentos Word con la **plantilla de Habitinder**. Se ejecutan cuando se necesita
+Generan documentos Word con la **plantilla de ChangeHouse**. Se ejecutan cuando se necesita
 el entregable, no en la secuencia de arranque, aunque dependen de que el contrato esté
 cerrado: la portada, la ficha y el pie salen de `docs/project.md`.
 

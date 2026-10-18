@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Genera las plantillas Word de los entregables de Habitinder.
+"""Genera las plantillas Word de los entregables de ChangeHouse.
 
 Lee los bloques ``ficha``, ``aprobacion`` e ``indice`` de cada prompt
 ``.claude/commands/harness/entregable-*.md`` y escribe la plantilla
@@ -155,7 +155,7 @@ def dibujar_portada(ruta: Path, logo: Path) -> None:
         d.line([(x, 0), (x, alto)], fill=tuple(int(a[i] + (b[i] - a[i]) * t) for i in range(3)))
     marca = Image.open(logo).resize((480, 480))
     img.paste(marca, (140, 210), marca)
-    d.text((720, 250), "Habitinder", font=_fuente(200, True), fill=_rgb(WHITE))
+    d.text((720, 250), "ChangeHouse", font=_fuente(200, True), fill=_rgb(WHITE))
     d.text((730, 520), "Cambia de casa sin vender primero", font=_fuente(72, False), fill=_rgb(WHITE))
     img.save(ruta)
 
@@ -490,7 +490,7 @@ def construir(ent: Entregable, logo: Path, banda: Path) -> Path:
     configurar_pagina(doc)
     configurar_estilos(doc)
     doc.core_properties.title = ent.tipo
-    doc.core_properties.author = "Habitinder"
+    doc.core_properties.author = "ChangeHouse"
     doc.core_properties.comments = f"Plantilla generada desde {ent.prompt}"
     portada(doc, ent, banda)
     preliminares(doc, ent, ficha, aprobacion)

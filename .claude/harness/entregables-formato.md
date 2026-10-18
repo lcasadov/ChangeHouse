@@ -22,7 +22,7 @@ contenido**. Aplica sin desviarte:
 | Identificadores | Prefijo estable por tipo: `RF-` requisitos, `L-` limitaciones, `R-` recomendaciones, `ADR-` decisiones |
 | Página | Mismo tamaño y mismos márgenes |
 
-Los **valores** —tipografía, colores, medidas— los fija el perfil de Habitinder en
+Los **valores** —tipografía, colores, medidas— los fija el perfil de ChangeHouse en
 `.claude/harness/profile/entregables/formato.md`, y la plantilla ya los lleva aplicados.
 Si algún día cambia la identidad visual, cambian los valores, **pero no la lista de elementos
 que hay que unificar**.

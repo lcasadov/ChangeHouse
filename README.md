@@ -1,4 +1,4 @@
-# Habitinder
+# ChangeHouse
 
 > **Cambia de casa sin vender primero.** Plataforma móvil y web para la **permuta de viviendas**
 > entre particulares: publicas tu vivienda, marcas las que te gustan y, cuando hay interés
@@ -58,7 +58,7 @@ Además, la plataforma detecta **cadenas de tres** (A quiere B, B quiere C, C qu
 | **Impuestos correctos, con exenciones aplicadas** | Simulador que muestra ITP, IRPF y plusvalía municipal, incluyendo exención por reinversión en vivienda habitual y mayores de 65 |
 | **Acompañamiento** | Gestoría asociada que tramita hasta la notaría |
 
-> ⚠️ **Habitinder nunca se comunica como "ahorro fiscal por escriturar menos".** Los valores de
+> ⚠️ **ChangeHouse nunca se comunica como "ahorro fiscal por escriturar menos".** Los valores de
 > escritura deben ser valores de mercado defendibles (ver [§6](#6--reglas-de-negocio) y
 > [§13](#13--cumplimiento-legal)).
 
@@ -123,7 +123,7 @@ Segmentos prioritarios:
 | `propietario` | Usuario registrado con al menos una vivienda publicada; da likes, recibe matches, chatea | 1 |
 | `buscador` | Usuario registrado sin vivienda publicada (solo puede mirar; **no genera matches**) | 1 |
 | `gestoria` | Profesional asociado; recibe operaciones derivadas y actualiza su estado | 2 |
-| `admin` | Equipo Habitinder: moderación, verificación, soporte, métricas | 1 |
+| `admin` | Equipo ChangeHouse: moderación, verificación, soporte, métricas | 1 |
 
 Modelo de acceso: **deny-by-default** y autorización centralizada en la API. La matriz de permisos
 detallada se definirá en `$RBAC_MATRIX_DOC`.
@@ -411,7 +411,7 @@ Todo el proyecto en **TypeScript**, organizado como **monorepo**.
 ### Estructura del repositorio
 
 ```text
-Habitinder/
+ChangeHouse/
 ├── apps/
 │   ├── mobile/            # Expo: Android, iOS y web (incluye portal de gestoría y admin en fase 1-2)
 │   └── landing/           # Astro: web pública, blog y lista de espera

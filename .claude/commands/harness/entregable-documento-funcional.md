@@ -1,5 +1,5 @@
 ---
-description: "Entregable · Genera el documento funcional del sistema en Word, con la plantilla de Habitinder. Describe comportamiento observable, no implementación."
+description: "Entregable · Genera el documento funcional del sistema en Word, con la plantilla de ChangeHouse. Describe comportamiento observable, no implementación."
 argument-hint: "[contexto opcional]"
 ---
 

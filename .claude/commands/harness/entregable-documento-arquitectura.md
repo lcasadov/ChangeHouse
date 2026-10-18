@@ -1,5 +1,5 @@
 ---
-description: "Entregable · Genera el documento de arquitectura del sistema en Word, con la plantilla de Habitinder: C4, datos, seguridad, ejecución, despliegue y decisiones."
+description: "Entregable · Genera el documento de arquitectura del sistema en Word, con la plantilla de ChangeHouse: C4, datos, seguridad, ejecución, despliegue y decisiones."
 argument-hint: "[contexto opcional]"
 ---
 
