@@ -5,8 +5,10 @@ import { AddressCipher } from '../../crypto/address-cipher.js';
 import type { Database, Executor } from './database.js';
 import { DrizzleAdminGrants } from './drizzle-admin-grants.js';
 import { DrizzleAuditLog } from './drizzle-audit-log.js';
+import { DrizzleCycleCandidates } from './drizzle-cycle-candidates.js';
 import { DrizzleDecisionStore } from './drizzle-decision-store.js';
 import { DrizzleDecisionUnitOfWork } from './drizzle-decision-unit-of-work.js';
+import { DrizzleMatchRepository } from './drizzle-match-repository.js';
 import { DrizzleUnitOfWork } from './drizzle-unit-of-work.js';
 
 /**
@@ -22,6 +24,29 @@ function fakeDb(result: unknown) {
         if (property === 'then') {
           return (resolve: (value: unknown) => void) => {
             resolve(result);
+          };
+        }
+        return (...args: unknown[]) => {
+          calls.push({ method: String(property), args });
+          return builder;
+        };
+      },
+    },
+  );
+  return { db: builder as Executor, calls };
+}
+
+/** Como `fakeDb`, pero cada consulta esperada da el siguiente resultado de la lista. */
+function sequenceDb(results: unknown[]) {
+  const pending = [...results];
+  const calls: { method: string; args: unknown[] }[] = [];
+  const builder: unknown = new Proxy(
+    {},
+    {
+      get(_target, property) {
+        if (property === 'then') {
+          return (resolve: (value: unknown) => void) => {
+            resolve(pending.shift());
           };
         }
         return (...args: unknown[]) => {
@@ -208,5 +233,163 @@ describe('DrizzleDecisionUnitOfWork', () => {
 
     expect(opened).toBe(1);
     expect(result).toBe(true);
+  });
+
+  it('la búsqueda de ciclos y los matches comparten la misma transacción', async () => {
+    const database = {
+      transaction: (work: (tx: Executor) => Promise<unknown>) => work(fakeDb(undefined).db),
+    } as unknown as Database;
+
+    const result = await new DrizzleDecisionUnitOfWork(database).run((_store, matching) =>
+      Promise.resolve([
+        matching.cycles instanceof DrizzleCycleCandidates,
+        matching.matches instanceof DrizzleMatchRepository,
+      ]),
+    );
+
+    expect(result).toEqual([true, true]);
+  });
+});
+
+describe('DrizzleDecisionStore.lockPair', () => {
+  it('toma el bloqueo asesor del par en la transacción', async () => {
+    const { db, calls } = fakeDb(undefined);
+
+    await new DrizzleDecisionStore(db).lockPair('a:b');
+
+    expect(calls.map((call) => call.method)).toEqual(['execute']);
+  });
+});
+
+describe('DrizzleCycleCandidates', () => {
+  const member = (id: string, terms: boolean) => ({
+    id,
+    owner_id: `owner-${id}`,
+    status: 'published',
+    value_min_cents: 100,
+    value_max_cents: 200,
+    max_to_pay_cents: terms ? 50 : null,
+    min_to_receive_cents: terms ? 0 : null,
+    value_reference_pct: terms ? 50 : null,
+  });
+  const backEdge = [{ one: 1 }];
+
+  it('sin la arista de vuelta no hay ciclos ni se leen las viviendas', async () => {
+    const { db, calls } = sequenceDb([[]]);
+
+    expect(await new DrizzleCycleCandidates(db).findCycles('a', 'b')).toEqual([]);
+    expect(calls).toHaveLength(1);
+  });
+
+  it('con la arista de vuelta devuelve el ciclo en orden, con o sin límites', async () => {
+    const { db } = sequenceDb([backEdge, [member('b', false), member('a', true)]]);
+
+    const [cycle] = await new DrizzleCycleCandidates(db).findCycles('a', 'b');
+
+    expect(cycle?.map((home) => home.homeId)).toEqual(['a', 'b']);
+    expect(cycle?.[0]?.terms).toEqual({
+      maxToPayCents: 50,
+      minToReceiveCents: 0,
+      valueReferencePct: 50,
+    });
+    expect(cycle?.[1]?.terms).toBeNull();
+  });
+
+  it('si una de las viviendas ya no existe, no hay ciclo', async () => {
+    const { db } = sequenceDb([backEdge, [member('a', true)]]);
+
+    expect(await new DrizzleCycleCandidates(db).findCycles('a', 'b')).toEqual([]);
+  });
+});
+
+describe('DrizzleMatchRepository', () => {
+  const at = new Date('2026-10-19T10:00:00.000Z');
+  const match = {
+    id: 'm-new',
+    createdAt: at,
+    cycle: {
+      type: 2 as const,
+      cycleKey: 'a:b',
+      participants: [
+        {
+          homeId: 'a',
+          userId: 'u-a',
+          givesHomeId: 'a',
+          receivesHomeId: 'b',
+          compensationCents: 10,
+        },
+        {
+          homeId: 'b',
+          userId: 'u-b',
+          givesHomeId: 'b',
+          receivesHomeId: 'a',
+          compensationCents: -10,
+        },
+      ],
+    },
+  };
+
+  it('saveMatch inserta el match y sus participantes si la clave era nueva', async () => {
+    const { db, calls } = sequenceDb([[{ id: 'm-new' }], undefined]);
+
+    expect(await new DrizzleMatchRepository(db).saveMatch(match)).toBe('m-new');
+    expect(calls.map((call) => call.method)).toContain('onConflictDoNothing');
+    expect(calls.filter((call) => call.method === 'values')[1]?.args[0]).toHaveLength(2);
+  });
+
+  it('saveMatch devuelve el match existente si la clave ya estaba', async () => {
+    const { db } = sequenceDb([[], [{ id: 'm-old' }]]);
+
+    expect(await new DrizzleMatchRepository(db).saveMatch(match)).toBe('m-old');
+  });
+
+  it('saveMatch falla si ni se creó ni existe', async () => {
+    const { db } = sequenceDb([[], []]);
+
+    await expect(new DrizzleMatchRepository(db).saveMatch(match)).rejects.toThrow();
+  });
+
+  it('findMatch agrupa los participantes de cada match, o devuelve null', async () => {
+    const row = { id: 'm', type: 2, status: 'open', createdAt: at, cycleKey: 'a:b', chatId: null };
+    const participant = {
+      homeId: 'a',
+      userId: 'u-a',
+      displayName: 'Ana',
+      givesHomeId: 'a',
+      receivesHomeId: 'b',
+      compensationCents: 10,
+      status: 'pending',
+    };
+    const found = await new DrizzleMatchRepository(
+      sequenceDb([[row], [{ matchId: 'm', ...participant }]]).db,
+    ).findMatch('m');
+    const missing = await new DrizzleMatchRepository(sequenceDb([[]]).db).findMatch('x');
+
+    expect(found).toEqual({
+      id: 'm',
+      type: 2,
+      status: 'open',
+      createdAt: at,
+      participants: [participant],
+    });
+    expect(missing).toBeNull();
+  });
+
+  it('listForUser aplica estado y cursor; isLikeInMatch dice si hay fila', async () => {
+    const listed = sequenceDb([[]]);
+
+    const page = await new DrizzleMatchRepository(listed.db).listForUser({
+      userId: 'u',
+      status: 'open',
+      after: { at, id: 'm' },
+      limit: 5,
+    });
+
+    expect(page).toEqual([]);
+    expect(listed.calls.find((call) => call.method === 'limit')?.args).toEqual([5]);
+    expect(await new DrizzleMatchRepository(fakeDb([{ one: 1 }]).db).isLikeInMatch('a', 'b')).toBe(
+      true,
+    );
+    expect(await new DrizzleMatchRepository(fakeDb([]).db).isLikeInMatch('a', 'b')).toBe(false);
   });
 });

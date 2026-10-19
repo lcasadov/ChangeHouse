@@ -5,6 +5,7 @@ import {
   InMemoryDecisionStore,
   InMemoryDecisionUnitOfWork,
   InMemoryHomeRepository,
+  InMemoryMatchStore,
 } from '../../../test/fakes.js';
 import { type Home, newDraft } from '../../domain/home/home.js';
 import { HomeNotFoundError } from '../home/errors.js';
@@ -57,15 +58,18 @@ function setup(now = new Date('2026-10-19T10:00:00.000Z'), homesToAdd: Home[] = 
     homes.homes.set(added.id, added);
   }
   const store = new InMemoryDecisionStore(homes);
+  const matching = new InMemoryMatchStore(store, homes);
   const matches = new FakeMatchLookup();
+  let sequence = 0;
   const operations = decisionOperations({
     homes,
-    units: new InMemoryDecisionUnitOfWork(store),
+    units: new InMemoryDecisionUnitOfWork(store, matching),
     matches,
     clock: { now: () => clock.current },
+    ids: { next: () => `match-${String(++sequence)}` },
     likesPerDay: LIMIT,
   });
-  return { operations, homes, store, matches, clock };
+  return { operations, homes, store, matching, matches, clock };
 }
 
 type Prepared = ReturnType<typeof setup>;
@@ -145,6 +149,173 @@ describe('likeHome', () => {
     await expect(
       prepared.operations.likeHome(ME, { fromHomeId: MY_HOME, targetHomeId: THEIR_HOME }),
     ).rejects.toBeInstanceOf(LikeExistsError);
+  });
+});
+
+describe('likeHome con match directo', () => {
+  const EUR = 100;
+  const euros = (amount: number) => amount * EUR;
+
+  /** Mis viviendas valen 200.000 € y la suya 212.000 €; cada dueño con los límites indicados. */
+  function valued(
+    myTerms: { maxToPayCents?: number; minToReceiveCents?: number } = {},
+    theirTerms: { maxToPayCents?: number; minToReceiveCents?: number } = {},
+  ) {
+    const prepared = setup();
+    const values = { [MY_HOME]: 200_000, [THEIR_HOME]: 212_000 };
+    for (const [id, value] of Object.entries(values)) {
+      const current = prepared.homes.homes.get(id);
+      if (!current) throw new Error(`falta ${id}`);
+      prepared.homes.homes.set(id, {
+        ...current,
+        valueMinCents: euros(value),
+        valueMaxCents: euros(value),
+      });
+    }
+    const terms = { maxToPayCents: euros(30_000), minToReceiveCents: 0, valueReferencePct: 50 };
+    prepared.matching.terms.set(MY_HOME, { ...terms, ...myTerms });
+    prepared.matching.terms.set(THEIR_HOME, { ...terms, ...theirTerms });
+    prepared.matching.displayNames.set(ME, 'Ana');
+    prepared.matching.displayNames.set(OTHER, 'Beto');
+    return prepared;
+  }
+
+  const theyLikedMe = (prepared: Prepared) =>
+    prepared.store.likes.push({
+      from: THEIR_HOME,
+      to: MY_HOME,
+      at: new Date('2026-10-19T09:00:00.000Z'),
+    });
+
+  it('Scenario: Me gusta recíproco compatible - la respuesta incluye el match directo abierto con las dos viviendas', async () => {
+    const prepared = valued();
+    theyLikedMe(prepared);
+
+    const result = await prepared.operations.likeHome(ME, {
+      fromHomeId: MY_HOME,
+      targetHomeId: THEIR_HOME,
+    });
+
+    expect(result).toEqual({
+      liked: true,
+      match: {
+        id: 'match-1',
+        type: 2,
+        status: 'open',
+        createdAt: '2026-10-19T10:00:00.000Z',
+        participants: [
+          {
+            homeId: MY_HOME,
+            displayName: 'Ana',
+            givesHomeId: MY_HOME,
+            receivesHomeId: THEIR_HOME,
+            compensationCents: euros(12_000),
+            status: 'pending',
+          },
+          {
+            homeId: THEIR_HOME,
+            displayName: 'Beto',
+            givesHomeId: THEIR_HOME,
+            receivesHomeId: MY_HOME,
+            compensationCents: -euros(12_000),
+            status: 'pending',
+          },
+        ],
+      },
+    });
+    expect(prepared.matching.saved.map((match) => match.cycle.cycleKey)).toEqual([
+      [MY_HOME, THEIR_HOME].sort().join(':'),
+    ]);
+    expect(prepared.store.likes).toHaveLength(2);
+  });
+
+  it('Scenario: Me gusta recíproco incompatible - se registra el me gusta y no se crea ningún match', async () => {
+    const prepared = valued({ maxToPayCents: euros(10_000) });
+    theyLikedMe(prepared);
+
+    const result = await prepared.operations.likeHome(ME, {
+      fromHomeId: MY_HOME,
+      targetHomeId: THEIR_HOME,
+    });
+
+    expect(result).toEqual({ liked: true, match: null });
+    expect(prepared.store.likes).toHaveLength(2);
+    expect(prepared.matching.saved).toEqual([]);
+  });
+
+  it('Scenario: Vivienda ya no publicada - si la otra se pausa antes de que se lea dentro de la transacción, no hay match', async () => {
+    const prepared = valued();
+    theyLikedMe(prepared);
+    prepared.matching.statusInTransaction.set(THEIR_HOME, 'paused');
+
+    const result = await prepared.operations.likeHome(ME, {
+      fromHomeId: MY_HOME,
+      targetHomeId: THEIR_HOME,
+    });
+
+    expect(result).toEqual({ liked: true, match: null });
+    expect(prepared.matching.saved).toEqual([]);
+  });
+
+  it('sin me gusta de vuelta no se busca ningún match', async () => {
+    const prepared = valued();
+
+    const result = await prepared.operations.likeHome(ME, {
+      fromHomeId: MY_HOME,
+      targetHomeId: THEIR_HOME,
+    });
+
+    expect(result).toEqual({ liked: true, match: null });
+    expect(prepared.matching.saved).toEqual([]);
+  });
+
+  it('Scenario: Me gusta simultáneos - bloquea el par de viviendas, con su clave canónica, antes de comprobar y escribir', async () => {
+    const prepared = valued();
+
+    await prepared.operations.likeHome(ME, { fromHomeId: MY_HOME, targetHomeId: THEIR_HOME });
+
+    expect(prepared.store.pairLocks).toEqual([[MY_HOME, THEIR_HOME].sort().join(':')]);
+    expect(prepared.store.lockOrder).toEqual(['user', 'pair', 'insert']);
+  });
+
+  it('Scenario: Un solo match por ciclo - si el ciclo ya tenía match, devuelve el existente sin crear otro', async () => {
+    const prepared = valued();
+    theyLikedMe(prepared);
+    await prepared.operations.likeHome(ME, { fromHomeId: MY_HOME, targetHomeId: THEIR_HOME });
+    const [first] = prepared.matching.records;
+    // Se borra la arista a mano para repetir el me gusta: el match del ciclo sigue existiendo
+    await prepared.store.deleteLike(MY_HOME, THEIR_HOME);
+
+    const again = await prepared.operations.likeHome(ME, {
+      fromHomeId: MY_HOME,
+      targetHomeId: THEIR_HOME,
+    });
+
+    expect(again.match?.id).toBe(first?.id);
+    expect(prepared.matching.records).toHaveLength(1);
+  });
+
+  it('si algo falla tras crear el match, ni el me gusta ni el match quedan guardados', async () => {
+    const prepared = valued();
+    theyLikedMe(prepared);
+    prepared.matching.failOnFind = true;
+
+    await expect(
+      prepared.operations.likeHome(ME, { fromHomeId: MY_HOME, targetHomeId: THEIR_HOME }),
+    ).rejects.toThrow();
+
+    expect(prepared.store.likes).toHaveLength(1);
+    expect(prepared.matching.records).toEqual([]);
+  });
+
+  it('deshacer un me gusta bloquea antes el par de viviendas, para no cruzarse con el match que lo usa', async () => {
+    const prepared = valued();
+    await prepared.operations.likeHome(ME, { fromHomeId: MY_HOME, targetHomeId: THEIR_HOME });
+    prepared.store.pairLocks.length = 0;
+
+    await prepared.operations.undoLastAction(ME, MY_HOME);
+
+    expect(prepared.store.pairLocks).toEqual([[MY_HOME, THEIR_HOME].sort().join(':')]);
   });
 });
 

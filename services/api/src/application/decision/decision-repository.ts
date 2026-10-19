@@ -1,3 +1,5 @@
+import type { MatchingTransaction } from '../matching/matching-repository.js';
+
 /** Desde dónde se decide: una vivienda propia o, para un `seeker` sin vivienda, la cuenta. */
 export type DecisionOrigin =
   | { readonly kind: 'home'; readonly homeId: string }
@@ -17,6 +19,12 @@ export interface LastAction {
 export interface DecisionStore {
   /** Serializa hasta el final de la transacción las decisiones de este usuario (límite diario). */
   lockUser(userId: string): Promise<void>;
+  /**
+   * Serializa hasta el final de la transacción las decisiones sobre un par de viviendas (su clave
+   * canónica): dos me gusta cruzados simultáneos no se pierden el uno al otro y un deshacer no se
+   * cruza con el match que usa ese me gusta. Se toma siempre después de `lockUser`.
+   */
+  lockPair(pairKey: string): Promise<void>;
   /** Me gusta dados desde las viviendas del usuario en `[start, end)`. */
   countLikes(userId: string, start: Date, end: Date): Promise<number>;
   likeExists(fromHomeId: string, toHomeId: string): Promise<boolean>;
@@ -29,12 +37,15 @@ export interface DecisionStore {
   lastAction(origin: DecisionOrigin): Promise<LastAction | null>;
 }
 
-/** Puerto de salida: ejecuta el trabajo en una transacción; si falla, nada queda confirmado. */
+/**
+ * Puerto de salida: ejecuta el trabajo en una transacción; si falla, nada queda confirmado. Las
+ * decisiones y la detección y creación de matches comparten la misma transacción.
+ */
 export interface DecisionUnitOfWork {
-  run<T>(work: (store: DecisionStore) => Promise<T>): Promise<T>;
+  run<T>(work: (store: DecisionStore, matching: MatchingTransaction) => Promise<T>): Promise<T>;
 }
 
-/** Puerto de salida: ¿este me gusta forma parte de un match? Lo implementa `add-direct-match`. */
+/** Puerto de salida: ¿este me gusta forma parte de un match no cerrado? */
 export interface MatchLookup {
   isLikeInMatch(fromHomeId: string, toHomeId: string): Promise<boolean>;
 }

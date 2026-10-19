@@ -351,12 +351,30 @@ sin pausar los demás matches de esas viviendas; `in_operation` llega en la
 fase 2); `chat_id`; `cycle_key` único = identificadores de vivienda ordenados y
 concatenados (evita duplicados, README §11).
 
+Implementada en `add-direct-match` (migración `0009_matches`): `type` con
+`CHECK (type IN (2, 3))`, `status` (`match_status`) `open` por defecto,
+`chat_id` nulo hasta `add-match-chat`, `cycle_key` con la restricción única
+`matches_cycle_key_unique` (identificadores ordenados y unidos con `:`). El
+match se crea en la misma transacción que el «Me gusta» que cierra el ciclo,
+con `INSERT … ON CONFLICT (cycle_key) DO NOTHING RETURNING`; si no devuelve
+fila, se lee el existente. Antes de insertar la arista se toma
+`pg_advisory_xact_lock` sobre la clave del par `{from, to}`, de modo que dos
+«Me gusta» cruzados simultáneos se serializan y forman un único match.
+
 ### `match_participants` — cada vivienda de un match
 
 `gives_home_id` (la que entrega, igual a `home_id`), `receives_home_id`,
 `compensation_cents` (positivo = paga, negativo = recibe; la suma en un match
 es 0, RN-04), `status` `pending`, `confirmed`, `withdrawn`, y `shares_phone`
 (autoriza mostrar su teléfono a los demás participantes, RF-53).
+
+Clave primaria `(match_id, home_id)`; `match_id` en cascada desde `matches`;
+`home_id`, `gives_home_id`, `receives_home_id` y `user_id` con `RESTRICT` (una
+vivienda o un usuario no se borran mientras figuren en un match). Checks
+`gives_home_id = home_id` y `receives_home_id <> gives_home_id`. `status`
+(`participant_status`) `pending` por defecto y `shares_phone` `false`. Índices
+`(user_id, match_id)` para «Mis matches» y `(gives_home_id, receives_home_id)`
+para saber si un «Me gusta» forma parte de un match no cerrado (no se deshace).
 
 ### `operations` — permuta en tramitación (fase 2)
 

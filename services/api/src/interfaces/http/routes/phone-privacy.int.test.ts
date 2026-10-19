@@ -106,6 +106,7 @@ const HOMES_REQUESTS: Record<string, RequestTemplate> = {
     payload: () => ({ fromHomeId: MISSING_ID, targetHomeId: MISSING_ID }),
   },
   undoLastAction: { method: 'DELETE', url: `/v1/me/last-action?homeId=${MISSING_ID}` },
+  listMyMatches: { method: 'GET', url: '/v1/matches' },
   adminListHomes: { method: 'GET', url: '/v1/admin/homes?status=in_review' },
   adminModerateHome: {
     method: 'POST',

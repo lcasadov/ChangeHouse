@@ -12,6 +12,7 @@ import type { ImageProcessor } from './application/home/image-processor.js';
 import { photoOperations } from './application/home/photo-operations.js';
 import type { PhotoStorage } from './application/home/photo-storage.js';
 import type { PlaceResolver } from './application/home/place-resolver.js';
+import { matchOperations } from './application/matching/match-operations.js';
 import { moderationOperations } from './application/moderation/moderation-operations.js';
 import { searchPreferencesOperations } from './application/search-preferences/search-preferences-operations.js';
 import { joinWaitlist } from './application/waitlist/join-waitlist.js';
@@ -19,12 +20,12 @@ import type { ApiConfig } from './config.js';
 import { createFirebaseIdentityVerifier } from './infrastructure/auth/firebase-identity-verifier.js';
 import { AddressCipher } from './infrastructure/crypto/address-cipher.js';
 import { SharpImageProcessor } from './infrastructure/images/sharp-image-processor.js';
-import { NoMatchLookup } from './infrastructure/matching/no-match-lookup.js';
 import { createDatabase } from './infrastructure/persistence/drizzle/database.js';
 import { DrizzleDecisionUnitOfWork } from './infrastructure/persistence/drizzle/drizzle-decision-unit-of-work.js';
 import { DrizzleDiscoveryRepository } from './infrastructure/persistence/drizzle/drizzle-discovery-repository.js';
 import { DrizzleHomeOwnership } from './infrastructure/persistence/drizzle/drizzle-home-ownership.js';
 import { DrizzleHomeRepository } from './infrastructure/persistence/drizzle/drizzle-home-repository.js';
+import { DrizzleMatchRepository } from './infrastructure/persistence/drizzle/drizzle-match-repository.js';
 import { DrizzlePhotoRepository } from './infrastructure/persistence/drizzle/drizzle-photo-repository.js';
 import { DrizzleSearchPreferencesRepository } from './infrastructure/persistence/drizzle/drizzle-search-preferences-repository.js';
 import { DrizzleUnitOfWork } from './infrastructure/persistence/drizzle/drizzle-unit-of-work.js';
@@ -48,7 +49,7 @@ export interface ApiAdapters {
   imageProcessor?: ImageProcessor;
   /** Por defecto, el reloj del sistema. Las pruebas fijan el instante (límite diario de me gusta). */
   clock?: Clock;
-  /** Por defecto, ningún me gusta forma parte de un match (`NoMatchLookup`) hasta `add-direct-match`. */
+  /** Por defecto, los matches reales de PostgreSQL (`DrizzleMatchRepository`). */
   matchLookup?: MatchLookup;
 }
 
@@ -121,13 +122,16 @@ export function createApi(config: ApiConfig, adapters: ApiAdapters = {}) {
     photos: photoRepository,
     storage: photoStorage,
   });
+  const matchRepository = new DrizzleMatchRepository(database.db);
   const decisions = decisionOperations({
     homes: homeRepository,
     units: new DrizzleDecisionUnitOfWork(database.db),
-    matches: adapters.matchLookup ?? new NoMatchLookup(),
+    matches: adapters.matchLookup ?? matchRepository,
     clock: adapters.clock ?? systemClock,
+    ids: uuidV7Generator,
     likesPerDay: config.likesPerDay,
   });
+  const matches = matchOperations({ matches: matchRepository });
   const app = buildApp({
     logger: config.logger,
     landingOrigin: config.landingOrigin,
@@ -147,6 +151,7 @@ export function createApi(config: ApiConfig, adapters: ApiAdapters = {}) {
     searchPreferences,
     discovery,
     decisions,
+    matches,
   });
 
   return {

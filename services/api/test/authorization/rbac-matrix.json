@@ -142,5 +142,11 @@
   { "operationId": "undoLastAction", "actor": "seeker", "expected": 404 },
   { "operationId": "undoLastAction", "actor": "owner", "expected": 404 },
   { "operationId": "undoLastAction", "actor": "agency", "expected": 403 },
-  { "operationId": "undoLastAction", "actor": "admin", "expected": 403 }
+  { "operationId": "undoLastAction", "actor": "admin", "expected": 403 },
+  { "operationId": "listMyMatches", "actor": "anon", "expected": 401 },
+  { "operationId": "listMyMatches", "actor": "unregistered", "expected": 403 },
+  { "operationId": "listMyMatches", "actor": "seeker", "expected": 200 },
+  { "operationId": "listMyMatches", "actor": "owner", "expected": 200 },
+  { "operationId": "listMyMatches", "actor": "agency", "expected": 403 },
+  { "operationId": "listMyMatches", "actor": "admin", "expected": 403 }
 ]

@@ -1,4 +1,4 @@
-import { FIXTURE_PLACES } from '@changehouse/shared';
+import { FIXTURE_PLACES, type HomeStatus } from '@changehouse/shared';
 
 import type { AdminGrantRepository } from '../src/application/account/admin-grant.js';
 import type { ConsentRepository } from '../src/application/account/consent-repository.js';
@@ -21,6 +21,15 @@ import type { ImageProcessor, ProcessedImage } from '../src/application/home/ima
 import type { PhotoRepository } from '../src/application/home/photo-repository.js';
 import type { OriginalFile, PhotoStorage } from '../src/application/home/photo-storage.js';
 import type { PlaceResolver } from '../src/application/home/place-resolver.js';
+import type {
+  CycleCandidates,
+  MatchingTransaction,
+  MatchListQuery,
+  MatchReader,
+  MatchRecord,
+  MatchWriter,
+  NewMatch,
+} from '../src/application/matching/matching-repository.js';
 import type { AuditEntry, AuditLog } from '../src/application/moderation/audit-log.js';
 import type { ModerationScope, UnitOfWork } from '../src/application/moderation/unit-of-work.js';
 import type {
@@ -32,6 +41,7 @@ import type { User } from '../src/domain/account/user.js';
 import { InvalidImageError } from '../src/domain/home/errors.js';
 import type { Home, HomeLocation } from '../src/domain/home/home.js';
 import { firstFreePosition, type HomePhoto, MAX_PHOTOS } from '../src/domain/home/photo.js';
+import type { CompensationTerms, CycleHome } from '../src/domain/matching/cycle.js';
 import type { SearchPreferences } from '../src/domain/search-preferences/search-preferences.js';
 
 const DEFAULT_CREATED_AT = new Date('2026-10-01T09:00:00.000Z');
@@ -412,6 +422,9 @@ export class InMemoryDecisionStore implements DecisionStore {
   readonly likes: { from: string; to: string; at: Date }[] = [];
   readonly dismissals: { origin: string; to: string; at: Date }[] = [];
   readonly locks: string[] = [];
+  readonly pairLocks: string[] = [];
+  /** Orden de los bloqueos y de la escritura del me gusta, para comprobar que se bloquea antes. */
+  readonly lockOrder: ('user' | 'pair' | 'insert')[] = [];
 
   constructor(private readonly homes: InMemoryHomeRepository) {}
 
@@ -421,6 +434,13 @@ export class InMemoryDecisionStore implements DecisionStore {
 
   lockUser(userId: string): Promise<void> {
     this.locks.push(userId);
+    this.lockOrder.push('user');
+    return Promise.resolve();
+  }
+
+  lockPair(pairKey: string): Promise<void> {
+    this.pairLocks.push(pairKey);
+    this.lockOrder.push('pair');
     return Promise.resolve();
   }
 
@@ -438,6 +458,7 @@ export class InMemoryDecisionStore implements DecisionStore {
 
   insertLike(from: string, to: string, at: Date): Promise<void> {
     this.likes.push({ from, to, at });
+    this.lockOrder.push('insert');
     return Promise.resolve();
   }
 
@@ -481,18 +502,116 @@ export class InMemoryDecisionStore implements DecisionStore {
 
 /** Unidad de trabajo de decisiones en memoria: si el trabajo falla, vuelve al estado anterior. */
 export class InMemoryDecisionUnitOfWork implements DecisionUnitOfWork {
-  constructor(readonly store: InMemoryDecisionStore) {}
+  constructor(
+    readonly store: InMemoryDecisionStore,
+    readonly matching: InMemoryMatchStore,
+  ) {}
 
-  async run<T>(work: (store: DecisionStore) => Promise<T>): Promise<T> {
+  async run<T>(
+    work: (store: DecisionStore, matching: MatchingTransaction) => Promise<T>,
+  ): Promise<T> {
     const likes = this.store.likes.map((like) => ({ ...like }));
     const dismissals = this.store.dismissals.map((row) => ({ ...row }));
+    const records = [...this.matching.records];
+    const saved = [...this.matching.saved];
     try {
-      return await work(this.store);
+      return await work(this.store, { cycles: this.matching, matches: this.matching });
     } catch (error) {
       this.store.likes.splice(0, this.store.likes.length, ...likes);
       this.store.dismissals.splice(0, this.store.dismissals.length, ...dismissals);
+      this.matching.records.splice(0, this.matching.records.length, ...records);
+      this.matching.saved.splice(0, this.matching.saved.length, ...saved);
       throw error;
     }
+  }
+}
+
+/**
+ * Matches en memoria: busca los ciclos de 2 en los me gusta del almacén de decisiones y guarda los
+ * matches con su clave única. `statusInTransaction` simula un cambio de estado que solo se ve ya
+ * dentro de la transacción; `terms`, las preferencias efectivas de cada vivienda.
+ */
+export class InMemoryMatchStore implements CycleCandidates, MatchWriter {
+  readonly terms = new Map<string, CompensationTerms>();
+  readonly displayNames = new Map<string, string>();
+  readonly statusInTransaction = new Map<string, HomeStatus>();
+  readonly records: MatchRecord[] = [];
+  /** Clave de ciclo → id del match: la restricción única. */
+  private readonly keys = new Map<string, string>();
+  readonly saved: NewMatch[] = [];
+  failOnFind = false;
+
+  constructor(
+    private readonly decisions: InMemoryDecisionStore,
+    private readonly homes: InMemoryHomeRepository,
+  ) {}
+
+  private member(homeId: string): CycleHome {
+    const home = this.homes.homes.get(homeId);
+    if (!home) throw new Error(`Vivienda ${homeId} inexistente`);
+    return {
+      homeId,
+      ownerId: home.ownerId,
+      status: this.statusInTransaction.get(homeId) ?? home.status,
+      valueMinCents: home.valueMinCents,
+      valueMaxCents: home.valueMaxCents,
+      terms: this.terms.get(homeId) ?? null,
+    };
+  }
+
+  findCycles(fromHomeId: string, toHomeId: string): Promise<CycleHome[][]> {
+    const back = this.decisions.likes.some(
+      (like) => like.from === toHomeId && like.to === fromHomeId,
+    );
+    return Promise.resolve(back ? [[this.member(fromHomeId), this.member(toHomeId)]] : []);
+  }
+
+  saveMatch(match: NewMatch): Promise<string> {
+    const existing = this.keys.get(match.cycle.cycleKey);
+    if (existing !== undefined && this.records.some((record) => record.id === existing)) {
+      return Promise.resolve(existing);
+    }
+    this.saved.push(match);
+    this.keys.set(match.cycle.cycleKey, match.id);
+    this.records.push({
+      id: match.id,
+      type: match.cycle.type,
+      status: 'open',
+      createdAt: match.createdAt,
+      participants: [...match.cycle.participants]
+        .sort((a, b) => a.homeId.localeCompare(b.homeId))
+        .map((participant) => ({
+          ...participant,
+          displayName: this.displayNames.get(participant.userId) ?? participant.userId,
+          status: 'pending' as const,
+        })),
+    });
+    return Promise.resolve(match.id);
+  }
+
+  findMatch(id: string): Promise<MatchRecord | null> {
+    if (this.failOnFind) return Promise.reject(new Error('fallo al leer el match'));
+    return Promise.resolve(this.records.find((record) => record.id === id) ?? null);
+  }
+}
+
+/** Lectura de matches en memoria: los del usuario, del más reciente al más antiguo, tras el cursor. */
+export class InMemoryMatchReader implements MatchReader {
+  readonly queries: MatchListQuery[] = [];
+
+  constructor(private readonly records: readonly MatchRecord[]) {}
+
+  listForUser(query: MatchListQuery): Promise<MatchRecord[]> {
+    this.queries.push(query);
+    const position = (record: MatchRecord) => `${record.createdAt.toISOString()}|${record.id}`;
+    const after = query.after && `${query.after.at.toISOString()}|${query.after.id}`;
+    const found = this.records
+      .filter((record) => record.participants.some((p) => p.userId === query.userId))
+      .filter((record) => query.status === undefined || record.status === query.status)
+      .filter((record) => after === undefined || position(record) < after)
+      .sort((a, b) => position(b).localeCompare(position(a)))
+      .slice(0, query.limit);
+    return Promise.resolve(found);
   }
 }
 
