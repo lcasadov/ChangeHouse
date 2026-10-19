@@ -23,6 +23,7 @@ describe('loadConfig', () => {
       appOrigins: ['http://localhost:8081'],
       trustProxyHops: 0,
       waitlistRateLimit: { max: 5, windowSeconds: 600 },
+      likesPerDay: 10,
       firebase: { projectId: 'changehouse-des', authEmulatorHost: undefined },
       addressEncryptionKey: ADDRESS_KEY,
       places: { serverKey: undefined },
@@ -42,6 +43,13 @@ describe('loadConfig', () => {
     expect(config.port).toBe(3000);
     expect(config.landingOrigin).toBe('https://changehouse.app');
     expect(config.waitlistRateLimit).toEqual({ max: 20, windowSeconds: 60 });
+  });
+
+  it('lee el límite diario de me gusta del entorno (LIKES_PER_DAY) y rechaza los valores no válidos', () => {
+    expect(loadConfig({ ...base, LIKES_PER_DAY: '25' }).likesPerDay).toBe(25);
+    for (const invalid of ['0', '-1', 'diez', '2.5', '']) {
+      expect(() => loadConfig({ ...base, LIKES_PER_DAY: invalid })).toThrow(/LIKES_PER_DAY/);
+    }
   });
 
   it('lee los orígenes de la app (lista separada por comas) y rechaza los que no son un origen', () => {

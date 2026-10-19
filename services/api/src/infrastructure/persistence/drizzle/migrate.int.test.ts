@@ -368,6 +368,86 @@ describe('migraciones', () => {
     ]);
   });
 
+  it('GIVEN la base migrada WHEN se inspecciona THEN likes y account_dismissals tienen clave compuesta, cascada, sin auto-referencia y los índices de decisiones', async () => {
+    const target = openSql(urlFor(EMPTY_DB));
+    const columns = await target<{ table_name: string; column_name: string; udt_name: string }[]>`
+      SELECT table_name, column_name, udt_name FROM information_schema.columns
+      WHERE table_name IN ('likes', 'account_dismissals')
+      ORDER BY table_name, column_name`;
+    const references = await target<{ constraint_name: string; delete_rule: string }[]>`
+      SELECT constraint_name, delete_rule FROM information_schema.referential_constraints
+      WHERE constraint_name LIKE 'likes_%' OR constraint_name LIKE 'account_dismissals_%'
+      ORDER BY constraint_name`;
+    const indexes = await target<{ indexname: string }[]>`
+      SELECT indexname FROM pg_indexes
+      WHERE tablename IN ('likes', 'account_dismissals', 'dismissals')
+      ORDER BY indexname`;
+    const user = '0199c1a2-0000-7000-8000-0000000000a9';
+    const seeker = '0199c1a2-0000-7000-8000-0000000000a6';
+    const [first, second] = [
+      '0199c1a2-0000-7000-8000-0000000000a7',
+      '0199c1a2-0000-7000-8000-0000000000a8',
+    ];
+    await target`INSERT INTO users (id, firebase_uid, email, display_name)
+                 VALUES (${user}, 'uid-likes', 'likes@example.com', 'Ana')`;
+    for (const id of [first, second]) {
+      await target`INSERT INTO homes (id, owner_id, type, exact_address, exact_location, approx_location, area_name)
+                   VALUES (${id}, ${user}, 'piso', ${Buffer.from('x')},
+                           ST_SetSRID(ST_MakePoint(-3.7, 40.4), 4326)::geography,
+                           ST_SetSRID(ST_MakePoint(-3.7, 40.4), 4326)::geography, 'Malasaña')`;
+    }
+    const selfLike = target`INSERT INTO likes (from_home_id, to_home_id) VALUES (${first}, ${first})`;
+    await expect(selfLike).rejects.toThrow(/likes_not_self/);
+    await target`INSERT INTO likes (from_home_id, to_home_id) VALUES (${first}, ${second})`;
+    const repeated = target`INSERT INTO likes (from_home_id, to_home_id) VALUES (${first}, ${second})`;
+    await expect(repeated).rejects.toThrow(/likes_from_home_id_to_home_id_pk/);
+    await target`INSERT INTO users (id, firebase_uid, email, display_name)
+                 VALUES (${seeker}, 'uid-seeker', 'seeker-likes@example.com', 'Beto')`;
+    await target`INSERT INTO account_dismissals (user_id, dismissed_home_id)
+                 VALUES (${seeker}, ${first})`;
+    const repeatedDismissal = target`INSERT INTO account_dismissals (user_id, dismissed_home_id)
+                                     VALUES (${seeker}, ${first})`;
+    await expect(repeatedDismissal).rejects.toThrow(
+      /account_dismissals_user_id_dismissed_home_id_pk/,
+    );
+    await target`DELETE FROM homes WHERE id = ${second}`;
+    const likesLeft = await target`SELECT 1 FROM likes`;
+    await target`DELETE FROM users WHERE id = ${seeker}`;
+    const accountLeft = await target`SELECT 1 FROM account_dismissals`;
+    await target`DELETE FROM homes WHERE id = ${first}`;
+    await target`DELETE FROM users WHERE id = ${user}`;
+    await target.end();
+
+    expect(columns).toEqual([
+      { table_name: 'account_dismissals', column_name: 'created_at', udt_name: 'timestamptz' },
+      { table_name: 'account_dismissals', column_name: 'dismissed_home_id', udt_name: 'uuid' },
+      { table_name: 'account_dismissals', column_name: 'user_id', udt_name: 'uuid' },
+      { table_name: 'likes', column_name: 'created_at', udt_name: 'timestamptz' },
+      { table_name: 'likes', column_name: 'from_home_id', udt_name: 'uuid' },
+      { table_name: 'likes', column_name: 'to_home_id', udt_name: 'uuid' },
+    ]);
+    expect(references).toEqual([
+      {
+        constraint_name: 'account_dismissals_dismissed_home_id_homes_id_fk',
+        delete_rule: 'CASCADE',
+      },
+      { constraint_name: 'account_dismissals_user_id_users_id_fk', delete_rule: 'CASCADE' },
+      { constraint_name: 'likes_from_home_id_homes_id_fk', delete_rule: 'CASCADE' },
+      { constraint_name: 'likes_to_home_id_homes_id_fk', delete_rule: 'CASCADE' },
+    ]);
+    expect(indexes.map((row) => row.indexname)).toEqual([
+      'account_dismissals_dismissed_home_idx',
+      'account_dismissals_user_id_dismissed_home_id_pk',
+      'dismissals_dismissed_home_idx',
+      'dismissals_home_id_dismissed_home_id_pk',
+      'likes_created_at_idx',
+      'likes_from_home_id_to_home_id_pk',
+      'likes_to_home_idx',
+    ]);
+    expect(likesLeft).toHaveLength(0);
+    expect(accountLeft).toHaveLength(0);
+  });
+
   it('GIVEN viviendas ya publicadas antes de la migración WHEN se aplica THEN reciben su fecha de publicación y las demás no', async () => {
     // Las migraciones hasta la 0006 en una carpeta aparte: la base queda como antes de este cambio
     const before = await mkdtemp(join(tmpdir(), 'migrations-0006-'));

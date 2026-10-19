@@ -56,6 +56,12 @@ export const policy: Policy = {
   // Descubrimiento (RF-40): owner y seeker; la vivienda desde la que se busca (propia y publicada)
   // la resuelve el caso de uso con un 404
   discoverHomes: { kind: 'roles', roles: HOME_OWNER_ROLES },
+  // Decisiones (RF-41, RF-44, RF-45): el me gusta exige una vivienda publicada propia (RN-01), es decir,
+  // el rol `owner`; descartar y deshacer también las puede hacer un `seeker` desde su cuenta. La
+  // propiedad de `fromHomeId` y del destino las resuelve el caso de uso con un 404
+  likeHome: { kind: 'roles', roles: ['owner'] },
+  dismissHome: { kind: 'roles', roles: HOME_OWNER_ROLES },
+  undoLastAction: { kind: 'roles', roles: HOME_OWNER_ROLES },
   // Moderación (RF-18, RF-93): solo el admin; la decisión queda auditada
   adminListHomes: { kind: 'roles', roles: ['admin'] },
   adminModerateHome: { kind: 'roles', roles: ['admin'] },

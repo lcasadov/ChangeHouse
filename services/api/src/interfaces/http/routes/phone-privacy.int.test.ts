@@ -95,6 +95,17 @@ const HOMES_REQUESTS: Record<string, RequestTemplate> = {
     url: `/v1/homes/${MISSING_ID}/search-preferences`,
   },
   discoverHomes: { method: 'GET', url: `/v1/discover?homeId=${MISSING_ID}` },
+  likeHome: {
+    method: 'POST',
+    url: '/v1/me/likes',
+    payload: () => ({ fromHomeId: MISSING_ID, targetHomeId: MISSING_ID }),
+  },
+  dismissHome: {
+    method: 'POST',
+    url: '/v1/me/dismissals',
+    payload: () => ({ fromHomeId: MISSING_ID, targetHomeId: MISSING_ID }),
+  },
+  undoLastAction: { method: 'DELETE', url: `/v1/me/last-action?homeId=${MISSING_ID}` },
   adminListHomes: { method: 'GET', url: '/v1/admin/homes?status=in_review' },
   adminModerateHome: {
     method: 'POST',

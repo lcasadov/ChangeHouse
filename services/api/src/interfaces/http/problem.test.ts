@@ -26,6 +26,12 @@ class ParameterMissingError extends DomainError {
   override readonly kind = 'invalid_request' as const;
 }
 
+class QuotaExceededError extends DomainError {
+  readonly code = 'QUOTA_EXCEEDED';
+  override readonly kind = 'rate_limited' as const;
+  override readonly retryAfterSeconds = 4321;
+}
+
 const PROBE = { config: { operationId: 'probe' } };
 
 function appWithFailingRoutes(logger?: ReturnType<typeof captureLogs>['logger']) {
@@ -54,6 +60,9 @@ function appWithFailingRoutes(logger?: ReturnType<typeof captureLogs>['logger'])
   });
   app.get('/missing-parameter', PROBE, () => {
     throw Object.assign(new ParameterMissingError('detalle interno'), { fields: ['homeId'] });
+  });
+  app.get('/quota', PROBE, () => {
+    throw new QuotaExceededError('detalle interno');
   });
   app.post('/echo', PROBE, (request) => request.body);
   return app;
@@ -210,6 +219,23 @@ describe('formato único de error (Problem)', () => {
       status: 400,
       code: 'PARAMETER_MISSING',
       errors: [{ field: 'homeId', message: 'required' }],
+    });
+    expect(response.body).not.toContain('detalle interno');
+    await app.close();
+  });
+
+  it('un límite de uso del dominio responde 429 con su código y Retry-After en segundos', async () => {
+    const app = appWithFailingRoutes();
+
+    const response = await app.inject({ method: 'GET', url: '/quota' });
+
+    expect(response.statusCode).toBe(429);
+    expect(response.headers['retry-after']).toBe('4321');
+    expect(response.headers['content-type']).toContain('application/problem+json');
+    expect(response.json()).toMatchObject({
+      status: 429,
+      title: 'Demasiadas peticiones',
+      code: 'QUOTA_EXCEEDED',
     });
     expect(response.body).not.toContain('detalle interno');
     await app.close();

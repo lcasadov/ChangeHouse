@@ -11,6 +11,8 @@ import { loadMatrix, type MatrixActor, matrixGaps, type MatrixRow } from './matr
 /** Viviendas que la matriz necesita: una propia del actor (borrador completo) y una publicada ajena. */
 interface HomeContext {
   ownHomeId: string;
+  /** Una vivienda propia ya publicada, desde la que se decide (me gusta, descarte, deshacer). */
+  ownPublishedHomeId: string;
   /** Una foto propia ya subida y sin confirmar (`pending`). */
   ownPhotoId: string;
   publishedHomeId: string;
@@ -21,7 +23,7 @@ interface HomeContext {
 interface RequestTemplate {
   method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   url: string | ((context: HomeContext) => string);
-  payload?: () => object;
+  payload?: (context: HomeContext) => object;
 }
 
 const MISSING_HOME = '0199c1a2-0000-7000-8000-000000000000';
@@ -118,6 +120,27 @@ const REQUESTS: Record<string, RequestTemplate> = {
   // Sin homeId: tanto el owner de la matriz (sin vivienda publicada real) como el seeker buscan con
   // sus preferencias por defecto, que la preparación del actor deja guardadas
   discoverHomes: { method: 'GET', url: '/v1/discover' },
+  likeHome: {
+    method: 'POST',
+    url: '/v1/me/likes',
+    payload: (context) => ({
+      fromHomeId: context.ownPublishedHomeId,
+      targetHomeId: context.publishedHomeId,
+    }),
+  },
+  dismissHome: {
+    method: 'POST',
+    url: '/v1/me/dismissals',
+    payload: (context) => ({
+      fromHomeId: context.ownPublishedHomeId,
+      targetHomeId: context.publishedHomeId,
+    }),
+  },
+  // Sin nada que deshacer: la matriz mide el acceso, y un 404 de «no hay acción» prueba que se llegó
+  undoLastAction: {
+    method: 'DELETE',
+    url: (context) => `/v1/me/last-action?homeId=${context.ownPublishedHomeId}`,
+  },
   adminListHomes: { method: 'GET', url: '/v1/admin/homes?status=in_review' },
   adminModerateHome: {
     method: 'POST',
@@ -217,6 +240,7 @@ async function authorizationFor(
 ): Promise<{ headers: Record<string, string>; context: HomeContext }> {
   const context: HomeContext = {
     ownHomeId: MISSING_HOME,
+    ownPublishedHomeId: MISSING_HOME,
     ownPhotoId: MISSING_HOME,
     publishedHomeId: await publishedHome(),
     reviewHomeId: MISSING_HOME,
@@ -242,6 +266,15 @@ async function authorizationFor(
     context.ownHomeId = created.json<{ id: string }>().id;
     await addReadyPhotos(context.ownHomeId);
     context.ownPhotoId = await uploadedPhoto(headers, context.ownHomeId);
+    const published = await api.app.inject({
+      method: 'POST',
+      url: '/v1/homes',
+      headers,
+      payload: COMPLETE_HOME,
+    });
+    context.ownPublishedHomeId = published.json<{ id: string }>().id;
+    await sql`UPDATE homes SET status = 'published', published_at = now()
+              WHERE id = ${context.ownPublishedHomeId}`;
     // Con preferencias propias y de la vivienda, las lecturas y el borrado de la matriz tienen algo que devolver
     for (const url of [
       '/v1/me/search-preferences',
@@ -291,7 +324,7 @@ describe('matriz de permisos (docs/rbac-matrix.md)', () => {
           method: template.method,
           url: typeof template.url === 'function' ? template.url(context) : template.url,
           headers,
-          ...(template.payload ? { payload: template.payload() } : {}),
+          ...(template.payload ? { payload: template.payload(context) } : {}),
         });
 
         expect(response.statusCode, `${row.operationId} como ${row.actor}`).toBe(row.expected);

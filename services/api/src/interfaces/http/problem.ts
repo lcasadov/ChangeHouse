@@ -16,6 +16,7 @@ const UNPROCESSABLE_STATUS = 422;
 const CONFLICT_STATUS = 409;
 const NOT_FOUND_STATUS = 404;
 const BAD_REQUEST_STATUS = 400;
+const TOO_MANY_REQUESTS_STATUS = 429;
 
 /** Cómo se traduce cada clase de violación de negocio. */
 const DOMAIN_STATUS: Record<DomainErrorKind, number> = {
@@ -23,6 +24,7 @@ const DOMAIN_STATUS: Record<DomainErrorKind, number> = {
   conflict: CONFLICT_STATUS,
   not_found: NOT_FOUND_STATUS,
   invalid_request: BAD_REQUEST_STATUS,
+  rate_limited: TOO_MANY_REQUESTS_STATUS,
 };
 
 export interface FieldError {
@@ -133,6 +135,9 @@ function handleError(error: unknown, request: FastifyRequest, reply: FastifyRepl
     return sendProblem(reply, buildProblem(INTERNAL_ERROR_STATUS, request.id));
   }
   request.log.warn({ status }, 'Petición rechazada');
+  if (error instanceof DomainError && error.retryAfterSeconds !== undefined) {
+    void reply.header('Retry-After', String(error.retryAfterSeconds));
+  }
   return sendProblem(reply, buildProblem(status, request.id, extraOf(error)));
 }
 

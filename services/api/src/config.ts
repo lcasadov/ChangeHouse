@@ -8,6 +8,8 @@ export interface ApiConfig {
   /** Saltos de proxy de confianza para obtener la IP real del cliente. */
   trustProxyHops: number;
   waitlistRateLimit: { max: number; windowSeconds: number };
+  /** Me gusta permitidos por usuario y día natural de Madrid, sumando todas sus viviendas (RF-45). */
+  likesPerDay: number;
   firebase: {
     /** Proyecto de Firebase cuyos ID tokens acepta la API (`aud` e `iss`). */
     projectId: string;
@@ -41,6 +43,7 @@ const DEFAULT_LANDING_ORIGIN = 'http://localhost:4321'; // `astro dev`
 const DEFAULT_APP_ORIGIN = 'http://localhost:8081'; // `expo start --web`
 const DEFAULT_WAITLIST_MAX = 5;
 const DEFAULT_WAITLIST_WINDOW_SECONDS = 600; // 10 minutos
+const DEFAULT_LIKES_PER_DAY = 10;
 const CLOUD_RUN_PROXY_HOPS = 1;
 const DEFAULT_PRIVATE_BUCKET = 'changehouse-photos-private'; // docker-compose.yml
 const DEFAULT_PUBLIC_BUCKET = 'changehouse-photos-public'; // docker-compose.yml
@@ -135,6 +138,7 @@ export function loadConfig(env: Env = process.env): ApiConfig {
       max: integer(env, 'WAITLIST_RATE_LIMIT_MAX', DEFAULT_WAITLIST_MAX, 1),
       windowSeconds: integer(env, 'WAITLIST_RATE_LIMIT_WINDOW', DEFAULT_WAITLIST_WINDOW_SECONDS, 1),
     },
+    likesPerDay: integer(env, 'LIKES_PER_DAY', DEFAULT_LIKES_PER_DAY, 1),
     firebase: { projectId, authEmulatorHost },
     addressEncryptionKey,
     places: { serverKey: placesServerKey },

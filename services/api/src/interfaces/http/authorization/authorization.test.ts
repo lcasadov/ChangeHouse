@@ -102,6 +102,11 @@ describe('política de autorización', () => {
       deleteHomeSearchPreferences: { kind: 'roles', roles: ['seeker', 'owner'] },
       // Descubrimiento: owner y seeker; la vivienda desde la que se busca la resuelve el caso de uso
       discoverHomes: { kind: 'roles', roles: ['seeker', 'owner'] },
+      // Decisiones: el me gusta exige vivienda publicada (RN-01), es decir, owner; descartar y deshacer
+      // también las puede hacer un seeker desde su cuenta
+      likeHome: { kind: 'roles', roles: ['owner'] },
+      dismissHome: { kind: 'roles', roles: ['seeker', 'owner'] },
+      undoLastAction: { kind: 'roles', roles: ['seeker', 'owner'] },
       // Moderación: solo el admin (RF-18, RF-93)
       adminListHomes: { kind: 'roles', roles: ['admin'] },
       adminModerateHome: { kind: 'roles', roles: ['admin'] },

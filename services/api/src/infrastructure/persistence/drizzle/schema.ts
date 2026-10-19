@@ -262,8 +262,8 @@ export const searchPreferences = pgTable(
 
 /**
  * Descartes (RF-44): `home_id` descarta `dismissed_home_id`. Deja de aplicarse si la vivienda
- * descartada tiene un cambio relevante posterior (`homes.relevant_changed_at`). Este change solo los
- * lee en el descubrimiento; descartar y deshacer llegan con `add-like-dismiss-undo`.
+ * descartada tiene un cambio relevante posterior (`homes.relevant_changed_at`). Se escriben al
+ * descartar y se borran al deshacer (`add-like-dismiss-undo`).
  */
 export const dismissals = pgTable(
   'dismissals',
@@ -279,5 +279,52 @@ export const dismissals = pgTable(
   (table) => [
     primaryKey({ columns: [table.homeId, table.dismissedHomeId] }),
     check('dismissals_not_self', sql`${table.homeId} <> ${table.dismissedHomeId}`),
+    index('dismissals_dismissed_home_idx').on(table.dismissedHomeId),
+  ],
+);
+
+/**
+ * Descartes de un `seeker`, que no tiene vivienda desde la que descartar: `user_id` descarta
+ * `dismissed_home_id` con la misma regla de cambio relevante que `dismissals`.
+ */
+export const accountDismissals = pgTable(
+  'account_dismissals',
+  {
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    dismissedHomeId: uuid('dismissed_home_id')
+      .notNull()
+      .references(() => homes.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.dismissedHomeId] }),
+    index('account_dismissals_dismissed_home_idx').on(table.dismissedHomeId),
+  ],
+);
+
+/**
+ * Arista del grafo de interés (RF-41): el propietario de `from_home_id` quiere `to_home_id`. Cada
+ * vivienda del usuario participa de forma independiente (RF-20). El límite diario se cuenta sobre
+ * estas filas (`likes_created_at_idx` más la unión con `homes.owner_id`).
+ */
+export const likes = pgTable(
+  'likes',
+  {
+    fromHomeId: uuid('from_home_id')
+      .notNull()
+      .references(() => homes.id, { onDelete: 'cascade' }),
+    toHomeId: uuid('to_home_id')
+      .notNull()
+      .references(() => homes.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.fromHomeId, table.toHomeId] }),
+    check('likes_not_self', sql`${table.fromHomeId} <> ${table.toHomeId}`),
+    // Ciclos de 2 y 3 (`add-direct-match`) y borrado en cascada por destino
+    index('likes_to_home_idx').on(table.toHomeId, table.fromHomeId),
+    index('likes_created_at_idx').on(table.createdAt),
   ],
 );

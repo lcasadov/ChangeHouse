@@ -3,6 +3,9 @@ import { PRIVACY_VERSION, TERMS_VERSION } from '@changehouse/shared';
 import { accountOperations } from './application/account/account-operations.js';
 import type { HomeOwnership } from './application/account/home-ownership.js';
 import { resolvePrincipal } from './application/auth/resolve-principal.js';
+import type { Clock } from './application/clock.js';
+import { decisionOperations } from './application/decision/decision-operations.js';
+import type { MatchLookup } from './application/decision/decision-repository.js';
 import { discoveryOperations } from './application/discovery/discovery-operations.js';
 import { homeOperations } from './application/home/home-operations.js';
 import type { ImageProcessor } from './application/home/image-processor.js';
@@ -16,7 +19,9 @@ import type { ApiConfig } from './config.js';
 import { createFirebaseIdentityVerifier } from './infrastructure/auth/firebase-identity-verifier.js';
 import { AddressCipher } from './infrastructure/crypto/address-cipher.js';
 import { SharpImageProcessor } from './infrastructure/images/sharp-image-processor.js';
+import { NoMatchLookup } from './infrastructure/matching/no-match-lookup.js';
 import { createDatabase } from './infrastructure/persistence/drizzle/database.js';
+import { DrizzleDecisionUnitOfWork } from './infrastructure/persistence/drizzle/drizzle-decision-unit-of-work.js';
 import { DrizzleDiscoveryRepository } from './infrastructure/persistence/drizzle/drizzle-discovery-repository.js';
 import { DrizzleHomeOwnership } from './infrastructure/persistence/drizzle/drizzle-home-ownership.js';
 import { DrizzleHomeRepository } from './infrastructure/persistence/drizzle/drizzle-home-repository.js';
@@ -41,6 +46,10 @@ export interface ApiAdapters {
   photoStorage?: PhotoStorage;
   /** Por defecto, `sharp`. */
   imageProcessor?: ImageProcessor;
+  /** Por defecto, el reloj del sistema. Las pruebas fijan el instante (límite diario de me gusta). */
+  clock?: Clock;
+  /** Por defecto, ningún me gusta forma parte de un match (`NoMatchLookup`) hasta `add-direct-match`. */
+  matchLookup?: MatchLookup;
 }
 
 function placeResolverFor(config: ApiConfig): PlaceResolver {
@@ -112,6 +121,13 @@ export function createApi(config: ApiConfig, adapters: ApiAdapters = {}) {
     photos: photoRepository,
     storage: photoStorage,
   });
+  const decisions = decisionOperations({
+    homes: homeRepository,
+    units: new DrizzleDecisionUnitOfWork(database.db),
+    matches: adapters.matchLookup ?? new NoMatchLookup(),
+    clock: adapters.clock ?? systemClock,
+    likesPerDay: config.likesPerDay,
+  });
   const app = buildApp({
     logger: config.logger,
     landingOrigin: config.landingOrigin,
@@ -130,6 +146,7 @@ export function createApi(config: ApiConfig, adapters: ApiAdapters = {}) {
     adminHomes,
     searchPreferences,
     discovery,
+    decisions,
   });
 
   return {
