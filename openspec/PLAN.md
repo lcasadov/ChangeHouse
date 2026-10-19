@@ -36,13 +36,13 @@ personas; la zona generada la reescribe `plan-sync` en cada operación.
 
 | change | estado | % | completadas/total | fase |
 |---|---|---|---|---|
-| add-discovery-feed | ❌ SIN EMPEZAR | 0 % | 0/9 | C · Primer match |
+| add-discovery-feed | 🔄 EN PROGRESO | 56 % | 5/9 | ❌ SIN EMPEZAR |
 
-**Progreso global de los changes activos**: 0/9 (0 %)
+**Progreso global de los changes activos**: 5/9 (56 %)
 
 | estado | changes |
 |---|---|
-| ❌ SIN EMPEZAR | 1 |
+| 🔄 EN PROGRESO | 1 |
 | ✅ ARCHIVADO | 8 |
 
 ### Changes archivados
