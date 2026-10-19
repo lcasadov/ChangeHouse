@@ -53,6 +53,9 @@ export const policy: Policy = {
   getHomeSearchPreferences: { kind: 'roles', roles: HOME_OWNER_ROLES },
   putHomeSearchPreferences: { kind: 'roles', roles: HOME_OWNER_ROLES },
   deleteHomeSearchPreferences: { kind: 'roles', roles: HOME_OWNER_ROLES },
+  // Descubrimiento (RF-40): owner y seeker; la vivienda desde la que se busca (propia y publicada)
+  // la resuelve el caso de uso con un 404
+  discoverHomes: { kind: 'roles', roles: HOME_OWNER_ROLES },
   // Moderación (RF-18, RF-93): solo el admin; la decisión queda auditada
   adminListHomes: { kind: 'roles', roles: ['admin'] },
   adminModerateHome: { kind: 'roles', roles: ['admin'] },

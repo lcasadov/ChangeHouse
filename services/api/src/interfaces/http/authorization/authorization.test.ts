@@ -100,6 +100,8 @@ describe('política de autorización', () => {
       getHomeSearchPreferences: { kind: 'roles', roles: ['seeker', 'owner'] },
       putHomeSearchPreferences: { kind: 'roles', roles: ['seeker', 'owner'] },
       deleteHomeSearchPreferences: { kind: 'roles', roles: ['seeker', 'owner'] },
+      // Descubrimiento: owner y seeker; la vivienda desde la que se busca la resuelve el caso de uso
+      discoverHomes: { kind: 'roles', roles: ['seeker', 'owner'] },
       // Moderación: solo el admin (RF-18, RF-93)
       adminListHomes: { kind: 'roles', roles: ['admin'] },
       adminModerateHome: { kind: 'roles', roles: ['admin'] },

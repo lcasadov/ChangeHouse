@@ -57,6 +57,7 @@ describe('createApi', () => {
       'createHomePhotoUpload',
       'deleteHomePhoto',
       'deleteHomeSearchPreferences',
+      'discoverHomes',
       'getHome',
       'getHomeSearchPreferences',
       'getMe',

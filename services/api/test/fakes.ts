@@ -4,6 +4,11 @@ import type { AdminGrantRepository } from '../src/application/account/admin-gran
 import type { ConsentRepository } from '../src/application/account/consent-repository.js';
 import type { HomeOwnership } from '../src/application/account/home-ownership.js';
 import type { ProfileChanges, UserRepository } from '../src/application/account/user-repository.js';
+import type {
+  CandidateQuery,
+  DiscoveryCandidate,
+  DiscoveryRepository,
+} from '../src/application/discovery/discovery-repository.js';
 import type { HomeRepository, ModerationListing } from '../src/application/home/home-repository.js';
 import type { ImageProcessor, ProcessedImage } from '../src/application/home/image-processor.js';
 import type { PhotoRepository } from '../src/application/home/photo-repository.js';
@@ -134,6 +139,12 @@ export class InMemoryHomeRepository implements HomeRepository {
 
   findByIdForUpdate(id: string): Promise<Home | null> {
     return this.findById(id);
+  }
+
+  markRelevantChange(id: string, at: Date): Promise<void> {
+    const home = this.homes.get(id);
+    if (home) this.homes.set(id, { ...home, relevantChangedAt: at });
+    return Promise.resolve();
   }
 
   /** Misma ordenación que la real: la cola por envío ascendente; el resto, de la más reciente a la más antigua. */
@@ -357,5 +368,34 @@ export class InMemorySearchPreferencesRepository implements SearchPreferencesRep
     if (index < 0) return Promise.resolve(false);
     this.rows.splice(index, 1);
     return Promise.resolve(true);
+  }
+}
+
+/** Orden de las tarjetas: de la publicada más recientemente a la más antigua; el id desempata. */
+function newestFirst(a: DiscoveryCandidate, b: DiscoveryCandidate): number {
+  return b.publishedAt.getTime() - a.publishedAt.getTime() || b.home.id.localeCompare(a.home.id);
+}
+
+/**
+ * Fase 1 del descubrimiento en memoria: no filtra por zona ni preferencias (eso lo prueba la
+ * integración con PostgreSQL); reproduce el orden, el cursor y el límite, y anota cada consulta.
+ */
+export class InMemoryDiscoveryRepository implements DiscoveryRepository {
+  readonly candidates: DiscoveryCandidate[] = [];
+  readonly queries: CandidateQuery[] = [];
+
+  findCandidates(query: CandidateQuery): Promise<DiscoveryCandidate[]> {
+    this.queries.push(query);
+    const { after } = query;
+    const ordered = [...this.candidates].sort(newestFirst);
+    const rest = after
+      ? ordered.filter(
+          (candidate) =>
+            candidate.publishedAt.getTime() < after.at.getTime() ||
+            (candidate.publishedAt.getTime() === after.at.getTime() &&
+              candidate.home.id.localeCompare(after.id) < 0),
+        )
+      : ordered;
+    return Promise.resolve(rest.slice(0, query.limit));
   }
 }

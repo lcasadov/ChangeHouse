@@ -1,9 +1,42 @@
 import type { Validation } from '@changehouse/shared';
 import type { FastifyRequest } from 'fastify';
 
-import { ValidationFailedError } from '../problem.js';
+import { decodeCursor, type ModerationCursor } from '../../../application/moderation/cursor.js';
+import { type FieldError, ValidationFailedError } from '../problem.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const DEFAULT_LIMIT = 20;
+const MAX_LIMIT = 50;
+const INTEGER = /^\d+$/;
+
+/** `cursor` y `limit` de un listado paginado del contrato (`Cursor` y `Limit`). */
+export interface PageParams {
+  cursor?: string;
+  limit?: string;
+}
+
+/** Un cursor emitido por la API: siempre lleva el id (UUID) de la última fila de la página. */
+function decodePosition(raw: string): ModerationCursor | null {
+  const cursor = decodeCursor(raw);
+  return cursor !== null && UUID.test(cursor.id) ? cursor : null;
+}
+
+/**
+ * Posición y tamaño de página: `limit` entero de 1 a 50 (20 por defecto) y un `cursor` emitido por
+ * la API. Cada parámetro erróneo se anota en `errors` por su nombre.
+ */
+export function parsePage(
+  query: PageParams,
+  errors: FieldError[],
+): { cursor: ModerationCursor | undefined; limit: number } {
+  const limit = query.limit === undefined ? DEFAULT_LIMIT : Number(query.limit);
+  if (query.limit !== undefined && (!INTEGER.test(query.limit) || limit < 1 || limit > MAX_LIMIT)) {
+    errors.push({ field: 'limit', message: 'invalid' });
+  }
+  const cursor = query.cursor === undefined ? undefined : decodePosition(query.cursor);
+  if (cursor === null) errors.push({ field: 'cursor', message: 'invalid' });
+  return { cursor: cursor ?? undefined, limit };
+}
 
 /** Datos válidos o un 400 con los campos erróneos. */
 export function validated<T>(result: Validation<T>): T {

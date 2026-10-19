@@ -24,4 +24,13 @@ describe('FIXTURE_PLACES', () => {
       expect(place.areaCenter).not.toEqual(place.exact);
     }
   });
+
+  it('cada lugar lleva su municipio, distinto del barrio cuando el barrio es parte de una ciudad', () => {
+    for (const place of FIXTURE_PLACES) {
+      expect(place.municipality.length).toBeGreaterThan(0);
+    }
+    expect(FIXTURE_PLACES.find((place) => place.placeId === 'fixture-malasana')?.municipality).toBe(
+      'Madrid',
+    );
+  });
 });

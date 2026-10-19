@@ -12,7 +12,14 @@ export class FixturePlaceResolver implements PlaceResolver {
   resolve(placeId: string): Promise<HomeLocation | null> {
     const place = FIXTURE_PLACES.find((candidate) => candidate.placeId === placeId);
     return Promise.resolve(
-      place ? { exact: place.exact, areaName: place.areaName, areaCenter: place.areaCenter } : null,
+      place
+        ? {
+            exact: place.exact,
+            areaName: place.areaName,
+            areaCenter: place.areaCenter,
+            municipality: place.municipality,
+          }
+        : null,
     );
   }
 }

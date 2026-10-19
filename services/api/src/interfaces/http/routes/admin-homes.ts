@@ -8,49 +8,35 @@ import type { FastifyPluginCallback } from 'fastify';
 
 import { HomeNotFoundError } from '../../../application/home/errors.js';
 import type { HomeView } from '../../../application/home/home-views.js';
-import { decodeCursor } from '../../../application/moderation/cursor.js';
 import type {
   AdminHomesPage,
   AdminHomesQuery,
 } from '../../../application/moderation/moderation-operations.js';
 import { type FieldError, ValidationFailedError } from '../problem.js';
-import { accountId, uuidOr404, validated } from './request-helpers.js';
+import { accountId, type PageParams, parsePage, uuidOr404, validated } from './request-helpers.js';
 
 export interface AdminHomeRouteOptions {
   adminListHomes: (query: AdminHomesQuery) => Promise<AdminHomesPage>;
   adminModerateHome: (adminId: string, homeId: string, input: ModerationInput) => Promise<HomeView>;
 }
 
-interface ListQuery {
+interface ListQuery extends PageParams {
   status?: string;
-  cursor?: string;
-  limit?: string;
 }
-
-const DEFAULT_LIMIT = 20;
-const MAX_LIMIT = 50;
-const INTEGER = /^\d+$/;
 
 /** `status`, `cursor` y `limit` de `adminListHomes`; cada parámetro erróneo se señala por su nombre. */
 function parseListQuery(query: ListQuery): AdminHomesQuery {
   const errors: FieldError[] = [];
-  const invalid = (field: string) => errors.push({ field, message: 'invalid' });
-
   const status = query.status;
   if (status !== undefined && !(HOME_STATUSES as readonly string[]).includes(status)) {
-    invalid('status');
+    errors.push({ field: 'status', message: 'invalid' });
   }
-  const limit = query.limit === undefined ? DEFAULT_LIMIT : Number(query.limit);
-  if (query.limit !== undefined && (!INTEGER.test(query.limit) || limit < 1 || limit > MAX_LIMIT)) {
-    invalid('limit');
-  }
-  const cursor = query.cursor === undefined ? undefined : decodeCursor(query.cursor);
-  if (cursor === null) invalid('cursor');
+  const { cursor, limit } = parsePage(query, errors);
 
   if (errors.length > 0) throw new ValidationFailedError(errors);
   return {
     ...(status === undefined ? {} : { status: status as HomeStatus }),
-    ...(cursor === undefined || cursor === null ? {} : { cursor }),
+    ...(cursor === undefined ? {} : { cursor }),
     limit,
   };
 }

@@ -215,6 +215,18 @@ describe('adminModerateHome', () => {
     ]);
   });
 
+  it('aprobar fija la fecha de publicación con el reloj inyectado; rechazar no la toca', async () => {
+    const fixture = setup();
+    seed(fixture, 'home-1');
+    seed(fixture, 'home-2');
+
+    await fixture.adminModerateHome(ADMIN, 'home-1', { decision: 'approve' });
+    await fixture.adminModerateHome(ADMIN, 'home-2', { decision: 'reject', reason: 'Datos' });
+
+    expect(fixture.homes.homes.get('home-1')?.publishedAt).toEqual(NOW);
+    expect(fixture.homes.homes.get('home-2')?.publishedAt).toBeNull();
+  });
+
   it('aprobar se audita como home.approve', async () => {
     const fixture = setup();
     seed(fixture, 'home-1');

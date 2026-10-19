@@ -2,18 +2,18 @@
 
 ## 1. Dominio de la compensación
 
-- [ ] T1 Escribir las pruebas unitarias y de propiedades (fast-check) del valor de referencia, la compensación y la aceptabilidad bilateral (RN-03), incluido «Cambio justo» al 1 %, y comprobar que fallan. ref: Compensación visible en cada tarjeta · est: 3h · disc: qa
+- [x] T1 Escribir las pruebas unitarias y de propiedades (fast-check) del valor de referencia, la compensación y la aceptabilidad bilateral (RN-03), incluido «Cambio justo» al 1 %, y comprobar que fallan. ref: Compensación visible en cada tarjeta · est: 3h · disc: qa
   - GIVEN dos viviendas cualesquiera WHEN se calcula la compensación en ambos sentidos THEN una es la opuesta de la otra
-- [ ] B1 Implementar `domain/matching/compensation.ts` (valor de referencia, compensación, aceptabilidad, clasificación de la píldora) y verificar que pasan las pruebas de T1. ref: Viviendas compatibles en los dos sentidos · est: 2h · disc: back
+- [x] B1 Implementar `domain/matching/compensation.ts` (valor de referencia, compensación, aceptabilidad, clasificación de la píldora) y verificar que pasan las pruebas de T1. ref: Viviendas compatibles en los dos sentidos · est: 2h · disc: back
   - GIVEN mi máximo a pagar de 30.000 € WHEN la diferencia es de 30.001 € THEN no es aceptable
 
 ## 2. Consulta de descubrimiento
 
-- [ ] T2 Escribir las pruebas de integración de `discoverHomes` con PostgreSQL (compatibles en ambos sentidos, zona inversa, economía, paginación sin repetidos, exclusiones de propias, no publicadas, descartadas y cambio relevante, VPP, modo `seeker`) y la de rendimiento con datos sintéticos, con su fila en la matriz, y comprobar que fallan. ref: Viviendas excluidas · est: 5h · disc: qa
+- [x] T2 Escribir las pruebas de integración de `discoverHomes` con PostgreSQL (compatibles en ambos sentidos, zona inversa, economía, paginación sin repetidos, exclusiones de propias, no publicadas, descartadas y cambio relevante, VPP, modo `seeker`) y la de rendimiento con datos sintéticos, con su fila en la matriz, y comprobar que fallan. ref: Viviendas excluidas · est: 5h · disc: qa
   - GIVEN 50.000 viviendas sintéticas WHEN se pide una página THEN la consulta termina en menos de 300 ms en el entorno de integración
-- [ ] B2 Implementar la consulta en dos fases con PostGIS, los índices con su migración, el cursor y la ruta `discoverHomes`, y verificar que pasan las pruebas de T2. ref: Viviendas compatibles en los dos sentidos · est: 6h · disc: back
+- [x] B2 Implementar la consulta en dos fases con PostGIS, los índices con su migración, el cursor y la ruta `discoverHomes`, y verificar que pasan las pruebas de T2. ref: Viviendas compatibles en los dos sentidos · est: 6h · disc: back
   - GIVEN una vivienda que pasa a `in_operation` WHEN se consulta el descubrimiento THEN no aparece
-- [ ] B3 Implementar el modo sin vivienda publicada (preferencias por defecto, sin compatibilidad inversa ni compensación) y verificar sus pruebas de T2. ref: Descubrimiento sin vivienda publicada · est: 2h · disc: back
+- [x] B3 Implementar el modo sin vivienda publicada (preferencias por defecto, sin compatibilidad inversa ni compensación) y verificar sus pruebas de T2. ref: Descubrimiento sin vivienda publicada · est: 2h · disc: back
   - GIVEN un `seeker` WHEN consulta sin `homeId` THEN las tarjetas no incluyen compensación
 
 ## 3. App

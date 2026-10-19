@@ -153,7 +153,7 @@ describe('DrizzleHomeRepository: moderación', () => {
       expect((await locking.findByIdForUpdate(homeId(1)))?.status).toBe('in_review');
       order.push('primero bloquea');
       await held;
-      await locking.save(approveHome((await locking.findById(homeId(1)))!));
+      await locking.save(approveHome((await locking.findById(homeId(1)))!, day(20)));
       order.push('primero confirma');
     });
     await new Promise((resolve) => setTimeout(resolve, 200));
@@ -212,7 +212,7 @@ describe('DrizzleUnitOfWork y DrizzleAuditLog', () => {
     await expect(
       units.run(async (scope) => {
         const found = await scope.homes.findByIdForUpdate(homeId(1));
-        await scope.homes.save(approveHome(found!));
+        await scope.homes.save(approveHome(found!, day(20)));
         await scope.audit.record({
           actorId: unknownActor,
           action: 'home.approve',

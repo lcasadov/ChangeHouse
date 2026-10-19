@@ -22,6 +22,11 @@ export interface HomeRepository {
   findById(id: string): Promise<Home | null>;
   /** Como `findById`, pero bloquea la fila hasta el final de la transacción en curso. */
   findByIdForUpdate(id: string): Promise<Home | null>;
+  /**
+   * Anota un cambio relevante (fotos) sin reescribir el resto de la vivienda, para no pisar una
+   * edición concurrente de la ficha.
+   */
+  markRelevantChange(id: string, at: Date): Promise<void>;
   /** Las viviendas del propietario en cualquier estado, de la más antigua a la más reciente. */
   listByOwner(ownerId: string): Promise<Home[]>;
   /** Una página de viviendas para la administración. */

@@ -14,6 +14,8 @@ export interface FixturePlace {
   readonly areaName: string;
   /** Centro del barrio o zona: el punto público por defecto. */
   readonly areaCenter: { readonly lat: number; readonly lng: number };
+  /** Municipio (la localidad de la dirección): con él se comparan las zonas de búsqueda. */
+  readonly municipality: string;
 }
 
 export const FIXTURE_PLACES: readonly FixturePlace[] = [
@@ -23,6 +25,7 @@ export const FIXTURE_PLACES: readonly FixturePlace[] = [
     exact: { lat: 40.4254, lng: -3.7058 },
     areaName: 'Malasaña',
     areaCenter: { lat: 40.4265, lng: -3.7038 },
+    municipality: 'Madrid',
   },
   {
     placeId: 'fixture-chamberi',
@@ -30,6 +33,7 @@ export const FIXTURE_PLACES: readonly FixturePlace[] = [
     exact: { lat: 40.4338, lng: -3.6978 },
     areaName: 'Chamberí',
     areaCenter: { lat: 40.434, lng: -3.7 },
+    municipality: 'Madrid',
   },
   {
     placeId: 'fixture-retiro',
@@ -37,6 +41,7 @@ export const FIXTURE_PLACES: readonly FixturePlace[] = [
     exact: { lat: 40.4197, lng: -3.6706 },
     areaName: 'Retiro',
     areaCenter: { lat: 40.4153, lng: -3.6844 },
+    municipality: 'Madrid',
   },
   {
     placeId: 'fixture-lavapies',
@@ -44,6 +49,7 @@ export const FIXTURE_PLACES: readonly FixturePlace[] = [
     exact: { lat: 40.4087, lng: -3.7001 },
     areaName: 'Lavapiés',
     areaCenter: { lat: 40.4082, lng: -3.7035 },
+    municipality: 'Madrid',
   },
   {
     placeId: 'fixture-alcala',
@@ -51,6 +57,7 @@ export const FIXTURE_PLACES: readonly FixturePlace[] = [
     exact: { lat: 40.482, lng: -3.3635 },
     areaName: 'Centro histórico',
     areaCenter: { lat: 40.4818, lng: -3.3642 },
+    municipality: 'Alcalá de Henares',
   },
   {
     placeId: 'fixture-getafe',
@@ -58,5 +65,6 @@ export const FIXTURE_PLACES: readonly FixturePlace[] = [
     exact: { lat: 40.3056, lng: -3.7321 },
     areaName: 'Getafe Centro',
     areaCenter: { lat: 40.306, lng: -3.7325 },
+    municipality: 'Getafe',
   },
 ];

@@ -81,17 +81,12 @@ async function adminModerateHome(
   const moderated = await deps.units.run(async ({ homes, audit }) => {
     const home = await homes.findByIdForUpdate(homeId);
     if (home === null) throw new HomeNotFoundError();
+    const now = deps.clock.now();
     const approving = input.decision === 'approve';
-    const decided = approving ? approveHome(home) : rejectHome(home, input.reason);
+    const decided = approving ? approveHome(home, now) : rejectHome(home, input.reason);
     const action: AuditAction = approving ? 'home.approve' : 'home.reject';
     await homes.save(decided);
-    await audit.record({
-      actorId: adminId,
-      action,
-      entity: 'home',
-      entityId: homeId,
-      at: deps.clock.now(),
-    });
+    await audit.record({ actorId: adminId, action, entity: 'home', entityId: homeId, at: now });
     return decided;
   });
   const [view] = await viewsOf(deps, [moderated]);

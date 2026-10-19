@@ -36,6 +36,11 @@ preferencias efectivas por vivienda (`resolveEffectivePreferences`, de
   nueva, con relleno para las ya publicadas). Página por defecto 20, máximo 50.
 - **Índices**: GIST sobre `homes.approx_location` y `exact_location`, parcial
   por `status = 'published'`, y sobre la zona de `search_preferences`.
+- **Municipio de la vivienda**: `homes.municipality` y
+  `municipality_normalized` (nuevas) se rellenan con la localidad que devuelve
+  el resolvedor de lugares; `area_name` es el barrio y no sirve para cruzar con
+  los municipios de las preferencias. Las viviendas previas sin municipio solo
+  casan por radio. El radio se mide desde el punto público de la candidata.
 - **Descartes**: este change crea la tabla `dismissals` (`home_id`,
   `dismissed_home_id`, `created_at`, PK compuesta, `CASCADE`) solo para la
   exclusión; descartar y deshacer llegan con `add-like-dismiss-undo`. Las

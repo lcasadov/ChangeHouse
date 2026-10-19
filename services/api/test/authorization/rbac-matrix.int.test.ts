@@ -115,6 +115,9 @@ const REQUESTS: Record<string, RequestTemplate> = {
     method: 'DELETE',
     url: (context) => `/v1/homes/${context.ownHomeId}/search-preferences`,
   },
+  // Sin homeId: tanto el owner de la matriz (sin vivienda publicada real) como el seeker buscan con
+  // sus preferencias por defecto, que la preparación del actor deja guardadas
+  discoverHomes: { method: 'GET', url: '/v1/discover' },
   adminListHomes: { method: 'GET', url: '/v1/admin/homes?status=in_review' },
   adminModerateHome: {
     method: 'POST',

@@ -5,6 +5,7 @@ import { registerSecurity, type SecurityOptions } from './authorization/security
 import { generateCorrelationId, registerProblemHandling } from './problem.js';
 import { type AccountRouteOptions, accountRoutes } from './routes/accounts.js';
 import { type AdminHomeRouteOptions, adminHomeRoutes } from './routes/admin-homes.js';
+import { type DiscoveryRouteOptions, discoveryRoutes } from './routes/discovery.js';
 import { type HomeRouteOptions, homeRoutes } from './routes/homes.js';
 import { type PhotoRouteOptions, photoRoutes } from './routes/photos.js';
 import {
@@ -29,6 +30,7 @@ export interface AppOptions {
   photos?: PhotoRouteOptions;
   adminHomes?: AdminHomeRouteOptions;
   searchPreferences?: SearchPreferencesRouteOptions;
+  discovery?: DiscoveryRouteOptions;
 }
 
 /** Confía solo en los `hops` saltos más cercanos: la IP real es la que añadió el último proxy. */
@@ -101,6 +103,7 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
       if (options.searchPreferences) {
         await versioned.register(searchPreferencesRoutes(options.searchPreferences));
       }
+      if (options.discovery) await versioned.register(discoveryRoutes(options.discovery));
     },
     { prefix: API_PREFIX },
   );

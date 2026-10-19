@@ -21,6 +21,11 @@ class RuleBrokenError extends DomainError {
   readonly code = 'RULE_BROKEN';
 }
 
+class ParameterMissingError extends DomainError {
+  readonly code = 'PARAMETER_MISSING';
+  override readonly kind = 'invalid_request' as const;
+}
+
 const PROBE = { config: { operationId: 'probe' } };
 
 function appWithFailingRoutes(logger?: ReturnType<typeof captureLogs>['logger']) {
@@ -46,6 +51,9 @@ function appWithFailingRoutes(logger?: ReturnType<typeof captureLogs>['logger'])
   });
   app.get('/rule-fields', PROBE, () => {
     throw Object.assign(new RuleBrokenError('otro detalle interno'), { fields: ['email'] });
+  });
+  app.get('/missing-parameter', PROBE, () => {
+    throw Object.assign(new ParameterMissingError('detalle interno'), { fields: ['homeId'] });
   });
   app.post('/echo', PROBE, (request) => request.body);
   return app;
@@ -189,6 +197,21 @@ describe('formato único de error (Problem)', () => {
     expect(plain.json<Record<string, unknown>>()['errors']).toBeUndefined();
     expect(withFields.json()).toMatchObject({ errors: [{ field: 'email', message: 'required' }] });
     expect(plain.body + withFields.body).not.toContain('detalle interno');
+    await app.close();
+  });
+
+  it('un error de dominio de petición incompleta es un 400 con su código y el parámetro que falta', async () => {
+    const app = appWithFailingRoutes();
+
+    const response = await app.inject({ method: 'GET', url: '/missing-parameter' });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({
+      status: 400,
+      code: 'PARAMETER_MISSING',
+      errors: [{ field: 'homeId', message: 'required' }],
+    });
+    expect(response.body).not.toContain('detalle interno');
     await app.close();
   });
 });

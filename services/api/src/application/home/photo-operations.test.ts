@@ -365,3 +365,45 @@ describe('deletePhoto', () => {
     },
   );
 });
+
+describe('cambio relevante de las fotos (descarte, RF-44)', () => {
+  it('Scenario: Descarte y cambio relevante - confirmar una foto de una vivienda publicada anota el cambio relevante', async () => {
+    const env = setup('published');
+    const photoId = await uploaded(env, 'IMG:nueva');
+
+    await env.completePhotoUpload(OWNER, HOME, photoId);
+
+    expect(env.homes.homes.get(HOME)?.relevantChangedAt).toEqual(NOW);
+  });
+
+  it('borrar una foto de una vivienda publicada anota el cambio relevante', async () => {
+    const env = setup('published');
+    seedMany(env, 4);
+
+    await env.deletePhoto(OWNER, HOME, 'ready-home-1-4');
+
+    expect(env.homes.homes.get(HOME)?.relevantChangedAt).toEqual(NOW);
+  });
+
+  it('en un borrador que nunca se publicó las fotos no son un cambio relevante', async () => {
+    const env = setup('draft');
+    const photoId = await uploaded(env, 'IMG:nueva');
+    seedMany(env, 2);
+
+    await env.completePhotoUpload(OWNER, HOME, photoId);
+    await env.deletePhoto(OWNER, HOME, 'ready-home-1-1');
+
+    expect(env.homes.homes.get(HOME)?.relevantChangedAt).toBeNull();
+  });
+
+  it('una foto que no llega a quedar lista no es un cambio relevante', async () => {
+    const env = setup('published');
+    const photoId = await uploaded(env, 'no es una imagen');
+
+    await expect(env.completePhotoUpload(OWNER, HOME, photoId)).rejects.toBeInstanceOf(
+      InvalidImageError,
+    );
+
+    expect(env.homes.homes.get(HOME)?.relevantChangedAt).toBeNull();
+  });
+});

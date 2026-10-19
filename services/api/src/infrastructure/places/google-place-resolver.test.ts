@@ -54,6 +54,7 @@ describe('GooglePlaceResolver', () => {
       exact: { lat: 40.4254, lng: -3.7058 },
       areaName: 'Universidad',
       areaCenter: { lat: 40.4265, lng: -3.7038 },
+      municipality: 'Madrid',
     });
     expect(calls[0]).toMatchObject({
       url: 'https://places.googleapis.com/v1/places/ChIJ-abc',
@@ -98,6 +99,20 @@ describe('GooglePlaceResolver', () => {
 
     expect(first?.areaName).toBe('Las Letras');
     expect(second?.areaName).toBe('Getafe');
+  });
+
+  it('el municipio es la localidad de la dirección; sin localidad no hay municipio', async () => {
+    const withoutLocality = {
+      ...DETAILS,
+      addressComponents: [{ longText: 'Las Letras', types: ['neighborhood'] }],
+    };
+
+    const located = await fakeFetch(json(DETAILS), json(SEARCH)).resolver.resolve('a');
+    const unlocated = await fakeFetch(json(withoutLocality), json(SEARCH)).resolver.resolve('b');
+
+    expect(located?.municipality).toBe('Madrid');
+    expect(unlocated).not.toBeNull();
+    expect(unlocated).not.toHaveProperty('municipality');
   });
 
   it('Scenario: Dirección no reconocida - un lugar inexistente o mal formado no se resuelve', async () => {
