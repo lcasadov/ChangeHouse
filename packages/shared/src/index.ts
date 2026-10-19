@@ -38,6 +38,13 @@ export {
 } from './home.js';
 export { HOME_TYPES, type HomeType } from './home-type.js';
 export { PRIVACY_VERSION, TERMS_VERSION } from './legal.js';
+export {
+  PHOTO_CONTENT_TYPES,
+  type PhotoContentType,
+  type PhotoUploadInput,
+  photoUploadInputSchema,
+  validatePhotoUploadInput,
+} from './photo.js';
 export type { FieldError, FieldErrorCode, Validation } from './validation.js';
 export {
   validateWaitlistInput,

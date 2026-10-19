@@ -90,6 +90,9 @@ describe('política de autorización', () => {
       createHome: { kind: 'roles', roles: ['seeker', 'owner'] },
       updateHome: { kind: 'roles', roles: ['seeker', 'owner'] },
       submitHome: { kind: 'roles', roles: ['seeker', 'owner'] },
+      createHomePhotoUpload: { kind: 'roles', roles: ['seeker', 'owner'] },
+      completeHomePhotoUpload: { kind: 'roles', roles: ['seeker', 'owner'] },
+      deleteHomePhoto: { kind: 'roles', roles: ['seeker', 'owner'] },
       getHome: { kind: 'roles', roles: ['seeker', 'owner', 'admin'] },
     });
   });

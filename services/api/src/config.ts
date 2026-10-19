@@ -20,6 +20,16 @@ export interface ApiConfig {
     /** Clave de servidor de Google Places. Sin ella (solo en local) rigen los lugares de prueba. */
     serverKey: string | undefined;
   };
+  storage: {
+    /** Bucket privado y temporal de los originales subidos con URL firmada. */
+    privateBucket: string;
+    /** Bucket público de las fotos ya procesadas. */
+    publicBucket: string;
+    /** Base de la URL pública de las fotos (sin barra final): la CDN, o el bucket público directamente. */
+    publicBaseUrl: string;
+    /** `host:puerto` de fake-gcs-server. Solo en local y en las pruebas. */
+    emulatorHost: string | undefined;
+  };
   /** `false` en pruebas; las pruebas pasan un destino propio para inspeccionar el registro. */
   logger: boolean | { level: string; stream: { write(line: string): void } };
 }
@@ -32,6 +42,8 @@ const DEFAULT_APP_ORIGIN = 'http://localhost:8081'; // `expo start --web`
 const DEFAULT_WAITLIST_MAX = 5;
 const DEFAULT_WAITLIST_WINDOW_SECONDS = 600; // 10 minutos
 const CLOUD_RUN_PROXY_HOPS = 1;
+const DEFAULT_PRIVATE_BUCKET = 'changehouse-photos-private'; // docker-compose.yml
+const DEFAULT_PUBLIC_BUCKET = 'changehouse-photos-public'; // docker-compose.yml
 
 function integer(env: Env, name: string, fallback: number, minimum: number): number {
   const raw = env[name];
@@ -53,6 +65,37 @@ function origin(env: Env, name: string, fallback: string): string {
 function origins(env: Env, name: string, fallback: string): string[] {
   const list = (env[name] ?? fallback).split(',').map((item) => item.trim());
   return list.filter((item) => item !== '').map((item) => origin({ [name]: item }, name, item));
+}
+
+/** Los buckets de las fotos: obligatorios en Cloud Run; en local, los de docker-compose. */
+function bucket(env: Env, name: string, fallback: string): string {
+  const value = env[name] || undefined;
+  if (value) return value;
+  if (env['K_SERVICE']) throw new Error(`Falta la variable ${name} en Cloud Run`);
+  return fallback;
+}
+
+function storageConfig(env: Env): ApiConfig['storage'] {
+  const emulatorHost = env['STORAGE_EMULATOR_HOST'] || undefined;
+  // El emulador no valida las URL firmadas: en Cloud Run guardaría las fotos en un servidor falso
+  if (emulatorHost && env['K_SERVICE']) {
+    throw new Error('STORAGE_EMULATOR_HOST no puede definirse en Cloud Run');
+  }
+  const privateBucket = bucket(env, 'STORAGE_PRIVATE_BUCKET', DEFAULT_PRIVATE_BUCKET);
+  const publicBucket = bucket(env, 'STORAGE_PUBLIC_BUCKET', DEFAULT_PUBLIC_BUCKET);
+  const custom = env['STORAGE_PUBLIC_BASE_URL'] || undefined;
+  if (custom !== undefined && !URL.canParse(custom)) {
+    throw new Error('La variable STORAGE_PUBLIC_BASE_URL debe ser una URL');
+  }
+  const bucketUrl = emulatorHost
+    ? `http://${emulatorHost}/${publicBucket}`
+    : `https://storage.googleapis.com/${publicBucket}`;
+  return {
+    privateBucket,
+    publicBucket,
+    publicBaseUrl: (custom ?? bucketUrl).replace(/\/+$/, ''),
+    emulatorHost,
+  };
 }
 
 /** Lee y valida la configuración del entorno; falla al arrancar si algo no es válido. */
@@ -95,6 +138,7 @@ export function loadConfig(env: Env = process.env): ApiConfig {
     firebase: { projectId, authEmulatorHost },
     addressEncryptionKey,
     places: { serverKey: placesServerKey },
+    storage: storageConfig(env),
     logger: env['NODE_ENV'] !== 'test',
   };
 }

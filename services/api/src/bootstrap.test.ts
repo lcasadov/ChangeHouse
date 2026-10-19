@@ -14,6 +14,12 @@ const config: ApiConfig = {
   firebase: { projectId: 'demo-changehouse', authEmulatorHost: undefined },
   addressEncryptionKey: Buffer.alloc(32, 7).toString('base64'),
   places: { serverKey: undefined },
+  storage: {
+    privateBucket: 'privado',
+    publicBucket: 'publico',
+    publicBaseUrl: 'http://localhost:4443/publico',
+    emulatorHost: 'localhost:4443',
+  },
   logger: false,
 };
 
@@ -44,7 +50,10 @@ describe('createApi', () => {
     expect(responses.map((response) => response.statusCode)).toEqual([401, 401, 401, 401]);
     expect([...app.operations].sort()).toEqual([
       'acceptConsent',
+      'completeHomePhotoUpload',
       'createHome',
+      'createHomePhotoUpload',
+      'deleteHomePhoto',
       'getHome',
       'getMe',
       'joinWaitlist',

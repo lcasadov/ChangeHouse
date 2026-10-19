@@ -196,6 +196,7 @@ operación de la API sin filas en ese fichero hace fallar la prueba.
 | `pauseHome` | 401 | — | `resourceOwner` | 403 | ídem |
 | `resumeHome` | 401 | `resourceOwner` | `resourceOwner` | 403 | ídem |
 | `createHomePhotoUpload` | 401 | `resourceOwner` | `resourceOwner` | 403 | ajena → 404 |
+| `completeHomePhotoUpload` | 401 | `resourceOwner` | `resourceOwner` | 403 | ajena → 404 |
 | `deleteHomePhoto` | 401 | `resourceOwner` | `resourceOwner` | 403 | ajena → 404 |
 | `getMySearchPreferences` | 401 | ✅ | ✅ | 403 | `self` |
 | `putMySearchPreferences` | 401 | ✅ | ✅ | 403 | `self` |

@@ -9,6 +9,7 @@ import type {
 
 import { HomeIncompleteError, HomeNotEditableError, HomeNotSubmittableError } from './errors.js';
 import { assertValueRange } from './money.js';
+import { MIN_PHOTOS } from './photo.js';
 
 export interface GeoPoint {
   readonly lat: number;
@@ -189,7 +190,7 @@ function relevantChanged(before: Home, after: Home): boolean {
  * el cambio queda anotado para moderarlo al reactivarla.
  */
 export function editHome(home: Home, changes: HomeChanges, now: Date): Home {
-  if (NOT_EDITABLE.includes(home.status)) throw new HomeNotEditableError();
+  assertEditable(home);
 
   const { place, type, ...details } = changes;
   const edited: Home = {
@@ -214,10 +215,18 @@ export function missingFields(home: Home): string[] {
   return REQUIRED_FOR_SUBMIT.filter((field) => home[field] === null);
 }
 
-/** Envía a revisión una vivienda en borrador con la ficha completa. */
-export function submitHome(home: Home): Home {
+/** Comprueba que la vivienda admite cambios (también en sus fotos): no en `in_operation` ni `closed`. */
+export function assertEditable(home: Home): void {
+  if (NOT_EDITABLE.includes(home.status)) throw new HomeNotEditableError();
+}
+
+/**
+ * Envía a revisión una vivienda en borrador con la ficha completa y al menos 3 fotos procesadas
+ * (`readyPhotos`). Si falta algo, el error lista los campos y `photos` si faltan fotos.
+ */
+export function submitHome(home: Home, readyPhotos: number): Home {
   if (home.status !== 'draft') throw new HomeNotSubmittableError();
-  const missing = missingFields(home);
+  const missing = [...missingFields(home), ...(readyPhotos < MIN_PHOTOS ? ['photos'] : [])];
   if (missing.length > 0) throw new HomeIncompleteError(missing);
   return { ...home, status: 'in_review' };
 }

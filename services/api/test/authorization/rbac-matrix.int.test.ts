@@ -5,16 +5,19 @@ import { createApi } from '../../src/bootstrap.js';
 import { emulatorAvailable, signUp, uniqueEmail } from '../auth-emulator.js';
 import { FixedHomeOwnership } from '../fakes.js';
 import { openSql, testConfig } from '../fixtures.js';
+import { jpeg } from '../images.js';
 import { loadMatrix, type MatrixActor, matrixGaps, type MatrixRow } from './matrix.js';
 
 /** Viviendas que la matriz necesita: una propia del actor (borrador completo) y una publicada ajena. */
 interface HomeContext {
   ownHomeId: string;
+  /** Una foto propia ya subida y sin confirmar (`pending`). */
+  ownPhotoId: string;
   publishedHomeId: string;
 }
 
 interface RequestTemplate {
-  method: 'GET' | 'POST' | 'PUT' | 'PATCH';
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   url: string | ((context: HomeContext) => string);
   payload?: () => object;
 }
@@ -76,6 +79,19 @@ const REQUESTS: Record<string, RequestTemplate> = {
     payload: () => ({ bedrooms: 2 }),
   },
   submitHome: { method: 'POST', url: (context) => `/v1/homes/${context.ownHomeId}/submit` },
+  createHomePhotoUpload: {
+    method: 'POST',
+    url: (context) => `/v1/homes/${context.ownHomeId}/photos`,
+    payload: () => ({ contentType: 'image/jpeg' }),
+  },
+  completeHomePhotoUpload: {
+    method: 'POST',
+    url: (context) => `/v1/homes/${context.ownHomeId}/photos/${context.ownPhotoId}/complete`,
+  },
+  deleteHomePhoto: {
+    method: 'DELETE',
+    url: (context) => `/v1/homes/${context.ownHomeId}/photos/${context.ownPhotoId}`,
+  },
   acceptConsent: {
     method: 'POST',
     url: '/v1/me/consents',
@@ -119,11 +135,41 @@ async function publishedHome(): Promise<string> {
   return publishedHomeId;
 }
 
+/** Tres fotos ya procesadas: con ellas la vivienda propia puede enviarse a revisión (RF-11). */
+async function addReadyPhotos(homeId: string): Promise<void> {
+  for (let position = 1; position <= 3; position += 1) {
+    const id = crypto.randomUUID();
+    await sql`INSERT INTO home_photos (id, home_id, status, storage_path, position)
+              VALUES (${id}, ${homeId}, 'ready', ${`homes/${homeId}/${id}.webp`}, ${position})`;
+  }
+}
+
+/** Una foto propia con el original ya subido por la URL firmada, pendiente de confirmar. */
+async function uploadedPhoto(headers: Record<string, string>, homeId: string): Promise<string> {
+  const created = await api.app.inject({
+    method: 'POST',
+    url: `/v1/homes/${homeId}/photos`,
+    headers,
+    payload: { contentType: 'image/jpeg' },
+  });
+  const { photoId, uploadUrl } = created.json<{ photoId: string; uploadUrl: string }>();
+  await fetch(uploadUrl, {
+    method: 'PUT',
+    headers: { 'content-type': 'image/jpeg' },
+    body: new Uint8Array(await jpeg()),
+  });
+  return photoId;
+}
+
 /** Prepara un actor nuevo en cada caso: ninguna fila depende de lo que dejó otra. */
 async function authorizationFor(
   actor: MatrixActor,
 ): Promise<{ headers: Record<string, string>; context: HomeContext }> {
-  const context: HomeContext = { ownHomeId: MISSING_HOME, publishedHomeId: await publishedHome() };
+  const context: HomeContext = {
+    ownHomeId: MISSING_HOME,
+    ownPhotoId: MISSING_HOME,
+    publishedHomeId: await publishedHome(),
+  };
   if (actor === 'anon') return { headers: {}, context };
   const { uid, email, idToken } = await signUp();
   const headers = { authorization: `Bearer ${idToken}` };
@@ -142,6 +188,8 @@ async function authorizationFor(
       payload: COMPLETE_HOME,
     });
     context.ownHomeId = created.json<{ id: string }>().id;
+    await addReadyPhotos(context.ownHomeId);
+    context.ownPhotoId = await uploadedPhoto(headers, context.ownHomeId);
   }
   return { headers, context };
 }

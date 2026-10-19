@@ -10,6 +10,7 @@ import { sql } from 'drizzle-orm';
 import {
   bigint,
   boolean,
+  check,
   customType,
   date,
   index,
@@ -21,9 +22,11 @@ import {
   smallint,
   text,
   timestamp,
+  unique,
   uuid,
 } from 'drizzle-orm/pg-core';
 
+import { PHOTO_STATUSES } from '../../../domain/home/photo.js';
 import { type GeoPoint, parsePoint, pointSql } from './geography.js';
 
 /** Texto sin distinción de mayúsculas (extensión `citext`): el email es único sea cual sea su capitalización. */
@@ -32,6 +35,7 @@ const citext = customType<{ data: string }>({ dataType: () => 'citext' });
 export const homeTypeEnum = pgEnum('home_type', HOME_TYPES);
 export const homeStatusEnum = pgEnum('home_status', HOME_STATUSES);
 export const homeRegimeEnum = pgEnum('home_regime', HOME_REGIMES);
+export const photoStatusEnum = pgEnum('photo_status', PHOTO_STATUSES);
 export const locationVisibilityEnum = pgEnum('location_visibility', LOCATION_VISIBILITIES);
 
 /** Dirección cifrada (`bytea`): se lee y se escribe como `Buffer`. */
@@ -126,4 +130,31 @@ export const homes = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index('homes_owner_id_idx').on(table.ownerId)],
+);
+
+/**
+ * Fotos de una vivienda (`docs/datamodel.md`). `pending`: URL de subida emitida y aún sin procesar,
+ * sin posición; `ready`: ya procesada y publicada en `storage_path` (bucket público), con posición 1–20.
+ */
+export const homePhotos = pgTable(
+  'home_photos',
+  {
+    id: uuid('id').primaryKey(),
+    homeId: uuid('home_id')
+      .notNull()
+      .references(() => homes.id, { onDelete: 'cascade' }),
+    status: photoStatusEnum('status').notNull().default('pending'),
+    storagePath: text('storage_path').notNull(),
+    position: smallint('position'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('home_photos_home_id_idx').on(table.homeId),
+    unique('home_photos_home_id_position_key').on(table.homeId, table.position),
+    check('home_photos_position_range', sql`${table.position} BETWEEN 1 AND 20`),
+    check(
+      'home_photos_ready_has_position',
+      sql`${table.status} = 'pending' OR ${table.position} IS NOT NULL`,
+    ),
+  ],
 );

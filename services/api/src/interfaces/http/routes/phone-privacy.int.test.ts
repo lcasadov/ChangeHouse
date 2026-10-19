@@ -68,6 +68,16 @@ const HOMES_REQUESTS: Record<string, RequestTemplate> = {
   getHome: { method: 'GET', url: `/v1/homes/${MISSING_ID}` },
   updateHome: { method: 'PATCH', url: `/v1/homes/${MISSING_ID}`, payload: () => ({ bedrooms: 2 }) },
   submitHome: { method: 'POST', url: `/v1/homes/${MISSING_ID}/submit` },
+  createHomePhotoUpload: {
+    method: 'POST',
+    url: `/v1/homes/${MISSING_ID}/photos`,
+    payload: () => ({ contentType: 'image/jpeg' }),
+  },
+  completeHomePhotoUpload: {
+    method: 'POST',
+    url: `/v1/homes/${MISSING_ID}/photos/${MISSING_ID}/complete`,
+  },
+  deleteHomePhoto: { method: 'DELETE', url: `/v1/homes/${MISSING_ID}/photos/${MISSING_ID}` },
 };
 Object.assign(REQUESTS, HOMES_REQUESTS);
 

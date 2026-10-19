@@ -66,7 +66,7 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  await sql`TRUNCATE homes`;
+  await sql`TRUNCATE homes CASCADE`;
 });
 
 afterAll(async () => {

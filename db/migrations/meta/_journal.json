@@ -29,6 +29,13 @@
       "when": 1792389806594,
       "tag": "0003_homes",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792392679634,
+      "tag": "0004_home_photos",
+      "breakpoints": true
     }
   ]
 }

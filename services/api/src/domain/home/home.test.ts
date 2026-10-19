@@ -28,6 +28,8 @@ const OTHER_LOCATION: HomeLocation = {
   areaName: 'Chamberí',
   areaCenter: { lat: 40.434, lng: -3.7 },
 };
+/** Fotos procesadas con las que una ficha ya puede enviarse (RF-11). */
+const ENOUGH_PHOTOS = 3;
 const COMPLETE: HomeDetails = {
   usefulM2: 80,
   builtM2: 95,
@@ -227,9 +229,9 @@ describe('missingFields y submitHome', () => {
   it('Scenario: Envío de una ficha incompleta - lanza HomeIncompleteError con los campos y sigue en draft', () => {
     const home = draft({ ...COMPLETE, valueMinCents: undefined, valueMaxCents: undefined });
 
-    expect(() => submitHome(home)).toThrow(HomeIncompleteError);
+    expect(() => submitHome(home, ENOUGH_PHOTOS)).toThrow(HomeIncompleteError);
     try {
-      submitHome(home);
+      submitHome(home, ENOUGH_PHOTOS);
     } catch (error) {
       expect((error as HomeIncompleteError).fields).toEqual(['valueMinCents', 'valueMaxCents']);
     }
@@ -237,13 +239,37 @@ describe('missingFields y submitHome', () => {
   });
 
   it('Scenario: Envío de una ficha completa - pasa de draft a in_review', () => {
-    expect(submitHome(draft(COMPLETE)).status).toBe('in_review');
+    expect(submitHome(draft(COMPLETE), ENOUGH_PHOTOS).status).toBe('in_review');
+  });
+
+  it('Scenario: Envío con menos de 3 fotos - señala photos entre los campos que faltan y sigue en draft', () => {
+    const home = draft(COMPLETE);
+
+    for (const photos of [0, 1, 2]) {
+      expect(() => submitHome(home, photos)).toThrow(HomeIncompleteError);
+      try {
+        submitHome(home, photos);
+      } catch (error) {
+        expect((error as HomeIncompleteError).fields).toEqual(['photos']);
+      }
+    }
+    expect(home.status).toBe('draft');
+  });
+
+  it('con tres fotos o más no pide fotos; con una ficha incompleta lista primero los campos y luego las fotos', () => {
+    expect(submitHome(draft(COMPLETE), 20).status).toBe('in_review');
+    try {
+      submitHome(draft({ ...COMPLETE, bedrooms: undefined }), 2);
+      expect.unreachable();
+    } catch (error) {
+      expect((error as HomeIncompleteError).fields).toEqual(['bedrooms', 'photos']);
+    }
   });
 
   it.each(['in_review', 'published', 'paused', 'in_operation', 'closed'] as const)(
     'una vivienda en %s no se puede enviar',
     (status) => {
-      expect(() => submitHome(withStatus(draft(COMPLETE), status))).toThrow(
+      expect(() => submitHome(withStatus(draft(COMPLETE), status), ENOUGH_PHOTOS)).toThrow(
         HomeNotSubmittableError,
       );
     },

@@ -95,8 +95,10 @@ erDiagram
     home_photos {
         uuid id PK
         uuid home_id FK
+        photo_status status "pending | ready"
         text storage_path
-        smallint position
+        smallint position "nula si pending"
+        timestamptz created_at
     }
     search_preferences {
         uuid id PK
@@ -281,8 +283,10 @@ confirmado. Identificadores: `uuid` v7 generado en la aplicación —
 
 ### `home_photos` — fotos de una vivienda (3–20, RF-11)
 
-`home_id` FK, `storage_path` (ruta en el bucket público, sin EXIF de ubicación),
-`position` (orden de presentación).
+`home_id` FK, `status` (`pending` desde que se emite la URL de subida; `ready` cuando la
+subida se ha confirmado y procesado), `storage_path` (ruta en el bucket público, sin EXIF de
+ubicación), `position` (orden de presentación, 1–20, única por vivienda; nula mientras la foto
+está `pending`) y `created_at`. Solo las fotos `ready` se devuelven y cuentan para el mínimo de 3.
 
 ### `search_preferences` — qué busca un usuario
 

@@ -5,6 +5,7 @@ import { registerSecurity, type SecurityOptions } from './authorization/security
 import { generateCorrelationId, registerProblemHandling } from './problem.js';
 import { type AccountRouteOptions, accountRoutes } from './routes/accounts.js';
 import { type HomeRouteOptions, homeRoutes } from './routes/homes.js';
+import { type PhotoRouteOptions, photoRoutes } from './routes/photos.js';
 import { type WaitlistRouteOptions, waitlistRoutes } from './routes/waitlist.js';
 
 export interface AppOptions {
@@ -20,6 +21,7 @@ export interface AppOptions {
   waitlist?: WaitlistRouteOptions;
   accounts?: AccountRouteOptions;
   homes?: HomeRouteOptions;
+  photos?: PhotoRouteOptions;
 }
 
 /** Confía solo en los `hops` saltos más cercanos: la IP real es la que añadió el último proxy. */
@@ -87,6 +89,7 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
       if (options.waitlist) await versioned.register(waitlistRoutes(options.waitlist));
       if (options.accounts) await versioned.register(accountRoutes(options.accounts));
       if (options.homes) await versioned.register(homeRoutes(options.homes));
+      if (options.photos) await versioned.register(photoRoutes(options.photos));
     },
     { prefix: API_PREFIX },
   );

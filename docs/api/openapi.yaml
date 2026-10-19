@@ -295,7 +295,8 @@ paths:
         Exige los campos obligatorios completos (`usefulM2`, `builtM2`, `bedrooms`, `bathrooms`,
         `hasLift`, `garage`, `storageRoom`, `valueMinCents`, `valueMaxCents`, `isPrimaryResidence`);
         si faltan, 422 con `code: HOME_INCOMPLETE` y `errors` con cada campo. La exigencia de al
-        menos 3 fotos (RF-11) se incorpora con `add-home-photos`.
+        menos 3 fotos procesadas (RF-11); si faltan, el mismo 422 incluye `photos` entre los
+        `errors`.
       x-roles: [resourceOwner]
       responses:
         '200':
@@ -349,9 +350,10 @@ paths:
       operationId: createHomePhotoUpload
       summary: Solicita una URL firmada para subir una foto (máx. 20, RF-11)
       description: |
-        Devuelve una URL firmada de subida de corta duración. Tras la subida, la
-        API comprime la imagen y elimina los metadatos EXIF de ubicación antes
-        de publicarla.
+        Devuelve una URL firmada de subida (`PUT`, válida 15 minutos, con el
+        `Content-Type` indicado). La foto nace `pending` y no aparece en la vivienda hasta
+        que se confirma la subida con `completeHomePhotoUpload`, momento en que la API la
+        comprime y elimina los metadatos EXIF de ubicación antes de publicarla.
       x-roles: [resourceOwner]
       requestBody:
         required: true
@@ -376,6 +378,36 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+  /homes/{homeId}/photos/{photoId}/complete:
+    parameters:
+      - $ref: '#/components/parameters/HomeId'
+      - $ref: '#/components/parameters/PhotoId'
+    post:
+      tags: [viviendas]
+      operationId: completeHomePhotoUpload
+      summary: Confirma que la foto ya se subió y la procesa
+      description: |
+        La API descarga el original subido, elimina todos los metadatos (incluida la ubicación),
+        corrige la orientación, limita el lado mayor a 2048 px, la comprime a WebP y la publica;
+        solo entonces la foto pasa a `ready` y aparece en `photos` de la vivienda. Es idempotente
+        sobre una foto ya `ready`. Si el fichero no es una imagen válida: 422 con
+        `code: INVALID_IMAGE`, el fichero se elimina y la foto se descarta. Si la subida aún no se
+        ha hecho: 422 con `code: PHOTO_NOT_UPLOADED` y la foto sigue `pending`.
+      x-roles: [resourceOwner]
+      responses:
+        '200':
+          description: Foto procesada y visible
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Photo' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Ya hay 20 fotos, o la vivienda no admite cambios
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
   /homes/{homeId}/photos/{photoId}:
     parameters:
       - $ref: '#/components/parameters/HomeId'
@@ -384,6 +416,7 @@ paths:
       tags: [viviendas]
       operationId: deleteHomePhoto
       summary: Elimina una foto
+      description: Elimina también los ficheros. Sirve para fotos `pending` y `ready`.
       x-roles: [resourceOwner]
       responses:
         '204': { description: Eliminada }

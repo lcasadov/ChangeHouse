@@ -40,6 +40,10 @@ export const policy: Policy = {
   createHome: { kind: 'roles', roles: HOME_OWNER_ROLES },
   updateHome: { kind: 'roles', roles: HOME_OWNER_ROLES },
   submitHome: { kind: 'roles', roles: HOME_OWNER_ROLES },
+  // Fotos: mismas reglas que la vivienda a la que pertenecen (la propiedad la resuelve el caso de uso)
+  createHomePhotoUpload: { kind: 'roles', roles: HOME_OWNER_ROLES },
+  completeHomePhotoUpload: { kind: 'roles', roles: HOME_OWNER_ROLES },
+  deleteHomePhoto: { kind: 'roles', roles: HOME_OWNER_ROLES },
   // El admin consulta viviendas ajenas, pero en su forma pública hasta que exista la moderación
   getHome: { kind: 'roles', roles: [...HOME_OWNER_ROLES, 'admin'] },
 };
