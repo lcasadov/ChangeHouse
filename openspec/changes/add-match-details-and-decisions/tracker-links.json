@@ -1,0 +1,90 @@
+{
+  "tracker": "github-issues",
+  "change": "add-match-details-and-decisions",
+  "sprint": {
+    "path": "Sprint en curso",
+    "created": false
+  },
+  "epic": {
+    "capability": "matches",
+    "id": 197,
+    "reused": false
+  },
+  "related_epics": [],
+  "feature": {
+    "id": 198,
+    "reused": false
+  },
+  "stories": [
+    {
+      "key": "Detalle del match para sus participantes",
+      "id": 199,
+      "reused": false,
+      "prio": "P1"
+    },
+    {
+      "key": "Teléfono solo con autorización",
+      "id": 200,
+      "reused": false,
+      "prio": "P1"
+    },
+    {
+      "key": "Confirmar interés",
+      "id": 201,
+      "reused": false,
+      "prio": "P1"
+    },
+    {
+      "key": "Retirarse cierra el match para todos",
+      "id": 202,
+      "reused": false,
+      "prio": "P1"
+    }
+  ],
+  "tasks": [
+    {
+      "key": "T1",
+      "id": 203,
+      "parent": 201,
+      "state": "open"
+    },
+    {
+      "key": "B1",
+      "id": 204,
+      "parent": 202,
+      "state": "open"
+    },
+    {
+      "key": "T2",
+      "id": 205,
+      "parent": 199,
+      "state": "open"
+    },
+    {
+      "key": "B2",
+      "id": 206,
+      "parent": 200,
+      "state": "open"
+    },
+    {
+      "key": "T3",
+      "id": 207,
+      "parent": 199,
+      "state": "open"
+    },
+    {
+      "key": "F1",
+      "id": 208,
+      "parent": 201,
+      "state": "open"
+    },
+    {
+      "key": "V1",
+      "id": 209,
+      "parent": 199,
+      "state": "open"
+    }
+  ],
+  "bugs": [],
+  "pending": []
+}
