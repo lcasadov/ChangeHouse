@@ -82,25 +82,25 @@
       "key": "T3",
       "id": 162,
       "parent": 156,
-      "state": "doing"
+      "state": "done"
     },
     {
       "key": "F1",
       "id": 163,
       "parent": 156,
-      "state": "doing"
+      "state": "done"
     },
     {
       "key": "F2",
       "id": 164,
       "parent": 156,
-      "state": "doing"
+      "state": "done"
     },
     {
       "key": "V1",
       "id": 165,
       "parent": 152,
-      "state": "doing"
+      "state": "done"
     }
   ],
   "bugs": [],
