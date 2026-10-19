@@ -12,7 +12,7 @@ import { openSql, testConfig } from '../../../../test/fixtures.js';
 import { createApi } from '../../../bootstrap.js';
 
 interface RequestTemplate {
-  method: 'GET' | 'POST' | 'PUT';
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   url: string;
   payload?: () => object;
 }
@@ -50,6 +50,26 @@ const REQUESTS: Record<string, RequestTemplate> = {
     payload: () => ({ type: 'analytics', version: '2026-10' }),
   },
 };
+
+const MISSING_ID = '0199c1a2-0000-7000-8000-000000000000';
+const HOMES_REQUESTS: Record<string, RequestTemplate> = {
+  listMyHomes: { method: 'GET', url: '/v1/me/homes' },
+  createHome: {
+    method: 'POST',
+    url: '/v1/homes',
+    payload: () => ({
+      type: 'piso',
+      address: {
+        placeId: 'fixture-malasana',
+        formatted: 'Calle del Pez, 12, 28004 Madrid, España',
+      },
+    }),
+  },
+  getHome: { method: 'GET', url: `/v1/homes/${MISSING_ID}` },
+  updateHome: { method: 'PATCH', url: `/v1/homes/${MISSING_ID}`, payload: () => ({ bedrooms: 2 }) },
+  submitHome: { method: 'POST', url: `/v1/homes/${MISSING_ID}/submit` },
+};
+Object.assign(REQUESTS, HOMES_REQUESTS);
 
 const PHONE = '+34699888777';
 const legal = { acceptedTermsVersion: TERMS_VERSION, acceptedPrivacyVersion: PRIVACY_VERSION };

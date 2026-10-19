@@ -58,43 +58,43 @@
       "key": "T1",
       "id": 101,
       "parent": 99,
-      "state": "doing"
+      "state": "done"
     },
     {
       "key": "B1",
       "id": 102,
       "parent": 94,
-      "state": "doing"
+      "state": "done"
     },
     {
       "key": "B2",
       "id": 103,
       "parent": 96,
-      "state": "doing"
+      "state": "done"
     },
     {
       "key": "T2",
       "id": 104,
       "parent": 98,
-      "state": "doing"
+      "state": "done"
     },
     {
       "key": "B3",
       "id": 105,
       "parent": 96,
-      "state": "doing"
+      "state": "done"
     },
     {
       "key": "T3",
       "id": 106,
       "parent": 100,
-      "state": "doing"
+      "state": "done"
     },
     {
       "key": "B4",
       "id": 107,
       "parent": 100,
-      "state": "doing"
+      "state": "done"
     },
     {
       "key": "T4",

@@ -22,16 +22,16 @@
 
 ## 3. App
 
-- [ ] T4 Escribir las pruebas de componentes del asistente (guardado por paso, reanudar borrador, rango incoherente, dirección no resuelta, elección de visibilidad) y de «Mis casas» (varias viviendas con estado, estado vacío), y comprobar que fallan. ref: Alta de vivienda en borrador · est: 4h · disc: qa
+- [x] T4 Escribir las pruebas de componentes del asistente (guardado por paso, reanudar borrador, rango incoherente, dirección no resuelta, elección de visibilidad) y de «Mis casas» (varias viviendas con estado, estado vacío), y comprobar que fallan. ref: Alta de vivienda en borrador · est: 4h · disc: qa
   - GIVEN un borrador con el primer paso hecho WHEN se reabre THEN el asistente continúa en el segundo paso con los datos guardados
-- [ ] F1 Implementar «Mis casas» y el asistente de 5 pasos con autocompletado de direcciones (sugerencias de prueba sin clave), visibilidad de la ubicación y revisión final con envío, y verificar que pasan las pruebas de T4. ref: Varias viviendas por usuario · est: 8h · disc: front
+- [x] F1 Implementar «Mis casas» y el asistente de 5 pasos con autocompletado de direcciones (sugerencias de prueba sin clave), visibilidad de la ubicación y revisión final con envío, y verificar que pasan las pruebas de T4. ref: Varias viviendas por usuario · est: 8h · disc: front
   - GIVEN «Mis casas» sin viviendas WHEN se abre THEN aparece el estado vacío con el botón para publicar la primera
-- [ ] F2 Implementar el detalle de vivienda para el propietario con su estado y la acción de enviar a revisión, y verificar sus pruebas de componentes. ref: Envío a revisión · est: 3h · disc: front
+- [x] F2 Implementar el detalle de vivienda para el propietario con su estado y la acción de enviar a revisión, y verificar sus pruebas de componentes. ref: Envío a revisión · est: 3h · disc: front
   - GIVEN una vivienda enviada WHEN responde la API THEN el estado mostrado pasa a «En revisión»
 
 ## 4. Integración
 
-- [ ] V1 Ejecutar `pnpm lint`, `pnpm typecheck`, `pnpm test:coverage`, `pnpm test:integration` y `pnpm build` y verificar que todo pasa con cobertura ≥ 80 %. ref: Alta de vivienda en borrador · est: 1h · disc: qa
+- [x] V1 Ejecutar `pnpm lint`, `pnpm typecheck`, `pnpm test:coverage`, `pnpm test:integration` y `pnpm build` y verificar que todo pasa con cobertura ≥ 80 %. ref: Alta de vivienda en borrador · est: 1h · disc: qa
   - GIVEN el change implementado WHEN se ejecuta la puerta de calidad local THEN todos los comandos terminan con éxito
 
 ## Workflow follow-up

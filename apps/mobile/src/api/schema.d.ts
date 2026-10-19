@@ -120,7 +120,13 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Crea una vivienda en borrador (RF-10). Un usuario puede tener varias (RF-20) */
+    /**
+     * Crea una vivienda en borrador (RF-10). Un usuario puede tener varias (RF-20)
+     * @description El borrador nace con el tipo y la dirección (primer paso del asistente); el resto de
+     *     campos de `HomeInput` es opcional y se completa con `updateHome`. La completitud se
+     *     exige al enviar (`submitHome`). El servidor resuelve el `placeId` (punto exacto, barrio
+     *     o zona y su centro); si no puede, responde 422 con `code: ADDRESS_NOT_RESOLVED`.
+     */
     post: operations['createHome'];
     delete?: never;
     options?: never;
@@ -172,7 +178,10 @@ export interface paths {
     put?: never;
     /**
      * Envía la vivienda a moderación (`draft` → `in_review`)
-     * @description Exige al menos 3 fotos (RF-11) y los campos obligatorios completos.
+     * @description Exige los campos obligatorios completos (`usefulM2`, `builtM2`, `bedrooms`, `bathrooms`,
+     *     `hasLift`, `garage`, `storageRoom`, `valueMinCents`, `valueMaxCents`, `isPrimaryResidence`);
+     *     si faltan, 422 con `code: HOME_INCOMPLETE` y `errors` con cada campo. La exigencia de al
+     *     menos 3 fotos (RF-11) se incorpora con `add-home-photos`.
      */
     post: operations['submitHome'];
     delete?: never;
@@ -840,31 +849,36 @@ export interface components {
       type: components['schemas']['ConsentType'];
       version: string;
     };
+    /**
+     * @description Solo `type` y `address` son obligatorios al crear el borrador; `regime` es `libre` por
+     *     defecto. Los demás son obligatorios para enviar a revisión (`submitHome`), no para guardar.
+     *     Si hay rango, `valueMinCents` > 0 y `valueMinCents` <= `valueMaxCents` (422 en otro caso).
+     */
     HomeInput: {
       type: components['schemas']['HomeType'];
-      regime: components['schemas']['HomeRegime'];
+      regime?: components['schemas']['HomeRegime'];
       /** @description Dirección exacta (se guarda cifrada; nunca se publica) */
       address: {
         /** @description Identificador de Google Places */
         placeId: string;
         formatted: string;
       };
-      usefulM2: number;
-      builtM2: number;
-      bedrooms: number;
-      bathrooms: number;
+      usefulM2?: number;
+      builtM2?: number;
+      bedrooms?: number;
+      bathrooms?: number;
       floor?: string;
-      hasLift: boolean;
-      garage: boolean;
-      storageRoom: boolean;
+      hasLift?: boolean;
+      garage?: boolean;
+      storageRoom?: boolean;
       features?: components['schemas']['HomeFeatures'];
       locationVisibility?: components['schemas']['LocationVisibility'];
       /** @enum {string} */
       energyRating?: 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G';
       yearBuilt?: number;
-      valueMinCents: components['schemas']['Money'];
-      valueMaxCents: components['schemas']['Money'];
-      isPrimaryResidence: boolean;
+      valueMinCents?: components['schemas']['Money'];
+      valueMaxCents?: components['schemas']['Money'];
+      isPrimaryResidence?: boolean;
       mortgageOutstandingCents?: components['schemas']['Money'];
       /** Format: date */
       vppQualificationDate?: string;
@@ -900,25 +914,28 @@ export interface components {
       vppProtectionEnd?: string;
       vppMaxLegalPriceCents?: components['schemas']['Money'];
     };
-    /** @description Forma pública de una vivienda. Sin dirección postal exacta ni datos del propietario. */
+    /**
+     * @description Forma pública de una vivienda. Sin dirección postal exacta ni datos del propietario.
+     *     En un borrador (solo la ve su propietario) los datos aún sin rellenar son `null`.
+     */
     HomePublic: {
       /** Format: uuid */
       id: string;
       type: components['schemas']['HomeType'];
       regime: components['schemas']['HomeRegime'];
-      usefulM2: number;
-      builtM2: number;
-      bedrooms: number;
-      bathrooms: number;
+      usefulM2: number | null;
+      builtM2: number | null;
+      bedrooms: number | null;
+      bathrooms: number | null;
       floor?: string | null;
-      hasLift?: boolean;
-      garage?: boolean;
-      storageRoom?: boolean;
+      hasLift?: boolean | null;
+      garage?: boolean | null;
+      storageRoom?: boolean | null;
       features?: components['schemas']['HomeFeatures'];
       energyRating?: string | null;
       yearBuilt?: number | null;
-      valueMinCents: components['schemas']['Money'];
-      valueMaxCents: components['schemas']['Money'];
+      valueMinCents: number | null;
+      valueMaxCents: number | null;
       /** @description Punto exacto si el propietario eligió `exact`; centro del barrio o zona si eligió `area`. */
       location: {
         visibility: components['schemas']['LocationVisibility'];
@@ -931,8 +948,8 @@ export interface components {
     /** @description Ficha completa, visible para el propietario y el admin. */
     Home: components['schemas']['HomePublic'] & {
       status: components['schemas']['HomeStatus'];
-      isPrimaryResidence: boolean;
-      mortgageOutstandingCents?: components['schemas']['Money'];
+      isPrimaryResidence: boolean | null;
+      mortgageOutstandingCents?: number | null;
       /** Format: date */
       vppQualificationDate?: string | null;
       /** Format: date */

@@ -21,9 +21,196 @@
     }
   },
   "homes": {
+    "title": "Mis casas",
     "empty": {
       "title": "Aún no has publicado ninguna casa",
-      "description": "Publica tu casa en cinco pasos, empezando por las fotos. Sin una casa publicada no puede haber matches."
+      "description": "Publica tu casa en cinco pasos. Sin una casa publicada no puede haber matches.",
+      "action": "Publicar mi casa"
+    },
+    "add": "Añadir otra casa",
+    "loadFailed": "No hemos podido cargar tus casas. Comprueba tu conexión y vuelve a intentarlo.",
+    "retry": "Reintentar",
+    "type": {
+      "piso": "Piso",
+      "atico": "Ático",
+      "duplex": "Dúplex",
+      "estudio": "Estudio",
+      "bajo": "Bajo",
+      "chalet": "Chalet",
+      "adosado": "Adosado",
+      "pareado": "Pareado",
+      "casa": "Casa"
+    },
+    "status": {
+      "draft": "Borrador",
+      "in_review": "En revisión",
+      "published": "Publicada",
+      "paused": "Pausada",
+      "in_operation": "En operación",
+      "closed": "Cerrada"
+    },
+    "card": {
+      "title": "{{type}} en {{area}}",
+      "noPhotos": "Aún sin fotos",
+      "value": "Entre {{min}} y {{max}}",
+      "noValue": "Sin valor indicado",
+      "open": "Ver el detalle de {{title}}",
+      "action": "{{action}}: {{title}}"
+    },
+    "actions": {
+      "continue": "Continuar",
+      "submit": "Enviar a revisión",
+      "view": "Ver"
+    },
+    "wizard": {
+      "step": "Paso {{current}} de {{total}}",
+      "steps": {
+        "type": "Tipo y dirección",
+        "features": "Características",
+        "value": "Valor y cargas",
+        "location": "Ubicación visible"
+      },
+      "intro": "Tu avance se guarda en cada paso: puedes salir y seguir cuando quieras.",
+      "back": "Atrás",
+      "next": "Guardar y continuar",
+      "exit": "Guardar y salir",
+      "loadFailed": "No hemos podido cargar tu casa. Comprueba tu conexión y vuelve a intentarlo.",
+      "notFound": "No encontramos esta casa. Puede que ya no exista."
+    },
+    "form": {
+      "type": "Tipo de vivienda",
+      "address": "Dirección",
+      "addressHint": "Escribe la calle y elige una de las sugerencias. Tu dirección no se mostrará a nadie.",
+      "addressSearching": "Buscando direcciones",
+      "addressNoResults": "No encontramos esa dirección. Prueba con otra o revisa lo escrito.",
+      "addressSearchFailed": "No hemos podido buscar direcciones. Comprueba tu conexión y vuelve a intentarlo.",
+      "usefulM2": "Superficie útil (m²)",
+      "builtM2": "Superficie construida (m²)",
+      "bedrooms": "Dormitorios",
+      "bathrooms": "Baños",
+      "floor": "Planta",
+      "floorHint": "Por ejemplo 3, bajo o ático.",
+      "hasLift": "Tiene ascensor",
+      "garage": "Tiene garaje",
+      "storageRoom": "Tiene trastero",
+      "features": "Características",
+      "energyRating": "Certificado energético",
+      "yearBuilt": "Año de construcción",
+      "heating": "Calefacción",
+      "condition": "Estado de la vivienda",
+      "valueMin": "Valor mínimo (€)",
+      "valueMax": "Valor máximo (€)",
+      "valueHint": "Indica entre qué valores aceptarías cambiar tu casa.",
+      "valuePreview": "Son {{amount}}",
+      "mortgage": "Hipoteca pendiente (€)",
+      "mortgageHint": "Opcional. Lo que te queda por pagar.",
+      "isPrimaryResidence": "Es mi vivienda habitual"
+    },
+    "features": {
+      "terrace": "Terraza",
+      "balcony": "Balcón",
+      "garden": "Jardín",
+      "communalPool": "Piscina comunitaria",
+      "privatePool": "Piscina privada",
+      "airConditioning": "Aire acondicionado",
+      "exterior": "Exterior",
+      "accessible": "Accesible sin escalones"
+    },
+    "heating": {
+      "none": "Sin calefacción",
+      "individual": "Individual",
+      "central": "Central"
+    },
+    "condition": {
+      "new": "A estrenar",
+      "good": "Buen estado",
+      "needs_renovation": "A reformar"
+    },
+    "location": {
+      "title": "¿Qué ubicación ven las demás personas?",
+      "visibility": "Ubicación visible",
+      "area": "Solo el barrio o zona",
+      "exact": "La ubicación exacta",
+      "areaExplanation": "Mostraremos «{{area}}» y un punto en el centro de la zona. Nadie verá tu calle ni tu número.",
+      "exactExplanation": "Mostraremos el punto exacto de tu casa en el mapa, en «{{area}}». Tu dirección postal sigue siendo privada.",
+      "privacy": "Tu dirección postal nunca se muestra a nadie fuera de un match."
+    },
+    "review": {
+      "title": "Revisa tu casa",
+      "description": "Comprueba los datos antes de enviarla. Podrás cambiarlos más tarde."
+    },
+    "summary": {
+      "address": "Dirección",
+      "area": "Zona",
+      "visibility": "Ubicación visible",
+      "surfaces": "Superficies",
+      "surfacesValue": "{{useful}} m² útiles, {{built}} m² construidos",
+      "rooms": "Dormitorios y baños",
+      "roomsValue": "{{bedrooms}} dormitorios, {{bathrooms}} baños",
+      "floor": "Planta",
+      "extras": "Extras",
+      "energyRating": "Certificado energético",
+      "yearBuilt": "Año de construcción",
+      "value": "Valor",
+      "mortgage": "Hipoteca pendiente",
+      "primaryResidence": "Vivienda habitual",
+      "yes": "Sí",
+      "no": "No",
+      "pending": "Sin indicar"
+    },
+    "submit": {
+      "action": "Enviar a revisión",
+      "missing": "Faltan datos para enviar tu casa a revisión: {{fields}}.",
+      "complete": "Completar lo que falta",
+      "network": "No hemos podido enviar tu casa. Comprueba tu conexión y vuelve a intentarlo.",
+      "conflict": "Esta casa ya no se puede enviar a revisión.",
+      "unknown": "No hemos podido enviar tu casa. Inténtalo de nuevo en unos minutos."
+    },
+    "fields": {
+      "usefulM2": "Superficie útil",
+      "builtM2": "Superficie construida",
+      "bedrooms": "Dormitorios",
+      "bathrooms": "Baños",
+      "hasLift": "Ascensor",
+      "garage": "Garaje",
+      "storageRoom": "Trastero",
+      "valueMinCents": "Valor mínimo",
+      "valueMaxCents": "Valor máximo",
+      "isPrimaryResidence": "Vivienda habitual"
+    },
+    "errors": {
+      "type": "Elige el tipo de vivienda.",
+      "address": "Elige una dirección de las sugerencias.",
+      "addressNotResolved": "No hemos podido reconocer esa dirección. Elige otra sugerencia.",
+      "usefulM2": "Indica una superficie útil mayor que 0 y de hasta 10.000 m².",
+      "builtM2": "Indica una superficie construida mayor que 0 y de hasta 10.000 m².",
+      "bedrooms": "Indica el número de dormitorios con un número entero, de 0 a 30.",
+      "bathrooms": "Indica el número de baños con un número entero, de 0 a 30.",
+      "floor": "La planta admite hasta 20 caracteres.",
+      "yearBuilt": "Indica un año entre 1800 y 2100.",
+      "valueMin": "Indica un importe mayor que 0, por ejemplo 250.000.",
+      "valueMax": "Indica un importe mayor que 0, por ejemplo 300.000.",
+      "mortgage": "Indica un importe válido, por ejemplo 50.000, o déjalo vacío.",
+      "valueRange": "El valor máximo debe ser igual o mayor que el mínimo.",
+      "network": "No hemos podido guardar tu casa. Comprueba tu conexión y vuelve a intentarlo.",
+      "conflict": "Esta casa ya no se puede modificar.",
+      "invalid": "Algún dato no es válido. Revisa el formulario y vuelve a intentarlo.",
+      "unknown": "No hemos podido guardar tu casa. Inténtalo de nuevo en unos minutos."
+    },
+    "detail": {
+      "back": "Volver a Mis casas",
+      "privateAddress": "Solo tú ves la dirección completa.",
+      "edit": "Editar datos",
+      "loadFailed": "No hemos podido cargar esta casa. Comprueba tu conexión y vuelve a intentarlo.",
+      "notFound": "No encontramos esta casa. Puede que ya no exista.",
+      "statusNote": {
+        "draft": "Completa los datos y envíala a revisión para poder publicarla.",
+        "in_review": "Estamos revisando tu casa. Cuando se publique, podrás recibir matches.",
+        "published": "Tu casa está publicada y puede recibir matches.",
+        "paused": "Tu casa está pausada: otras personas no la ven.",
+        "in_operation": "Tu casa está en una operación de permuta.",
+        "closed": "Esta casa ya no está activa."
+      }
     }
   },
   "profile": {

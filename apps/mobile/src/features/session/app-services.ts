@@ -5,9 +5,14 @@ import { createFirebaseAuth } from '../auth/create-firebase-auth';
 import { createFirebaseAuthService } from '../auth/firebase-auth-service';
 import { type FirebaseEnv, readFirebaseConfig } from '../auth/firebase-config';
 import type { GoogleEnv } from '../auth/google-sign-in';
+import {
+  type AddressSuggestionsEnv,
+  createAddressSuggestions,
+} from '../homes/create-address-suggestions';
+import { createHttpHomesApi } from '../homes/http-homes-api';
 import type { AppServices } from './services';
 
-export interface AppEnv extends FirebaseEnv, GoogleEnv {
+export interface AppEnv extends FirebaseEnv, GoogleEnv, AddressSuggestionsEnv {
   /** Origen de la API, sin barra final (`services/api`). */
   EXPO_PUBLIC_API_URL?: string | undefined;
   /** Origen donde la landing publica `/terminos` y `/privacidad`. */
@@ -38,6 +43,8 @@ export function createAppServices(
   return {
     auth,
     accountApi: createHttpAccountApi(client),
+    homesApi: createHttpHomesApi(client),
+    addressSuggestions: createAddressSuggestions(env),
     social,
     legalUrls: { terms: `${legalBase}/terminos`, privacy: `${legalBase}/privacidad` },
   };

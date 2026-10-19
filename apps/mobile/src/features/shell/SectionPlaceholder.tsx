@@ -5,8 +5,8 @@ import { EmptyState, Screen } from '../../ui';
 
 export type Section = 'explore' | 'matches' | 'homes' | 'profile';
 
-/** Las secciones que aún no tienen feature propia: el perfil ya no es provisional. */
-export type PlaceholderSection = Exclude<Section, 'profile'>;
+/** Las secciones que aún no tienen feature propia: el perfil y «Mis casas» ya no son provisionales. */
+export type PlaceholderSection = Exclude<Section, 'profile' | 'homes'>;
 
 export interface SectionPlaceholderProps {
   section: PlaceholderSection;

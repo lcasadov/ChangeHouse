@@ -69,4 +69,25 @@ describe('createAppServices', () => {
     );
     expect(services.legalUrls.terms).toBe('https://changehouse.test/terminos');
   });
+
+  it('compone el adaptador de viviendas y, sin clave de Google, las sugerencias de prueba', async () => {
+    const services = createAppServices(env, []);
+
+    expect(typeof services.homesApi.listMine).toBe('function');
+    expect(await services.addressSuggestions.suggest('malasaña')).toMatchObject([
+      { placeId: 'fixture-malasana' },
+    ]);
+  });
+
+  it('con EXPO_PUBLIC_GOOGLE_PLACES_KEY el autocompletado va contra Google Places', async () => {
+    const fetchSpy = jest.spyOn(globalThis, 'fetch').mockResolvedValue(Response.json({}));
+    const services = createAppServices({ ...env, EXPO_PUBLIC_GOOGLE_PLACES_KEY: 'clave' }, []);
+
+    await services.addressSuggestions.suggest('calle');
+
+    const [url, init] = fetchSpy.mock.calls[0] ?? [];
+    expect(url).toBe('https://places.googleapis.com/v1/places:autocomplete');
+    expect(init?.headers).toMatchObject({ 'X-Goog-Api-Key': 'clave' });
+    fetchSpy.mockRestore();
+  });
 });
