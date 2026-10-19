@@ -14,7 +14,7 @@
 | Cobertura sobre código nuevo | `$COVERAGE_CMD` con umbral configurado en la herramienta | Check requerido |
 | Dependencias vulnerables | Escaneo de dependencias en la CI (severidad crítica) | Check requerido |
 | Coherencia de OpenSpec | `openspec-sync` en GitHub Actions | Check requerido |
-| Revisión automática | CodeRabbit (`coderabbitai[bot]`) | Cero conversaciones abiertas y revisión no en *changes requested* |
+| Revisión automática | CodeRabbit (`coderabbitai[bot]`) | Cero conversaciones abiertas y revisión sobre el HEAD en estado `APPROVED` o `COMMENTED` |
 
 ## Umbrales
 
@@ -57,9 +57,11 @@ Lo que no puede es empeorar. Cada cambio deja el conjunto igual o mejor.
   (`.coderabbit.yaml`) debe cubrir `$BASE_BRANCH` y `$PROD_BRANCH` como ramas de
   destino. Con `request_changes_workflow: true` su revisión pide cambios y
   aprueba al resolverse.
-- **La revisión se pide a mano.** El plan gratuito de CodeRabbit no revisa
-  automáticamente repositorios públicos con menos de 10 estrellas: su check sale
-  en verde con «Review skipped» **sin haber revisado**. Al abrir la PR, y cuando
+- **La revisión se pide a mano.** En este repositorio CodeRabbit omite la
+  revisión automática; su aviso dice literalmente «This repository does not
+  receive automatic reviews because it has fewer than 10 stars» (observado el
+  2026-10-18 en la PR #5). Su check sale en verde con «Review skipped» **sin
+  haber revisado**. Al abrir la PR, y cuando
   su HEAD sea definitivo, comenta `@coderabbitai review` (o `@coderabbitai full
   review`). Un push posterior al comentario lo anula («Head commit changed»): hay
   que volver a pedirla. **Un check verde de CodeRabbit no es una revisión.**
@@ -92,7 +94,7 @@ gh pr checks <PR>                       # todos en verde, ninguno pendiente
 # Si devuelve null, CodeRabbit no ha revisado el último commit: pide la revisión
 # (`gh pr comment <PR> --body "@coderabbitai review"`) y espera. Nunca se fusiona con null.
 gh pr view <PR> --json headRefOid,reviews \
-  --jq '(.headRefOid) as $head | [.reviews[] | select(.author.login=="coderabbitai" and .commit.oid==$head)] | max_by(.submittedAt) | .state'
+  --jq '(.headRefOid) as $head | [.reviews[] | select(.author.login=="coderabbitai" and .commit.oid==$head)] | max_by(.submittedAt) | if .state == "APPROVED" or .state == "COMMENTED" then .state else null end'
 gh api graphql -f query='query($o:String!,$r:String!,$n:Int!){repository(owner:$o,name:$r){pullRequest(number:$n){reviewThreads(first:100){nodes{isResolved}}}}}' \
   -F o=lcasadov -F r=ChangeHouse -F n=<PR> \
   --jq '[.data.repository.pullRequest.reviewThreads.nodes[]|select(.isResolved==false)]|length'   # debe ser 0
