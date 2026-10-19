@@ -189,6 +189,7 @@ deshabilitado, cargando y error. Para los que muestran datos: **vacío**.
 | `CompensationSummary` | Quién paga a quién en un match | — | — | siempre con el aviso «estimación orientativa» |
 | `ChatThread`, `MessageBubble` | Chat del match | — | propio, ajeno, sistema | enviando, fallido con reintento |
 | `Badge`, `Chip` | Estado o filtro | Acciones | `neutral`, `success`, `warning`, `danger` | — |
+| `Notice` | Aviso en línea con icono y mensaje anunciado (email sin verificar, confirmaciones, errores de formulario) | Errores de un solo campo (usa el error del campo) | `info`, `success`, `warning`, `danger` | acción opcional fuera del grupo anunciado, para que siga siendo alcanzable |
 | `EmptyState` | Lista o pantalla sin datos | — | — | explica por qué y qué hacer |
 | `ErrorState` | Fallo de carga | — | — | qué ha pasado + botón de reintentar |
 | `Skeleton` | Carga inicial > 300 ms | Cargas < 300 ms | — | — |

@@ -1,5 +1,7 @@
+import { Slot as MockSlot } from 'expo-router';
 import { renderRouter, screen } from 'expo-router/testing-library';
 import * as SplashScreen from 'expo-splash-screen';
+import { createElement as mockCreateElement } from 'react';
 import { Text } from 'react-native';
 
 import RootLayout from '../../app/_layout';
@@ -11,6 +13,10 @@ jest.mock('expo-splash-screen', () => ({
 }));
 jest.mock('../fonts/use-app-fonts', () => ({ useAppFonts: jest.fn() }));
 jest.mock('../observability/sentry', () => ({ initSentry: jest.fn() }));
+// La sesión (Firebase, API) tiene sus propias pruebas: aquí solo importa que el layout la monte
+jest.mock('../features/session/AppSessionRoot', () => ({
+  AppSessionRoot: () => mockCreateElement(MockSlot),
+}));
 
 const ROUTES = {
   _layout: RootLayout,

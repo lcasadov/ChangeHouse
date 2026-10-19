@@ -1,10 +1,10 @@
 import '../src/i18n';
 
-import { Slot } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 
+import { AppSessionRoot } from '../src/features/session/AppSessionRoot';
 import { useAppFonts } from '../src/fonts/use-app-fonts';
 import { initSentry } from '../src/observability/sentry';
 import { AppThemeProvider } from '../src/theme/AppThemeProvider';
@@ -25,7 +25,7 @@ export default function RootLayout() {
   return (
     <AppThemeProvider>
       <StatusBar style="auto" />
-      <Slot />
+      <AppSessionRoot />
     </AppThemeProvider>
   );
 }

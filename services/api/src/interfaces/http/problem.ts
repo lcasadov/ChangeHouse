@@ -3,6 +3,8 @@ import type { IncomingMessage } from 'node:http';
 import type { FastifyError, FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { v7 as uuidv7 } from 'uuid';
 
+import { DomainError } from '../../domain/domain-error.js';
+
 export const CORRELATION_HEADER = 'x-correlation-id';
 
 const PROBLEM_CONTENT_TYPE = 'application/problem+json';
@@ -10,6 +12,7 @@ const PROBLEM_TYPE_BASE = 'https://changehouse.app/problems';
 // Caracteres seguros para volcar el identificador en logs y cabeceras sin inyección
 const SAFE_CORRELATION_ID = /^[A-Za-z0-9._-]{1,128}$/;
 const INTERNAL_ERROR_STATUS = 500;
+const UNPROCESSABLE_STATUS = 422;
 
 export interface FieldError {
   field: string;
@@ -31,9 +34,12 @@ interface ProblemKind {
 
 const PROBLEM_KINDS: Record<number, ProblemKind> = {
   400: { slug: 'validation', title: 'Datos no válidos' },
+  401: { slug: 'unauthorized', title: 'No autenticado' },
+  403: { slug: 'forbidden', title: 'Acceso denegado' },
   404: { slug: 'not-found', title: 'Recurso no encontrado' },
   413: { slug: 'payload-too-large', title: 'Petición demasiado grande' },
   415: { slug: 'unsupported-media-type', title: 'Tipo de contenido no admitido' },
+  422: { slug: 'unprocessable', title: 'Regla de negocio incumplida' },
   429: { slug: 'too-many-requests', title: 'Demasiadas peticiones' },
 };
 const BAD_REQUEST_KIND: ProblemKind = { slug: 'bad-request', title: 'Petición no válida' };
@@ -43,6 +49,7 @@ interface Problem {
   type: string;
   title: string;
   status: number;
+  code?: string;
   correlationId: string;
   errors?: FieldError[];
 }
@@ -58,26 +65,50 @@ export function generateCorrelationId(request: IncomingMessage): string {
 
 function clientStatus(error: unknown): number | undefined {
   if (error instanceof ValidationFailedError) return 400;
+  if (error instanceof DomainError) return UNPROCESSABLE_STATUS;
   const status = (error as Partial<FastifyError>).statusCode;
   return status !== undefined && status >= 400 && status < INTERNAL_ERROR_STATUS
     ? status
     : undefined;
 }
 
-function buildProblem(status: number, correlationId: string, errors?: FieldError[]): Problem {
+function buildProblem(
+  status: number,
+  correlationId: string,
+  extra: { code?: string; errors?: FieldError[] } = {},
+): Problem {
   const kind =
     status >= INTERNAL_ERROR_STATUS ? INTERNAL_KIND : (PROBLEM_KINDS[status] ?? BAD_REQUEST_KIND);
   return {
     type: `${PROBLEM_TYPE_BASE}/${kind.slug}`,
     title: kind.title,
     status,
+    ...(extra.code ? { code: extra.code } : {}),
     correlationId,
-    ...(errors ? { errors } : {}),
+    ...(extra.errors ? { errors: extra.errors } : {}),
   };
 }
 
 function sendProblem(reply: FastifyReply, problem: Problem): FastifyReply {
   return reply.code(problem.status).type(PROBLEM_CONTENT_TYPE).send(problem);
+}
+
+function extraOf(error: unknown): { code?: string; errors?: FieldError[] } {
+  if (error instanceof ValidationFailedError) return { errors: error.errors };
+  if (error instanceof DomainError) {
+    const errors = error.fields.map((field) => ({ field, message: 'required' }));
+    return { code: error.code, ...(errors.length > 0 ? { errors } : {}) };
+  }
+  return {};
+}
+
+/** Responde con un `Problem` sin cuerpo de error propio: lo usan los hooks de seguridad. */
+export function replyWithProblem(
+  request: FastifyRequest,
+  reply: FastifyReply,
+  status: number,
+): FastifyReply {
+  return sendProblem(reply, buildProblem(status, request.id));
 }
 
 function handleError(error: unknown, request: FastifyRequest, reply: FastifyReply): FastifyReply {
@@ -88,8 +119,7 @@ function handleError(error: unknown, request: FastifyRequest, reply: FastifyRepl
     return sendProblem(reply, buildProblem(INTERNAL_ERROR_STATUS, request.id));
   }
   request.log.warn({ status }, 'Petición rechazada');
-  const errors = error instanceof ValidationFailedError ? error.errors : undefined;
-  return sendProblem(reply, buildProblem(status, request.id, errors));
+  return sendProblem(reply, buildProblem(status, request.id, extraOf(error)));
 }
 
 /**

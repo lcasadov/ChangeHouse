@@ -31,5 +31,87 @@
       "title": "Tu perfil estará aquí",
       "description": "Desde aquí podrás revisar tus datos, cambiar el tema de la aplicación y gestionar tu cuenta."
     }
+  },
+  "auth": {
+    "welcome": {
+      "title": "Cambia de casa sin vender primero",
+      "subtitle": "Publica tu casa, descubre la de otras personas y mira al momento cuánto te costaría el cambio.",
+      "signUp": "Empezar",
+      "signIn": "Ya tengo cuenta"
+    },
+    "access": {
+      "signUpTitle": "Crea tu cuenta",
+      "signInTitle": "Entra en tu cuenta",
+      "email": "Email",
+      "password": "Contraseña",
+      "passwordHint": "Mínimo 8 caracteres",
+      "signUpSubmit": "Crear cuenta",
+      "signInSubmit": "Entrar",
+      "switchToSignIn": "¿Ya tienes cuenta? Entra",
+      "switchToSignUp": "¿Primera vez? Crea tu cuenta",
+      "forgotPassword": "He olvidado mi contraseña",
+      "or": "o con tu email",
+      "google": "Continuar con Google",
+      "apple": "Continuar con Apple",
+      "back": "Volver"
+    },
+    "errors": {
+      "emailRequired": "Escribe tu email.",
+      "emailInvalid": "Revisa el email: parece que le falta algo.",
+      "passwordRequired": "Escribe tu contraseña.",
+      "passwordTooShort": "La contraseña debe tener al menos 8 caracteres.",
+      "invalidCredentials": "El email o la contraseña no son correctos. Inténtalo de nuevo o recupera tu contraseña.",
+      "emailInUse": "No hemos podido crear la cuenta con ese email. Si ya tienes una, entra o recupera tu contraseña.",
+      "tooManyRequests": "Has probado demasiadas veces. Espera unos minutos y vuelve a intentarlo.",
+      "network": "No hemos podido conectar. Comprueba tu conexión y vuelve a intentarlo.",
+      "unknown": "Algo no ha ido bien. Vuelve a intentarlo en unos minutos.",
+      "socialFailed": "No hemos podido completar el acceso con ese proveedor. Inténtalo de nuevo o usa tu email."
+    },
+    "forgot": {
+      "title": "Recupera tu contraseña",
+      "description": "Escribe el email de tu cuenta y te enviaremos un enlace para elegir una contraseña nueva.",
+      "submit": "Enviar enlace",
+      "sent": "Si hay una cuenta con ese email, te hemos enviado un enlace para recuperar la contraseña. Revisa también la carpeta de spam.",
+      "backToSignIn": "Volver a entrar"
+    },
+    "verify": {
+      "banner": "Confirma tu email: te hemos enviado un enlace de verificación.",
+      "resend": "Reenviar enlace",
+      "refresh": "Ya lo he confirmado",
+      "resent": "Enlace enviado. Revisa tu bandeja de entrada.",
+      "stillPending": "Todavía no vemos la confirmación. Abre el enlace del email y vuelve a probar.",
+      "failed": "No hemos podido enviar el enlace. Inténtalo de nuevo en unos minutos."
+    },
+    "signOut": "Cerrar sesión"
+  },
+  "account": {
+    "onboarding": {
+      "title": "Un último paso",
+      "description": "Dinos cómo quieres que te vean y acepta los textos legales para empezar.",
+      "displayName": "Tu nombre",
+      "displayNameHint": "Es el nombre que verán las demás personas.",
+      "terms": "Acepto los términos y condiciones",
+      "privacy": "Acepto la política de privacidad",
+      "readTerms": "Leer los términos (versión {{version}})",
+      "readPrivacy": "Leer la política de privacidad (versión {{version}})",
+      "submit": "Continuar",
+      "errors": {
+        "displayNameRequired": "Escribe tu nombre.",
+        "displayNameTooLong": "El nombre puede tener como máximo 60 caracteres.",
+        "termsRequired": "Para continuar tienes que aceptar los términos y condiciones.",
+        "privacyRequired": "Para continuar tienes que aceptar la política de privacidad.",
+        "legalOutdated": "Hay una versión más reciente de los textos legales. Actualiza la app y vuelve a intentarlo.",
+        "network": "No hemos podido guardar tu alta. Comprueba tu conexión y vuelve a intentarlo.",
+        "unknown": "No hemos podido completar tu alta. Vuelve a intentarlo en unos minutos."
+      }
+    }
+  },
+  "session": {
+    "loading": "Cargando tu cuenta",
+    "error": {
+      "title": "No hemos podido cargar tu cuenta",
+      "description": "Comprueba tu conexión y vuelve a intentarlo.",
+      "retry": "Reintentar"
+    }
   }
 }

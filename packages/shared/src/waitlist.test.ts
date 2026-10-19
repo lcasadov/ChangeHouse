@@ -98,9 +98,7 @@ describe('validateWaitlistInput', () => {
     }
   });
 
-  it('ignora los campos que no están en el contrato', () => {
-    const result = validateWaitlistInput({ ...valid, admin: true });
-
-    expect(result).toEqual({ success: true, data: { ...valid } });
+  it('rechaza los campos que no están en el contrato (additionalProperties: false)', () => {
+    expect(errorsFor({ ...valid, admin: true })).toEqual([{ field: 'admin', code: 'invalid' }]);
   });
 });

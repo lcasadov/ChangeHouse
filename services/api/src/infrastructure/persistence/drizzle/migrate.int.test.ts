@@ -50,6 +50,38 @@ describe('migraciones', () => {
     ]);
   });
 
+  it('GIVEN la base migrada WHEN se inspecciona THEN existen users (firebase_uid y email únicos) y consents (solo inserción por usuario, tipo y versión)', async () => {
+    const target = openSql(urlFor(EMPTY_DB));
+    const unique = await target<{ table_name: string; columns: string }[]>`
+      SELECT tc.table_name, string_agg(kcu.column_name, ',' ORDER BY kcu.ordinal_position) AS columns
+      FROM information_schema.table_constraints tc
+      JOIN information_schema.key_column_usage kcu USING (constraint_name, table_schema)
+      WHERE tc.table_name IN ('users', 'consents') AND tc.constraint_type IN ('UNIQUE', 'PRIMARY KEY')
+      GROUP BY tc.table_name, tc.constraint_name ORDER BY 1, 2`;
+    const types = await target<{ table_name: string; column_name: string; udt_name: string }[]>`
+      SELECT table_name, column_name, udt_name FROM information_schema.columns
+      WHERE (table_name = 'users' AND column_name IN ('email', 'assigned_role'))
+         OR (table_name = 'consents' AND column_name = 'type')
+      ORDER BY 1, 2`;
+    const references = await target<{ delete_rule: string }[]>`
+      SELECT delete_rule FROM information_schema.referential_constraints
+      WHERE constraint_name = 'consents_user_id_users_id_fk'`;
+    await target.end();
+
+    expect(unique).toEqual([
+      { table_name: 'consents', columns: 'user_id,type,version' },
+      { table_name: 'users', columns: 'email' },
+      { table_name: 'users', columns: 'firebase_uid' },
+      { table_name: 'users', columns: 'id' },
+    ]);
+    expect(types).toEqual([
+      { table_name: 'consents', column_name: 'type', udt_name: 'consent_type' },
+      { table_name: 'users', column_name: 'assigned_role', udt_name: 'assigned_role' },
+      { table_name: 'users', column_name: 'email', udt_name: 'citext' },
+    ]);
+    expect(references).toEqual([{ delete_rule: 'RESTRICT' }]);
+  });
+
   it('es repetible: aplicar de nuevo no falla', async () => {
     await expect(runMigrations(urlFor(EMPTY_DB), MIGRATIONS)).resolves.toBeUndefined();
   });

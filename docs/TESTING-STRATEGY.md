@@ -194,7 +194,7 @@ describe('matching / detección de ciclos', () => {
 |---|---|---|
 | `pnpm test` (`$TEST_UNIT_CMD`, `$TEST_CMD`) | Unitarias y de componentes de todos los paquetes | ⚠️ SUPUESTO (README) |
 | `pnpm test:coverage` (`$COVERAGE_CMD`) | Lo anterior con cobertura y umbral | ⚠️ SUPUESTO (README) |
-| `pnpm test:integration` (`$TEST_INTEGRATION_CMD`) | Integración con Testcontainers y emulador de Firestore | ⚠️ SUPUESTO (decidido; se verifica con el scaffold) |
+| `pnpm test:integration` (`$TEST_INTEGRATION_CMD`) | Integración con Testcontainers y el emulador de Firebase Auth, que arranca `firebase emulators:exec`. Con el emulador ya en marcha (`pnpm emulators`): `pnpm test:integration:run`. En local, si el emulador no responde, se omiten con aviso solo las pruebas que lo necesitan; en la CI (`CI=true`) su ausencia es un error | verificado 2026-10-19 |
 | `pnpm test:e2e` (`$TEST_E2E_CMD`) | Playwright (web) y Maestro (móvil) | ⚠️ SUPUESTO (decidido; se verifica con el scaffold) |
 
 | Momento | Qué se ejecuta |

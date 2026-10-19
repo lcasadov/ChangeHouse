@@ -36,7 +36,7 @@ están en `docs/rbac-matrix.md`. Motivación en `proposal.md`.
   emulador en el job `integration`.
 - **Política de autorización como datos**: `interfaces/http/authorization/policy.ts`
   declara por `operationId` los actores permitidos y la condición contextual;
-  un `preHandler` global la aplica a cada ruta por su `operationId` y deniega
+  un hook global `onRequest` (antes de leer el cuerpo, así un cuerpo inválido no adelanta al 401) la aplica a cada ruta por su `operationId` y deniega
   lo no declarado. La prueba parametrizada lee
   `services/api/test/authorization/rbac-matrix.json`.
 - **Roles**: `assigned_role` en `users` (`agency`, `admin` o nulo);

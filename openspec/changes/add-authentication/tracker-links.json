@@ -58,79 +58,79 @@
       "key": "T1",
       "id": 67,
       "parent": 65,
-      "state": "open"
+      "state": "done"
     },
     {
       "key": "B1",
       "id": 68,
       "parent": 65,
-      "state": "open"
+      "state": "done"
     },
     {
       "key": "T2",
       "id": 69,
       "parent": 66,
-      "state": "open"
+      "state": "done"
     },
     {
       "key": "B2",
       "id": 70,
       "parent": 66,
-      "state": "open"
+      "state": "done"
     },
     {
       "key": "B3",
       "id": 71,
       "parent": 63,
-      "state": "open"
+      "state": "done"
     },
     {
       "key": "T3",
       "id": 72,
       "parent": 63,
-      "state": "open"
+      "state": "done"
     },
     {
       "key": "B4",
       "id": 73,
       "parent": 64,
-      "state": "open"
+      "state": "done"
     },
     {
       "key": "T4",
       "id": 74,
       "parent": 61,
-      "state": "open"
+      "state": "done"
     },
     {
       "key": "F1",
       "id": 75,
       "parent": 61,
-      "state": "open"
+      "state": "done"
     },
     {
       "key": "F2",
       "id": 76,
       "parent": 62,
-      "state": "open"
+      "state": "done"
     },
     {
       "key": "T5",
       "id": 77,
       "parent": 63,
-      "state": "open"
+      "state": "done"
     },
     {
       "key": "F3",
       "id": 78,
       "parent": 63,
-      "state": "open"
+      "state": "done"
     },
     {
       "key": "V1",
       "id": 79,
       "parent": 66,
-      "state": "open"
+      "state": "done"
     }
   ],
   "bugs": [],

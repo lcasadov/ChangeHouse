@@ -10,7 +10,11 @@
     "typecheck": { "dependsOn": ["^build"] },
     "test": { "dependsOn": ["^build"] },
     "test:coverage": { "dependsOn": ["^build"], "outputs": ["coverage/**"] },
-    "test:integration": { "dependsOn": ["^build"], "cache": false },
+    "test:integration": {
+      "dependsOn": ["^build"],
+      "cache": false,
+      "passThroughEnv": ["CI", "FIREBASE_AUTH_EMULATOR_HOST"]
+    },
     "test:e2e": { "dependsOn": ["^build"], "cache": false }
   }
 }
