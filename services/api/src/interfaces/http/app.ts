@@ -25,6 +25,9 @@ function trustProxyFor(hops: number): FastifyServerOptions['trustProxy'] {
   return hops > 0 ? (_address, hop) => hop < hops : false;
 }
 
+/** Prefijo de versión de la API; coincide con el de `servers` en `docs/api/openapi.yaml`. */
+const API_PREFIX = '/v1';
+
 const LANDING_CORS = {
   methods: ['POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'X-Correlation-Id'],
@@ -76,7 +79,13 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
   app.after(() => {
     registerSecurity(app, options.security);
   });
-  if (options.waitlist) void app.register(waitlistRoutes(options.waitlist));
-  if (options.accounts) void app.register(accountRoutes(options.accounts));
+  // Las operaciones de negocio cuelgan de `/v1` (`servers` de docs/api/openapi.yaml); lo demás es 404
+  void app.register(
+    async (versioned) => {
+      if (options.waitlist) await versioned.register(waitlistRoutes(options.waitlist));
+      if (options.accounts) await versioned.register(accountRoutes(options.accounts));
+    },
+    { prefix: API_PREFIX },
+  );
   return app;
 }

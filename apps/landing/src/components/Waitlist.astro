@@ -7,7 +7,7 @@ const { waitlist } = es;
 const { fields } = waitlist;
 
 // El valor se fija al construir la landing (variable PUBLIC_API_URL)
-const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8080';
+const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8080/v1';
 
 const [consentBefore = '', consentAfter = ''] = fields.consent.label.split(fields.consent.linkText);
 ---

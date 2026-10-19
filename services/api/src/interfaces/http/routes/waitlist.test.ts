@@ -31,7 +31,7 @@ describe('POST /waitlist (adaptador HTTP)', () => {
   it('Scenario: Alta correcta - delega en el caso de uso con los datos recortados y responde 202', async () => {
     const { app, joinWaitlist } = setup();
 
-    const response = await app.inject({ method: 'POST', url: '/waitlist', payload: validBody });
+    const response = await app.inject({ method: 'POST', url: '/v1/waitlist', payload: validBody });
 
     expect(response.statusCode).toBe(202);
     expect(response.body).toBe('');
@@ -50,7 +50,7 @@ describe('POST /waitlist (adaptador HTTP)', () => {
 
     const response = await app.inject({
       method: 'POST',
-      url: '/waitlist',
+      url: '/v1/waitlist',
       payload: { ...validBody, email: 'juan@' },
     });
 
@@ -68,7 +68,7 @@ describe('POST /waitlist (adaptador HTTP)', () => {
     const statuses: number[] = [];
     let last;
     for (let attempt = 0; attempt < 3; attempt++) {
-      last = await app.inject({ method: 'POST', url: '/waitlist', payload: validBody });
+      last = await app.inject({ method: 'POST', url: '/v1/waitlist', payload: validBody });
       statuses.push(last.statusCode);
     }
 
@@ -83,7 +83,7 @@ describe('POST /waitlist (adaptador HTTP)', () => {
   it('el límite es por origen: otra IP no queda bloqueada', async () => {
     const { app } = setup(1);
     const post = (remoteAddress: string) =>
-      app.inject({ method: 'POST', url: '/waitlist', payload: validBody, remoteAddress });
+      app.inject({ method: 'POST', url: '/v1/waitlist', payload: validBody, remoteAddress });
 
     const first = await post('10.0.0.1');
     const blocked = await post('10.0.0.1');

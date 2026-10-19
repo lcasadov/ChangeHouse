@@ -17,7 +17,7 @@ interface RequestTemplate {
 const REQUESTS: Record<string, RequestTemplate> = {
   joinWaitlist: {
     method: 'POST',
-    url: '/waitlist',
+    url: '/v1/waitlist',
     payload: () => ({
       email: uniqueEmail('espera'),
       municipality: 'Madrid',
@@ -26,20 +26,20 @@ const REQUESTS: Record<string, RequestTemplate> = {
       consent: true,
     }),
   },
-  getMe: { method: 'GET', url: '/me' },
+  getMe: { method: 'GET', url: '/v1/me' },
   upsertMe: {
     method: 'PUT',
-    url: '/me',
+    url: '/v1/me',
     payload: () => ({
       displayName: 'Ana',
       acceptedTermsVersion: TERMS_VERSION,
       acceptedPrivacyVersion: PRIVACY_VERSION,
     }),
   },
-  listMyConsents: { method: 'GET', url: '/me/consents' },
+  listMyConsents: { method: 'GET', url: '/v1/me/consents' },
   acceptConsent: {
     method: 'POST',
-    url: '/me/consents',
+    url: '/v1/me/consents',
     payload: () => ({ type: 'analytics', version: '2026-10' }),
   },
 };

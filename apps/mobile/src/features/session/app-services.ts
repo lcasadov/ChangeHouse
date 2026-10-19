@@ -14,7 +14,7 @@ export interface AppEnv extends FirebaseEnv, GoogleEnv {
   EXPO_PUBLIC_LEGAL_BASE_URL?: string | undefined;
 }
 
-const DEFAULT_API_URL = 'http://localhost:8080';
+const DEFAULT_API_URL = 'http://localhost:8080/v1';
 const DEFAULT_LEGAL_BASE_URL = 'http://localhost:4321'; // `astro dev`
 
 const withoutTrailingSlash = (url: string) => url.replace(/\/+$/, '');

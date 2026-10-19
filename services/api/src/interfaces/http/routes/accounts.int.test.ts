@@ -24,7 +24,7 @@ const bearer = (user: Pick<EmulatorUser, 'idToken'>) => ({
 });
 
 function put(user: EmulatorUser, payload: object) {
-  return app.inject({ method: 'PUT', url: '/me', headers: bearer(user), payload });
+  return app.inject({ method: 'PUT', url: '/v1/me', headers: bearer(user), payload });
 }
 
 function get(user: EmulatorUser, url: string) {
@@ -32,7 +32,7 @@ function get(user: EmulatorUser, url: string) {
 }
 
 function post(user: EmulatorUser, payload: object) {
-  return app.inject({ method: 'POST', url: '/me/consents', headers: bearer(user), payload });
+  return app.inject({ method: 'POST', url: '/v1/me/consents', headers: bearer(user), payload });
 }
 
 /** Una persona con cuenta en Firebase y ya dada de alta en ChangeHouse. */
@@ -129,7 +129,7 @@ describe.skipIf(!emulatorAvailable())('cuenta y consentimientos con tokens reale
         expect(response.json()).toMatchObject({ code: 'LEGAL_ACCEPTANCE_REQUIRED' });
         expect(await count('users')).toBe(0);
         expect(await count('consents')).toBe(0);
-        expect((await get(user, '/me')).statusCode).toBe(404);
+        expect((await get(user, '/v1/me')).statusCode).toBe(404);
       },
     );
 
@@ -198,7 +198,7 @@ describe.skipIf(!emulatorAvailable())('cuenta y consentimientos con tokens reale
           { assigned_role: string | null }[]
         >`SELECT assigned_role FROM users`;
         expect(stored?.assigned_role).toBeNull();
-        expect((await get(user, '/me')).json()).toMatchObject({ roles: ['seeker'] });
+        expect((await get(user, '/v1/me')).json()).toMatchObject({ roles: ['seeker'] });
       },
     );
 
@@ -208,8 +208,8 @@ describe.skipIf(!emulatorAvailable())('cuenta y consentimientos con tokens reale
 
       await put(other, { displayName: 'Beto', ...legal });
 
-      expect((await get(owner, '/me')).json()).toMatchObject({ displayName: 'Ana' });
-      expect((await get(other, '/me')).json()).toMatchObject({ displayName: 'Beto' });
+      expect((await get(owner, '/v1/me')).json()).toMatchObject({ displayName: 'Ana' });
+      expect((await get(other, '/v1/me')).json()).toMatchObject({ displayName: 'Beto' });
       expect(await count('users')).toBe(2);
     });
   });
@@ -218,7 +218,7 @@ describe.skipIf(!emulatorAvailable())('cuenta y consentimientos con tokens reale
     it('Scenario: Consultar la propia cuenta - un usuario sin viviendas recibe su nombre, su email, el rol seeker y hasPublishedHome en falso', async () => {
       const user = await registered('Ana');
 
-      const response = await get(user, '/me');
+      const response = await get(user, '/v1/me');
 
       expect(response.statusCode).toBe(200);
       expect(response.json()).toMatchObject({
@@ -231,10 +231,10 @@ describe.skipIf(!emulatorAvailable())('cuenta y consentimientos con tokens reale
 
     it('un usuario con vivienda publicada es owner', async () => {
       const user = await registered();
-      const { id } = (await get(user, '/me')).json<{ id: string }>();
+      const { id } = (await get(user, '/v1/me')).json<{ id: string }>();
       ownership.owners.add(id);
 
-      expect((await get(user, '/me')).json()).toMatchObject({
+      expect((await get(user, '/v1/me')).json()).toMatchObject({
         roles: ['owner'],
         hasPublishedHome: true,
       });
@@ -242,11 +242,11 @@ describe.skipIf(!emulatorAvailable())('cuenta y consentimientos con tokens reale
 
     it('un rol asignado en la base de datos se refleja y prevalece sobre las viviendas', async () => {
       const user = await registered();
-      const { id } = (await get(user, '/me')).json<{ id: string }>();
+      const { id } = (await get(user, '/v1/me')).json<{ id: string }>();
       ownership.owners.add(id);
       await sql`UPDATE users SET assigned_role = 'admin'`;
 
-      expect((await get(user, '/me')).json()).toMatchObject({
+      expect((await get(user, '/v1/me')).json()).toMatchObject({
         roles: ['admin'],
         hasPublishedHome: false,
       });
@@ -255,7 +255,7 @@ describe.skipIf(!emulatorAvailable())('cuenta y consentimientos con tokens reale
     it('quien aún no está dado de alta recibe 404, igual que una ruta inexistente', async () => {
       const user = await signUp();
 
-      const response = await get(user, '/me');
+      const response = await get(user, '/v1/me');
       const missing = await get(user, '/no-existe');
 
       expect(response.statusCode).toBe(404);
@@ -270,7 +270,7 @@ describe.skipIf(!emulatorAvailable())('cuenta y consentimientos con tokens reale
 
       const response = await app.inject({
         method: 'GET',
-        url: '/me',
+        url: '/v1/me',
         headers: { authorization: `Bearer ${expiredToken(user.idToken)}` },
       });
 
@@ -282,7 +282,7 @@ describe.skipIf(!emulatorAvailable())('cuenta y consentimientos con tokens reale
     it('lista los consentimientos del alta con su versión y fecha', async () => {
       const user = await registered();
 
-      const response = await get(user, '/me/consents');
+      const response = await get(user, '/v1/me/consents');
 
       expect(response.statusCode).toBe(200);
       const list = response.json<{ type: string; version: string; acceptedAt: string }[]>();
@@ -297,7 +297,7 @@ describe.skipIf(!emulatorAvailable())('cuenta y consentimientos con tokens reale
       const user = await registered();
 
       const created = await post(user, { type: 'privacy', version: '2027-01' });
-      const list = (await get(user, '/me/consents')).json<{ type: string; version: string }[]>();
+      const list = (await get(user, '/v1/me/consents')).json<{ type: string; version: string }[]>();
 
       expect(created.statusCode).toBe(201);
       expect(created.json()).toMatchObject({ type: 'privacy', version: '2027-01' });
@@ -325,7 +325,7 @@ describe.skipIf(!emulatorAvailable())('cuenta y consentimientos con tokens reale
       const beto = await registered('Beto');
       await post(ana, { type: 'marketing', version: '1' });
 
-      const list = (await get(beto, '/me/consents')).json<{ type: string }[]>();
+      const list = (await get(beto, '/v1/me/consents')).json<{ type: string }[]>();
 
       expect(list.map((consent) => consent.type)).not.toContain('marketing');
       expect(list).toHaveLength(2);
@@ -334,7 +334,7 @@ describe.skipIf(!emulatorAvailable())('cuenta y consentimientos con tokens reale
     it('quien aún no está dado de alta recibe 404 al listar y al aceptar', async () => {
       const user = await signUp();
 
-      expect((await get(user, '/me/consents')).statusCode).toBe(404);
+      expect((await get(user, '/v1/me/consents')).statusCode).toBe(404);
       expect((await post(user, { type: 'terms', version: TERMS_VERSION })).statusCode).toBe(404);
       expect(await count('consents')).toBe(0);
     });

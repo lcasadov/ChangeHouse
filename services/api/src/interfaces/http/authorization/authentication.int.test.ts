@@ -136,7 +136,7 @@ describe('operación pública con la API completa', () => {
   it('Scenario: Única operación pública - joinWaitlist sin token sigue respondiendo 202', async () => {
     const response = await api.app.inject({
       method: 'POST',
-      url: '/waitlist',
+      url: '/v1/waitlist',
       payload: {
         email: `espera-${String(Date.now())}@example.com`,
         municipality: 'Madrid',

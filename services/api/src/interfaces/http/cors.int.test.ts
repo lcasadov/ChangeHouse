@@ -24,7 +24,7 @@ afterAll(async () => {
 function preflight(origin: string, method: string, headers: string) {
   return app.inject({
     method: 'OPTIONS',
-    url: '/me',
+    url: '/v1/me',
     headers: {
       origin,
       'access-control-request-method': method,
@@ -57,7 +57,7 @@ describe('CORS de la app', () => {
   it('expone la cabecera de correlación a la app', async () => {
     const response = await app.inject({
       method: 'GET',
-      url: '/me',
+      url: '/v1/me',
       headers: { origin: APP_ORIGIN },
     });
 

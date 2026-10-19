@@ -9,7 +9,7 @@ export type SubmitResult =
   | { kind: 'unavailable' };
 
 export interface SubmitDependencies {
-  /** URL base de la API (`PUBLIC_API_URL`). */
+  /** URL base de la API (`PUBLIC_API_URL`), incluido el prefijo de versión (`/v1`). */
   apiUrl: string;
   fetch?: typeof fetch;
 }

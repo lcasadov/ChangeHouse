@@ -3,7 +3,7 @@ import createClient from 'openapi-fetch';
 import type { paths } from './schema';
 
 export interface ApiClientOptions {
-  /** `EXPO_PUBLIC_API_URL`: origen de la API, sin barra final. */
+  /** `EXPO_PUBLIC_API_URL`: base de la API con su prefijo de versión (`/v1`), sin barra final. */
   baseUrl: string;
   /** ID token vigente de la sesión, o `null` si no hay sesión. Se pide en cada petición. */
   getToken: () => Promise<string | null>;
