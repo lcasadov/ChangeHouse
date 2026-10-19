@@ -3,7 +3,7 @@ import type { IncomingMessage } from 'node:http';
 import type { FastifyError, FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { v7 as uuidv7 } from 'uuid';
 
-import { DomainError } from '../../domain/domain-error.js';
+import { DomainError, type DomainErrorKind } from '../../domain/domain-error.js';
 
 export const CORRELATION_HEADER = 'x-correlation-id';
 
@@ -13,6 +13,15 @@ const PROBLEM_TYPE_BASE = 'https://changehouse.app/problems';
 const SAFE_CORRELATION_ID = /^[A-Za-z0-9._-]{1,128}$/;
 const INTERNAL_ERROR_STATUS = 500;
 const UNPROCESSABLE_STATUS = 422;
+const CONFLICT_STATUS = 409;
+const NOT_FOUND_STATUS = 404;
+
+/** Cómo se traduce cada clase de violación de negocio. */
+const DOMAIN_STATUS: Record<DomainErrorKind, number> = {
+  rule: UNPROCESSABLE_STATUS,
+  conflict: CONFLICT_STATUS,
+  not_found: NOT_FOUND_STATUS,
+};
 
 export interface FieldError {
   field: string;
@@ -37,6 +46,7 @@ const PROBLEM_KINDS: Record<number, ProblemKind> = {
   401: { slug: 'unauthorized', title: 'No autenticado' },
   403: { slug: 'forbidden', title: 'Acceso denegado' },
   404: { slug: 'not-found', title: 'Recurso no encontrado' },
+  409: { slug: 'conflict', title: 'Conflicto con el estado actual' },
   413: { slug: 'payload-too-large', title: 'Petición demasiado grande' },
   415: { slug: 'unsupported-media-type', title: 'Tipo de contenido no admitido' },
   422: { slug: 'unprocessable', title: 'Regla de negocio incumplida' },
@@ -65,7 +75,7 @@ export function generateCorrelationId(request: IncomingMessage): string {
 
 function clientStatus(error: unknown): number | undefined {
   if (error instanceof ValidationFailedError) return 400;
-  if (error instanceof DomainError) return UNPROCESSABLE_STATUS;
+  if (error instanceof DomainError) return DOMAIN_STATUS[error.kind];
   const status = (error as Partial<FastifyError>).statusCode;
   return status !== undefined && status >= 400 && status < INTERNAL_ERROR_STATUS
     ? status
@@ -95,6 +105,8 @@ function sendProblem(reply: FastifyReply, problem: Problem): FastifyReply {
 
 function extraOf(error: unknown): { code?: string; errors?: FieldError[] } {
   if (error instanceof ValidationFailedError) return { errors: error.errors };
+  // Un recurso que no se puede ver responde como uno inexistente: sin código ni campos que lo distingan
+  if (error instanceof DomainError && error.kind === 'not_found') return {};
   if (error instanceof DomainError) {
     const errors = error.fields.map((field) => ({ field, message: 'required' }));
     return { code: error.code, ...(errors.length > 0 ? { errors } : {}) };

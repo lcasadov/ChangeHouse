@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest';
 
 import { loadConfig } from './config.js';
 
+const ADDRESS_KEY = Buffer.alloc(32, 7).toString('base64');
 const base = {
   DATABASE_URL: 'postgres://u:p@localhost:5432/db',
   FIREBASE_PROJECT_ID: 'changehouse-des',
+  ADDRESS_ENCRYPTION_KEY: ADDRESS_KEY,
 };
 
 describe('loadConfig', () => {
@@ -19,6 +21,8 @@ describe('loadConfig', () => {
       trustProxyHops: 0,
       waitlistRateLimit: { max: 5, windowSeconds: 600 },
       firebase: { projectId: 'changehouse-des', authEmulatorHost: undefined },
+      addressEncryptionKey: ADDRESS_KEY,
+      places: { serverKey: undefined },
       logger: true,
     });
   });
@@ -54,9 +58,25 @@ describe('loadConfig', () => {
   });
 
   it('confía en un salto de proxy en Cloud Run (K_SERVICE) y se puede fijar a mano', () => {
-    expect(loadConfig({ ...base, K_SERVICE: 'api' }).trustProxyHops).toBe(1);
-    expect(loadConfig({ ...base, K_SERVICE: 'api', TRUST_PROXY_HOPS: '2' }).trustProxyHops).toBe(2);
-    expect(loadConfig({ ...base, TRUST_PROXY_HOPS: '0', K_SERVICE: 'api' }).trustProxyHops).toBe(0);
+    expect(
+      loadConfig({ ...base, K_SERVICE: 'api', GOOGLE_PLACES_SERVER_KEY: 'k' }).trustProxyHops,
+    ).toBe(1);
+    expect(
+      loadConfig({
+        ...base,
+        K_SERVICE: 'api',
+        GOOGLE_PLACES_SERVER_KEY: 'k',
+        TRUST_PROXY_HOPS: '2',
+      }).trustProxyHops,
+    ).toBe(2);
+    expect(
+      loadConfig({
+        ...base,
+        TRUST_PROXY_HOPS: '0',
+        K_SERVICE: 'api',
+        GOOGLE_PLACES_SERVER_KEY: 'k',
+      }).trustProxyHops,
+    ).toBe(0);
   });
 
   it('desactiva el logger de la aplicación en pruebas', () => {
@@ -68,7 +88,37 @@ describe('loadConfig', () => {
   });
 
   it('exige FIREBASE_PROJECT_ID: sin él no se podría verificar ningún token', () => {
-    expect(() => loadConfig({ DATABASE_URL: base.DATABASE_URL })).toThrow(/FIREBASE_PROJECT_ID/);
+    expect(() =>
+      loadConfig({ DATABASE_URL: base.DATABASE_URL, ADDRESS_ENCRYPTION_KEY: ADDRESS_KEY }),
+    ).toThrow(/FIREBASE_PROJECT_ID/);
+  });
+
+  it('exige ADDRESS_ENCRYPTION_KEY: sin ella no se podría cifrar ninguna dirección', () => {
+    const withoutKey = {
+      DATABASE_URL: base.DATABASE_URL,
+      FIREBASE_PROJECT_ID: base.FIREBASE_PROJECT_ID,
+    };
+
+    expect(() => loadConfig(withoutKey)).toThrow(/ADDRESS_ENCRYPTION_KEY/);
+    expect(() => loadConfig({ ...base, ADDRESS_ENCRYPTION_KEY: '' })).toThrow(
+      /ADDRESS_ENCRYPTION_KEY/,
+    );
+  });
+
+  it('lee la clave de servidor de Google Places; sin ella, en local, se usan los lugares de prueba', () => {
+    expect(loadConfig({ ...base, GOOGLE_PLACES_SERVER_KEY: 'clave' }).places).toEqual({
+      serverKey: 'clave',
+    });
+    expect(loadConfig({ ...base, GOOGLE_PLACES_SERVER_KEY: '' }).places).toEqual({
+      serverKey: undefined,
+    });
+  });
+
+  it('se niega a arrancar en Cloud Run sin la clave de Google Places: no se resolverían direcciones reales', () => {
+    expect(() => loadConfig({ ...base, K_SERVICE: 'api' })).toThrow(/GOOGLE_PLACES_SERVER_KEY/);
+    expect(
+      loadConfig({ ...base, K_SERVICE: 'api', GOOGLE_PLACES_SERVER_KEY: 'clave' }).places.serverKey,
+    ).toBe('clave');
   });
 
   it('lee el emulador de Auth del entorno para el desarrollo local', () => {
@@ -82,7 +132,12 @@ describe('loadConfig', () => {
 
   it('se niega a arrancar en Cloud Run con el emulador de Auth: aceptaría tokens sin firma', () => {
     expect(() =>
-      loadConfig({ ...base, K_SERVICE: 'api', FIREBASE_AUTH_EMULATOR_HOST: 'localhost:9099' }),
+      loadConfig({
+        ...base,
+        K_SERVICE: 'api',
+        GOOGLE_PLACES_SERVER_KEY: 'k',
+        FIREBASE_AUTH_EMULATOR_HOST: 'localhost:9099',
+      }),
     ).toThrow(/FIREBASE_AUTH_EMULATOR_HOST/);
   });
 

@@ -2,22 +2,22 @@
 
 ## 1. Dominio y persistencia
 
-- [ ] T1 Escribir las pruebas del dominio `Home` (estados y transiciones, completitud para el envío, rango de valor, edición prohibida en `in_operation`/`closed`) y comprobar que fallan. ref: Envío a revisión · est: 3h · disc: qa
+- [x] T1 Escribir las pruebas del dominio `Home` (estados y transiciones, completitud para el envío, rango de valor, edición prohibida en `in_operation`/`closed`) y comprobar que fallan. ref: Envío a revisión · est: 3h · disc: qa
   - GIVEN una vivienda en `closed` WHEN se intenta editar THEN el dominio lanza `HomeNotEditableError`
-- [ ] B1 Implementar la entidad `Home`, `Money` y sus reglas, y verificar que pasan las pruebas de T1. ref: Alta de vivienda en borrador · est: 3h · disc: back
+- [x] B1 Implementar la entidad `Home`, `Money` y sus reglas, y verificar que pasan las pruebas de T1. ref: Alta de vivienda en borrador · est: 3h · disc: back
   - GIVEN un mínimo mayor que el máximo WHEN se crea el rango THEN el dominio lo rechaza
-- [ ] B2 Crear la tabla `homes` con su migración (PostGIS, `location_visibility`, `area_name`, `relevant_changed_at`, dirección cifrada) y el cifrado AES-256-GCM con versión de clave, con pruebas unitarias del cifrado de ida y vuelta, y verificar que la migración se aplica. ref: Ubicación y dirección privada · est: 3h · disc: bd
+- [x] B2 Crear la tabla `homes` con su migración (PostGIS, `location_visibility`, `area_name`, `relevant_changed_at`, dirección cifrada) y el cifrado AES-256-GCM con versión de clave, con pruebas unitarias del cifrado de ida y vuelta, y verificar que la migración se aplica. ref: Ubicación y dirección privada · est: 3h · disc: bd
   - GIVEN una dirección cifrada WHEN se descifra con la misma clave THEN se obtiene el texto original y con otra clave falla
 
 ## 2. API de viviendas
 
-- [ ] T2 Escribir las pruebas de integración de `createHome`, `updateHome`, `listMyHomes`, `getHome` (completa, pública, 404 ajena no publicada), `submitHome` (422 incompleta) y 403 para `agency`/`admin`, con el `FixturePlaceResolver`, y añadir sus filas a la matriz como datos; comprobar que fallan. ref: Detalle de vivienda según quién la consulta · est: 4h · disc: qa
+- [x] T2 Escribir las pruebas de integración de `createHome`, `updateHome`, `listMyHomes`, `getHome` (completa, pública, 404 ajena no publicada), `submitHome` (422 incompleta) y 403 para `agency`/`admin`, con el `FixturePlaceResolver`, y añadir sus filas a la matriz como datos; comprobar que fallan. ref: Detalle de vivienda según quién la consulta · est: 4h · disc: qa
   - GIVEN una vivienda ajena en `draft` WHEN se consulta THEN la respuesta es 404 idéntica a la de un identificador inexistente
-- [ ] B3 Implementar el puerto `PlaceResolver` con el adaptador de Google Places y el de pruebas, los casos de uso, el repositorio Drizzle y las rutas, y verificar que pasan las pruebas de T2 y la matriz. ref: Ubicación y dirección privada · est: 6h · disc: back
+- [x] B3 Implementar el puerto `PlaceResolver` con el adaptador de Google Places y el de pruebas, los casos de uso, el repositorio Drizzle y las rutas, y verificar que pasan las pruebas de T2 y la matriz. ref: Ubicación y dirección privada · est: 6h · disc: back
   - GIVEN una vivienda publicada con `area` WHEN la consulta otro usuario THEN `location.point` es el centro del barrio o zona y no hay `address`
-- [ ] T3 Escribir las pruebas del rol derivado (vivienda en `in_review` → `seeker`; publicada, pausada o en operación → `owner`) y comprobar que fallan. ref: Rol de propietario derivado de sus viviendas · est: 1h · disc: qa
+- [x] T3 Escribir las pruebas del rol derivado (vivienda en `in_review` → `seeker`; publicada, pausada o en operación → `owner`) y comprobar que fallan. ref: Rol de propietario derivado de sus viviendas · est: 1h · disc: qa
   - GIVEN un usuario con una vivienda en `in_review` WHEN consulta `GET /me` THEN su rol es `seeker`
-- [ ] B4 Implementar `DrizzleHomeOwnership` en sustitución del provisional y verificar que pasan las pruebas de T3. ref: Rol de propietario derivado de sus viviendas · est: 1h · disc: back
+- [x] B4 Implementar `DrizzleHomeOwnership` en sustitución del provisional y verificar que pasan las pruebas de T3. ref: Rol de propietario derivado de sus viviendas · est: 1h · disc: back
   - GIVEN una vivienda que pasa a `published` WHEN el propietario consulta su cuenta THEN su rol es `owner`
 
 ## 3. App

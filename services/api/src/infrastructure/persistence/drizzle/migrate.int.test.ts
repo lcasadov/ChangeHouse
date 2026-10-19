@@ -82,6 +82,48 @@ describe('migraciones', () => {
     expect(references).toEqual([{ delete_rule: 'RESTRICT' }]);
   });
 
+  it('GIVEN la base migrada WHEN se inspecciona THEN homes tiene columnas PostGIS, dirección cifrada, visibilidad por defecto area y propietario con FK', async () => {
+    const target = openSql(urlFor(EMPTY_DB));
+    const columns = await target<{ column_name: string; udt_name: string; is_nullable: string }[]>`
+      SELECT column_name, udt_name, is_nullable FROM information_schema.columns
+      WHERE table_name = 'homes'
+        AND column_name IN ('id', 'owner_id', 'status', 'type', 'regime', 'location_visibility',
+                            'exact_address', 'exact_location', 'approx_location', 'area_name',
+                            'relevant_changed_at', 'features', 'value_min_cents', 'useful_m2')
+      ORDER BY column_name`;
+    const defaults = await target<{ column_default: string }[]>`
+      SELECT column_default FROM information_schema.columns
+      WHERE table_name = 'homes' AND column_name IN ('location_visibility', 'status', 'regime')
+      ORDER BY column_name`;
+    const references = await target<{ delete_rule: string }[]>`
+      SELECT delete_rule FROM information_schema.referential_constraints
+      WHERE constraint_name = 'homes_owner_id_users_id_fk'`;
+    await target.end();
+
+    expect(columns).toEqual([
+      { column_name: 'approx_location', udt_name: 'geography', is_nullable: 'NO' },
+      { column_name: 'area_name', udt_name: 'text', is_nullable: 'NO' },
+      { column_name: 'exact_address', udt_name: 'bytea', is_nullable: 'NO' },
+      { column_name: 'exact_location', udt_name: 'geography', is_nullable: 'NO' },
+      { column_name: 'features', udt_name: 'jsonb', is_nullable: 'NO' },
+      { column_name: 'id', udt_name: 'uuid', is_nullable: 'NO' },
+      { column_name: 'location_visibility', udt_name: 'location_visibility', is_nullable: 'NO' },
+      { column_name: 'owner_id', udt_name: 'uuid', is_nullable: 'NO' },
+      { column_name: 'regime', udt_name: 'home_regime', is_nullable: 'NO' },
+      { column_name: 'relevant_changed_at', udt_name: 'timestamptz', is_nullable: 'YES' },
+      { column_name: 'status', udt_name: 'home_status', is_nullable: 'NO' },
+      { column_name: 'type', udt_name: 'home_type', is_nullable: 'NO' },
+      { column_name: 'useful_m2', udt_name: 'numeric', is_nullable: 'YES' },
+      { column_name: 'value_min_cents', udt_name: 'int8', is_nullable: 'YES' },
+    ]);
+    expect(defaults.map((row) => row.column_default)).toEqual([
+      "'area'::location_visibility",
+      "'libre'::home_regime",
+      "'draft'::home_status",
+    ]);
+    expect(references).toEqual([{ delete_rule: 'RESTRICT' }]);
+  });
+
   it('es repetible: aplicar de nuevo no falla', async () => {
     await expect(runMigrations(urlFor(EMPTY_DB), MIGRATIONS)).resolves.toBeUndefined();
   });

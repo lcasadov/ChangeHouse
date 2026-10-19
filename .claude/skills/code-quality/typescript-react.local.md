@@ -50,3 +50,11 @@ fc.assert(
   llamadas; usa `clearAllMocks` en `beforeEach` si cuentas llamadas.
 - **Una ruta protegida (`Stack.Protected`) no redirige sola en el arranque**: queda «no encontrada».
   Hace falta `app/+not-found.tsx` que lleve a la pantalla de inicio que le toca a la sesión.
+
+## Drizzle y PostGIS
+
+- **`drizzle-kit generate` entrecomilla el tipo de una columna `customType`**: `"geography(Point,4326)"` no es un
+  identificador y la migración falla al aplicarse. Se corrige a mano en el `.sql` (sin comillas) y se deja un
+  comentario en la primera línea; la prueba de migración (`migrate.int.test.ts`) la aplica de verdad.
+- **Las pruebas de `application/` no importan de `infrastructure/`** (`no-restricted-imports`, también en los
+  `.test.ts`): los dobles de prueba viven en `test/fakes.ts`.

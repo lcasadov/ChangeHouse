@@ -85,7 +85,7 @@ erDiagram
         bigint mortgage_outstanding_cents
         bytea exact_address "cifrado"
         location_visibility location_visibility "exact o area"
-        geography exact_location "cifrada si area"
+        geography exact_location "acceso restringido"
         geography approx_location
         text area_name "barrio o zona"
         text moderation_note
@@ -273,7 +273,7 @@ confirmado. Identificadores: `uuid` v7 generado en la aplicación —
 | `mortgage_outstanding_cents` | bigint | no | Hipoteca pendiente aproximada (RF-15). ⚠️ El README menciona también la entidad y «otras cargas», sin columna: ver R-3 |
 | `exact_address` | bytea | sí | Dirección exacta **cifrada**; solo se revela a participantes de un match (RN-08) |
 | `location_visibility` | enum | sí (def. `area`) | Lo que elige el propietario: `exact` (ubicación exacta pública en el mapa) o `area` (solo barrio o zona) |
-| `exact_location` | geography(Point, 4326) | sí | Punto exacto. Público solo si `location_visibility = exact` |
+| `exact_location` | geography(Point, 4326) | sí | Punto exacto. Público solo si `location_visibility = exact`. Se guarda sin cifrar porque lo necesitan las consultas geográficas; ninguna respuesta lo expone con `area` (la dirección postal sí va cifrada) |
 | `approx_location` | geography(Point, 4326) | sí | Centro del barrio o zona: lo único público si `location_visibility = area` (RF-13) |
 | `area_name` | text | sí | Nombre del barrio o zona (de Google Places); también es la «zona» de las métricas |
 | `moderation_note` | text | no | Motivo del último rechazo de moderación, visible para el propietario |

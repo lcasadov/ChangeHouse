@@ -15,6 +15,27 @@ export {
   validateProfileForm,
 } from './account.js';
 export { assertNever } from './assert-never.js';
+export { FIXTURE_PLACES, type FixturePlace } from './fixture-places.js';
+export {
+  ENERGY_RATINGS,
+  HEATING_TYPES,
+  HOME_CONDITIONS,
+  HOME_REGIMES,
+  HOME_STATUSES,
+  type HomeAddressInput,
+  type HomeFeatures,
+  homeFeaturesSchema,
+  type HomeInput,
+  homeInputSchema,
+  type HomePatch,
+  homePatchSchema,
+  type HomeRegime,
+  type HomeStatus,
+  LOCATION_VISIBILITIES,
+  type LocationVisibility,
+  validateHomeInput,
+  validateHomePatch,
+} from './home.js';
 export { HOME_TYPES, type HomeType } from './home-type.js';
 export { PRIVACY_VERSION, TERMS_VERSION } from './legal.js';
 export type { FieldError, FieldErrorCode, Validation } from './validation.js';

@@ -4,6 +4,7 @@ import Fastify, { type FastifyInstance, type FastifyServerOptions, LogController
 import { registerSecurity, type SecurityOptions } from './authorization/security.js';
 import { generateCorrelationId, registerProblemHandling } from './problem.js';
 import { type AccountRouteOptions, accountRoutes } from './routes/accounts.js';
+import { type HomeRouteOptions, homeRoutes } from './routes/homes.js';
 import { type WaitlistRouteOptions, waitlistRoutes } from './routes/waitlist.js';
 
 export interface AppOptions {
@@ -18,6 +19,7 @@ export interface AppOptions {
   security?: SecurityOptions;
   waitlist?: WaitlistRouteOptions;
   accounts?: AccountRouteOptions;
+  homes?: HomeRouteOptions;
 }
 
 /** Confía solo en los `hops` saltos más cercanos: la IP real es la que añadió el último proxy. */
@@ -33,7 +35,7 @@ const LANDING_CORS = {
   allowedHeaders: ['Content-Type', 'X-Correlation-Id'],
 };
 const APP_CORS = {
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Authorization', 'Content-Type', 'X-Correlation-Id'],
 };
 
@@ -84,6 +86,7 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
     async (versioned) => {
       if (options.waitlist) await versioned.register(waitlistRoutes(options.waitlist));
       if (options.accounts) await versioned.register(accountRoutes(options.accounts));
+      if (options.homes) await versioned.register(homeRoutes(options.homes));
     },
     { prefix: API_PREFIX },
   );
