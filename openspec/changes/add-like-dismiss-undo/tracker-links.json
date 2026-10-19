@@ -52,25 +52,25 @@
       "key": "B1",
       "id": 173,
       "parent": 168,
-      "state": "doing"
+      "state": "done"
     },
     {
       "key": "T1",
       "id": 174,
       "parent": 169,
-      "state": "doing"
+      "state": "done"
     },
     {
       "key": "B2",
       "id": 175,
       "parent": 168,
-      "state": "doing"
+      "state": "done"
     },
     {
       "key": "B3",
       "id": 176,
       "parent": 171,
-      "state": "doing"
+      "state": "done"
     },
     {
       "key": "T2",
