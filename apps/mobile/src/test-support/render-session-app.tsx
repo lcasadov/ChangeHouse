@@ -18,11 +18,13 @@ import ExploreRoute from '../../app/(tabs)/index';
 import MatchesRoute from '../../app/(tabs)/matches';
 import ProfileRoute from '../../app/(tabs)/profile';
 import NotFoundRoute from '../../app/+not-found';
+import DiscoverDetailRoute from '../../app/discover/[homeId]';
 import OnboardingRoute from '../../app/onboarding';
 import { createApiClient } from '../api/client';
 import { createHttpAccountApi } from '../features/account/http-account-api';
 import { createHttpAdminApi } from '../features/admin/http-admin-api';
 import type { SocialSignIn } from '../features/auth/auth-service';
+import { createHttpDiscoveryApi } from '../features/discovery/http-discovery-api';
 import type { AddressSuggestions } from '../features/homes/address-suggestions';
 import { createFixtureAddressSuggestions } from '../features/homes/fixture-address-suggestions';
 import { createHttpHomesApi } from '../features/homes/http-homes-api';
@@ -61,6 +63,10 @@ export function fakeServices(overrides: Partial<AppServices> = {}): AppServices 
       createPhotoUpload: () => Promise.reject(new Error('Sin viviendas en este doble')),
       completePhotoUpload: () => Promise.reject(new Error('Sin viviendas en este doble')),
       deletePhoto: () => Promise.reject(new Error('Sin viviendas en este doble')),
+    },
+    discoveryApi: {
+      list: () => Promise.resolve({ items: [], nextCursor: null }),
+      getPublicHome: () => Promise.reject(new Error('Sin descubrimiento en este doble')),
     },
     photoPicker: { pick: () => Promise.resolve([]) },
     photoUploader: { upload: () => Promise.resolve() },
@@ -121,6 +127,7 @@ export function renderSessionApp({
     addressSuggestions,
     photoPicker,
     photoUploader,
+    discoveryApi: createHttpDiscoveryApi(client),
     searchPreferencesApi: createHttpSearchPreferencesApi(client),
     zoneSuggestions,
     social,
@@ -143,6 +150,7 @@ export function renderSessionApp({
       '(auth)/access': AccessRoute,
       '(auth)/forgot-password': ForgotPasswordRoute,
       onboarding: OnboardingRoute,
+      'discover/[homeId]': DiscoverDetailRoute,
       '+not-found': NotFoundRoute,
       '(tabs)/_layout': TabsLayout,
       '(tabs)/index': ExploreRoute,

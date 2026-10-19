@@ -2,6 +2,7 @@ import type { SearchPreferencesInput } from '@changehouse/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useAuth } from '../auth/AuthProvider';
+import { DISCOVERY_QUERY_KEY } from '../discovery/use-discovery-feed';
 import { useServices } from '../session/services';
 import { fromApi, type Preferences } from './preferences';
 
@@ -68,6 +69,8 @@ export function useSaveHomePreferences(homeId: string) {
   return async (input: SearchPreferencesInput): Promise<Preferences> => {
     const saved = fromApi(await searchPreferencesApi.putForHome(homeId, input));
     queryClient.setQueryData(homeKey(user?.uid, homeId), saved);
+    // Las tarjetas de «Explorar» dependen de las preferencias de la vivienda desde la que se busca
+    void queryClient.invalidateQueries({ queryKey: [DISCOVERY_QUERY_KEY] });
     return saved;
   };
 }
@@ -81,6 +84,7 @@ export function useDeleteHomePreferences(homeId: string) {
     mutationFn: () => searchPreferencesApi.deleteForHome(homeId),
     onSuccess: () => {
       queryClient.setQueryData(homeKey(user?.uid, homeId), null);
+      void queryClient.invalidateQueries({ queryKey: [DISCOVERY_QUERY_KEY] });
     },
   });
 }

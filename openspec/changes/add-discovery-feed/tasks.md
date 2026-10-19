@@ -18,16 +18,16 @@
 
 ## 3. App
 
-- [ ] T3 Escribir las pruebas de componentes de «Explorar» (tarjeta con carrusel, píldora de cada tipo, detalle sin dirección, selector de vivienda, estado vacío con acceso a filtros, aviso de `seeker`) y comprobar que fallan. ref: Tarjetas a pantalla completa · est: 4h · disc: qa
+- [x] T3 Escribir las pruebas de componentes de «Explorar» (tarjeta con carrusel, píldora de cada tipo, detalle sin dirección, selector de vivienda, estado vacío con acceso a filtros, aviso de `seeker`) y comprobar que fallan. ref: Tarjetas a pantalla completa · est: 4h · disc: qa
   - GIVEN una tarjeta con compensación de 12.000 € a pagar WHEN se renderiza THEN la píldora dice «Tú pagas 12.000 €» con el token `compensationPay`
-- [ ] F1 Implementar la pila de tarjetas a pantalla completa con `expo-image`, el degradado, la píldora, el selector de vivienda y el estado vacío, con datos de TanStack Query y paginación infinita, y verificar que pasan las pruebas de T3. ref: Tarjetas a pantalla completa · est: 8h · disc: front
+- [x] F1 Implementar la pila de tarjetas a pantalla completa con `expo-image`, el degradado, la píldora, el selector de vivienda y el estado vacío, con datos de TanStack Query y paginación infinita, y verificar que pasan las pruebas de T3. ref: Tarjetas a pantalla completa · est: 8h · disc: front
   - GIVEN el final de la página WHEN quedan más resultados THEN se carga la siguiente sin repetir tarjetas
-- [ ] F2 Implementar el detalle de vivienda ajena con galería, características y mapa de la ubicación pública, y verificar sus pruebas de componentes. ref: Tarjetas a pantalla completa · est: 4h · disc: front
+- [x] F2 Implementar el detalle de vivienda ajena con galería, características y mapa de la ubicación pública, y verificar sus pruebas de componentes. ref: Tarjetas a pantalla completa · est: 4h · disc: front
   - GIVEN una vivienda con ubicación por zona WHEN se abre su detalle THEN el mapa muestra el centro de la zona y su nombre
 
 ## 4. Integración
 
-- [ ] V1 Ejecutar `pnpm lint`, `pnpm typecheck`, `pnpm test:coverage`, `pnpm test:integration` y `pnpm build` y verificar que todo pasa con cobertura ≥ 80 %. ref: Viviendas compatibles en los dos sentidos · est: 1h · disc: qa
+- [x] V1 Ejecutar `pnpm lint`, `pnpm typecheck`, `pnpm test:coverage`, `pnpm test:integration` y `pnpm build` y verificar que todo pasa con cobertura ≥ 80 %. ref: Viviendas compatibles en los dos sentidos · est: 1h · disc: qa
   - GIVEN el change implementado WHEN se ejecuta la puerta de calidad local THEN todos los comandos terminan con éxito
 
 ## Workflow follow-up

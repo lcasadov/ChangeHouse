@@ -64,6 +64,10 @@ preferencias efectivas por vivienda (`resolveEffectivePreferences`, de
     (`react-native-maps` en móvil; en web y en pruebas, la zona sin mapa
     interactivo) con el punto público y el nombre de la zona, nunca la
     dirección.
+  - **Decisión de implementación (mapa):** `react-native-maps` exige una clave de Google Maps en
+    Android y no funciona en la web, así que no es «sin configuración». El detalle usa siempre una
+    tarjeta de zona estática y sin claves (nombre de la zona sobre un plano esquemático), igual en
+    móvil, web y pruebas; nunca la dirección postal. Un mapa interactivo queda para cuando haya clave.
   - Estado vacío con «Ampliar zona» y «Ajustar compensación», que abren la hoja
     de filtros de `add-search-preferences`; aviso fijo para `seeker`: «Publica
     tu vivienda para poder hacer match».

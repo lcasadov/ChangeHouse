@@ -26,6 +26,7 @@ describe('themes', () => {
         'text',
         'textMuted',
         'textOnPrimary',
+        'textOnPhoto',
         'primary',
         'primaryPressed',
         'brand',

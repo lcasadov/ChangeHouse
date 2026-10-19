@@ -15,6 +15,72 @@
       "description": "Cuando publiques tu casa y elijas dónde quieres vivir, te mostraremos viviendas compatibles con una foto grande y lo que te costaría el cambio."
     }
   },
+  "discovery": {
+    "next": "Siguiente",
+    "loading": "Buscando casas para ti",
+    "card": {
+      "openHint": "Abre el detalle de la vivienda",
+      "m2": "{{value}} m²",
+      "bedrooms_one": "{{count}} dormitorio",
+      "bedrooms_other": "{{count}} dormitorios",
+      "bathrooms_one": "{{count}} baño",
+      "bathrooms_other": "{{count}} baños"
+    },
+    "photos": {
+      "previous": "Foto anterior",
+      "next": "Foto siguiente",
+      "position": "Foto {{position}} de {{total}}",
+      "alt": "Foto {{position}} de {{total}} de {{title}}"
+    },
+    "compensation": {
+      "receive": "Tú recibes {{amount}}",
+      "pay": "Tú pagas {{amount}}",
+      "fair": "Cambio justo",
+      "disclaimer": "Estimación orientativa"
+    },
+    "seekerNotice": {
+      "message": "Publica tu vivienda para poder hacer match",
+      "action": "Ir a Mis casas"
+    },
+    "homeSelector": {
+      "label": "Buscar desde",
+      "required": "Elige desde qué vivienda quieres buscar."
+    },
+    "end": {
+      "title": "Has visto todas las casas por ahora",
+      "description": "Amplía la zona o la compensación que puedes pagar o recibir y verás más casas con las que cambiar.",
+      "widenZone": "Ampliar zona",
+      "adjustCompensation": "Ajustar compensación"
+    },
+    "errors": {
+      "load": "No hemos podido cargar las casas. Comprueba tu conexión y vuelve a intentarlo.",
+      "more": "No hemos podido cargar más casas. Comprueba tu conexión y vuelve a intentarlo.",
+      "homeGone": "La vivienda desde la que buscabas ya no está publicada. Reintenta para buscar con las que te quedan.",
+      "retry": "Reintentar"
+    },
+    "detail": {
+      "back": "Volver",
+      "loading": "Cargando la vivienda",
+      "goneTitle": "Esta casa ya no está",
+      "gone": "Esta vivienda ya no está disponible. Puede que su propietario la haya retirado.",
+      "loadFailedTitle": "No hemos podido cargar la casa",
+      "loadFailed": "No hemos podido cargar la vivienda. Comprueba tu conexión y vuelve a intentarlo.",
+      "retry": "Reintentar",
+      "sections": {
+        "features": "Características",
+        "location": "Ubicación"
+      },
+      "surfaces": "{{useful}} m² útiles · {{built}} m² construidos",
+      "floor": "Planta {{floor}}",
+      "energyRating": "Certificado energético {{rating}}",
+      "yearBuilt": "Construida en {{year}}",
+      "location": {
+        "title": "Ubicación",
+        "areaLabel": "Zona: {{area}}",
+        "note": "Te mostramos la zona de la casa. La dirección exacta solo se comparte cuando hay match."
+      }
+    }
+  },
   "matches": {
     "empty": {
       "title": "Todavía no tienes matches",

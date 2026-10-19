@@ -3,6 +3,7 @@ import { createContext, type ReactNode, useContext } from 'react';
 import type { AccountApi } from '../account/account-api';
 import type { AdminApi } from '../admin/admin-api';
 import type { AuthService, SocialSignIn } from '../auth/auth-service';
+import type { DiscoveryApi } from '../discovery/discovery-api';
 import type { AddressSuggestions } from '../homes/address-suggestions';
 import type { HomesApi } from '../homes/homes-api';
 import type { PhotoPicker } from '../homes/photo-picker';
@@ -23,6 +24,8 @@ export interface AppServices {
   photoPicker: PhotoPicker;
   /** El envío directo de cada foto a su URL firmada de subida. */
   photoUploader: PhotoUploader;
+  /** Las viviendas ajenas compatibles que ofrece «Explorar» y su detalle público. */
+  discoveryApi: DiscoveryApi;
   /** Las preferencias de búsqueda del usuario y las propias de cada vivienda. */
   searchPreferencesApi: SearchPreferencesApi;
   /** Autocompletado de la zona de búsqueda: municipios y lugares (sugerencias de prueba sin clave). */

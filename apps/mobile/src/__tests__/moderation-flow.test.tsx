@@ -101,7 +101,7 @@ describe('Sección de administración', () => {
   it('Scenario: Usuario sin rol de administración - sus rutas lo devuelven a la pantalla de inicio sin pedir la cola', async () => {
     const { backend } = await openApp({ profile: me({ roles: ['owner'] }), url: '/admin' });
 
-    expect(await screen.findByRole('header', { name: es.explore.empty.title })).toBeTruthy();
+    expect(await screen.findByRole('header', { name: es.discovery.end.title })).toBeTruthy();
     expect(backend.requestsTo('GET', '/admin/homes')).toHaveLength(0);
   });
 

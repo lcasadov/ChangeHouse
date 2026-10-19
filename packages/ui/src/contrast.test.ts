@@ -76,3 +76,18 @@ describe('contraste de los bordes de controles (WCAG 1.4.11)', () => {
     },
   );
 });
+
+describe('texto sobre fotos', () => {
+  it.each(['light', 'dark'] as const)(
+    'textOnPhoto alcanza 4,5:1 sobre el tramo final del degradado aun con una foto blanca en %s',
+    (name) => {
+      const { color } = themes[name];
+      // 0,72 de negro sobre blanco: el peor caso de fondo bajo el degradado
+      const WHITE_PHOTO_UNDER_SCRIM = '#474747';
+      expect(color.photoScrimEnd).toBe('rgba(0,0,0,0.72)');
+      expect(contrastRatio(color.textOnPhoto, WHITE_PHOTO_UNDER_SCRIM)).toBeGreaterThanOrEqual(
+        MIN_TEXT_CONTRAST,
+      );
+    },
+  );
+});

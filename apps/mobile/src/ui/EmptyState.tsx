@@ -13,9 +13,17 @@ export interface EmptyStateProps {
   /** Qué hacer a continuación o qué habrá aquí. */
   description: string;
   action?: { label: string; onPress: () => void };
+  /** Una alternativa a la acción principal, con menos peso visual. */
+  secondaryAction?: { label: string; onPress: () => void };
 }
 
-export function EmptyState({ icon, title, description, action }: Readonly<EmptyStateProps>) {
+export function EmptyState({
+  icon,
+  title,
+  description,
+  action,
+  secondaryAction,
+}: Readonly<EmptyStateProps>) {
   const theme = useTheme();
 
   return (
@@ -41,6 +49,13 @@ export function EmptyState({ icon, title, description, action }: Readonly<EmptyS
         {description}
       </Text>
       {action ? <Button label={action.label} onPress={action.onPress} /> : null}
+      {secondaryAction ? (
+        <Button
+          variant="secondary"
+          label={secondaryAction.label}
+          onPress={secondaryAction.onPress}
+        />
+      ) : null}
     </View>
   );
 }

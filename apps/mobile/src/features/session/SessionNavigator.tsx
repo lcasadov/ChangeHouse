@@ -49,6 +49,7 @@ export function SessionNavigator() {
           </Stack.Protected>
           <Stack.Protected guard={destination === 'ready'}>
             <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="discover/[homeId]" />
           </Stack.Protected>
         </Stack>
       </View>

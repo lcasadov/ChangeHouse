@@ -6,6 +6,8 @@ export interface ColorTokens {
   text: string;
   textMuted: string;
   textOnPrimary: string;
+  /** Texto sobre fotos, con el degradado `photoScrim*` debajo; blanco en los dos temas. */
+  textOnPhoto: string;
   primary: string;
   primaryPressed: string;
   /** Logotipo e ilustración; nunca texto. */
@@ -31,6 +33,7 @@ export interface ColorTokens {
 }
 
 const BRAND = '#E8505B';
+const TEXT_ON_PHOTO = '#FFFFFF';
 const MATCH_GRADIENT_END = '#F472B6';
 const PHOTO_SCRIM_START = 'rgba(0,0,0,0)';
 const PHOTO_SCRIM_END = 'rgba(0,0,0,0.72)';
@@ -42,6 +45,7 @@ export const lightColors: ColorTokens = {
   text: '#3A3A3A',
   textMuted: '#5A6672',
   textOnPrimary: '#FFFFFF',
+  textOnPhoto: TEXT_ON_PHOTO,
   primary: '#C8323E',
   primaryPressed: '#B42A35',
   brand: BRAND,
@@ -69,6 +73,7 @@ export const darkColors: ColorTokens = {
   text: '#E6E8EC',
   textMuted: '#8A94A3',
   textOnPrimary: '#121826',
+  textOnPhoto: TEXT_ON_PHOTO,
   primary: '#FF7A84',
   primaryPressed: '#FF959D',
   brand: BRAND,

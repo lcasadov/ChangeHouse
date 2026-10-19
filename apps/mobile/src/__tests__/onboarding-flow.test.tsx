@@ -39,7 +39,7 @@ describe('Alta en ChangeHouse con consentimiento', () => {
     await fireEvent.press(button(onboarding.submit));
 
     // Entra en las pestañas
-    expect(await screen.findByText(es.explore.empty.title)).toBeTruthy();
+    expect(await screen.findByText(es.discovery.end.title)).toBeTruthy();
     // Una única llamada a PUT /me con el token, el nombre y las versiones vigentes aceptadas
     const [put, ...others] = backend.requestsTo('PUT', '/me');
     expect(others).toEqual([]);
@@ -63,7 +63,7 @@ describe('Alta en ChangeHouse con consentimiento', () => {
     expect(await screen.findByText(onboarding.errors.termsRequired)).toBeTruthy();
     expect(screen.getByText(onboarding.errors.privacyRequired)).toBeTruthy();
     expect(backend.requestsTo('PUT', '/me')).toEqual([]);
-    expect(screen.queryByText(es.explore.empty.title)).toBeNull();
+    expect(screen.queryByText(es.discovery.end.title)).toBeNull();
   });
 
   it('Scenario: Sin aceptar los textos legales - solo se señala lo que falta', async () => {
@@ -144,7 +144,7 @@ describe('Alta en ChangeHouse con consentimiento', () => {
     expect(screen.getByLabelText(onboarding.displayName).props.value).toBe('Ana');
 
     await fireEvent.press(button(onboarding.submit));
-    expect(await screen.findByText(es.explore.empty.title)).toBeTruthy();
+    expect(await screen.findByText(es.discovery.end.title)).toBeTruthy();
   });
 
   it('si los textos legales han cambiado, pide actualizar la app', async () => {
@@ -186,7 +186,7 @@ describe('Alta en ChangeHouse con consentimiento', () => {
     expect(button(onboarding.submit).props.accessibilityState).toMatchObject({ busy: true });
     release();
 
-    await screen.findByText(es.explore.empty.title);
+    await screen.findByText(es.discovery.end.title);
     expect(backend.requestsTo('PUT', '/me')).toHaveLength(1);
   });
 
@@ -194,7 +194,7 @@ describe('Alta en ChangeHouse con consentimiento', () => {
     const auth = new FakeAuthService({ initialUser: authUser() });
     await renderSessionApp({ auth, backend: new FakeBackend({ registered: true }) });
 
-    expect(await screen.findByText(es.explore.empty.title)).toBeTruthy();
+    expect(await screen.findByText(es.discovery.end.title)).toBeTruthy();
     expect(screen.queryByRole('header', { name: onboarding.title })).toBeNull();
   });
 });

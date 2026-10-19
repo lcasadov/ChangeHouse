@@ -71,6 +71,7 @@ ilustraciones y elementos no textuales grandes.
 | `color.text` | Texto principal | `#3A3A3A` | `#E6E8EC` | 11,4:1 · 14,5:1 |
 | `color.textMuted` | Texto secundario | `#5A6672` | `#8A94A3` | 5,9:1 · 5,4:1 |
 | `color.textOnPrimary` | Texto sobre `primary` | `#FFFFFF` | `#121826` | 5,3:1 · 7,1:1 |
+| `color.textOnPhoto` | Texto sobre fotos, siempre con `photoScrim*` debajo | `#FFFFFF` | `#FFFFFF` | ≥ 4,5:1 sobre el tramo final del degradado, aun con una foto blanca |
 | `color.primary` | Acción principal, enlaces | `#C8323E` | `#FF7A84` | 5,3:1 · 7,1:1 |
 | `color.primaryPressed` | Estado activo | `#B42A35` | `#FF959D` | ≥ 4,5:1 |
 | `color.brand` | Logotipo e ilustración (no texto) | `#E8505B` | `#E8505B` | no textual |

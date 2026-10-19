@@ -1,12 +1,16 @@
 import { PRIVACY_VERSION, TERMS_VERSION } from '@changehouse/shared';
 
+import type { components } from '../api/schema';
 import type { Me } from '../features/account/account-api';
 import type { Home } from '../features/homes/homes-api';
 import type { SearchPreferences } from '../features/search/search-preferences-api';
+import { FakeDiscovery } from './fake-discovery';
 import { FakeHomes } from './fake-homes';
 import { FakeModeration } from './fake-moderation';
 import { FakeSearchPreferences } from './fake-search-preferences';
 import { json, problem } from './http-responses';
+
+type DiscoveryCard = components['schemas']['DiscoveryCard'];
 
 export interface RecordedRequest {
   method: string;
@@ -70,6 +74,8 @@ export class FakeBackend {
   readonly homes: FakeHomes;
   /** Las preferencias de búsqueda del usuario y las de cada vivienda. */
   readonly searchPreferences: FakeSearchPreferences;
+  /** El descubrimiento de viviendas ajenas desde esas mismas viviendas y preferencias. */
+  readonly discovery: FakeDiscovery;
   /** La cola de moderación sobre esas mismas viviendas. */
   private readonly moderation: FakeModeration;
 
@@ -78,26 +84,44 @@ export class FakeBackend {
     profile = me(),
     homes = [],
     searchPreferences = DEFAULT_SEARCH_PREFERENCES,
+    discoveryCards = [],
   }: {
     registered?: boolean;
     profile?: Me;
     homes?: readonly Home[];
     /** Las preferencias ya guardadas del usuario; `null` si aún no las ha definido (primer uso). */
     searchPreferences?: SearchPreferences | null;
+    /** Las viviendas ajenas que ofrece «Explorar»; por defecto, ninguna. */
+    discoveryCards?: readonly DiscoveryCard[];
   } = {}) {
     this.registered = registered;
     this.profile = profile;
     this.homes = new FakeHomes(homes);
     this.searchPreferences = new FakeSearchPreferences(this.homes, searchPreferences);
     this.moderation = new FakeModeration(this.homes);
+    this.discovery = new FakeDiscovery(
+      discoveryCards,
+      () => this.homes.all(),
+      () => this.searchPreferences.mine !== null || this.searchPreferences.byHome.size > 0,
+    );
   }
 
   private gate: Promise<void> | null = null;
+  private discoveryGate: Promise<void> | null = null;
 
   /** Retiene la siguiente respuesta hasta llamar a la función devuelta (para probar «en curso»). */
   hold(): () => void {
     let release: () => void = () => undefined;
     this.gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    return release;
+  }
+
+  /** Retiene la siguiente consulta de descubrimiento hasta llamar a la función devuelta. */
+  holdDiscovery(): () => void {
+    let release: () => void = () => undefined;
+    this.discoveryGate = new Promise<void>((resolve) => {
       release = resolve;
     });
     return release;
@@ -116,6 +140,11 @@ export class FakeBackend {
     const gate = this.gate;
     this.gate = null;
     await gate;
+    if (path === '/discover') {
+      const discoveryGate = this.discoveryGate;
+      this.discoveryGate = null;
+      await discoveryGate;
+    }
     return this.respond(
       input.method,
       path,
@@ -141,6 +170,11 @@ export class FakeBackend {
     }
     if (path.endsWith('/search-preferences')) {
       return this.searchPreferences.respond(method, path, body);
+    }
+    if (path === '/discover') return this.discovery.respond(search);
+    if (method === 'GET') {
+      const others = this.discovery.publicHome(path);
+      if (others) return others;
     }
     if (path === '/me/homes' || path.startsWith('/homes')) {
       return this.homes.respond(method, path, body);

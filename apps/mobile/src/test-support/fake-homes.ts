@@ -108,6 +108,7 @@ export class FakeHomes {
   private readonly homes: Home[];
   private readonly pending: PendingPhoto[] = [];
   private photoSequence = 0;
+  private listFailure: { status: number; remaining: number } | null = null;
 
   constructor(seed: readonly Home[]) {
     this.homes = [...seed];
@@ -117,8 +118,19 @@ export class FakeHomes {
     return this.homes;
   }
 
+  /** Las siguientes `times` lecturas del listado (`GET /me/homes`) responden con este error. */
+  rejectNextList(status: number, times = 1): void {
+    this.listFailure = { status, remaining: times };
+  }
+
   respond(method: string, path: string, body: unknown): Response {
-    if (path === '/me/homes') return json(200, this.homes);
+    if (path === '/me/homes') {
+      const failure = this.listFailure;
+      if (failure === null) return json(200, this.homes);
+      failure.remaining -= 1;
+      if (failure.remaining === 0) this.listFailure = null;
+      return problem(failure.status);
+    }
     if (path === '/homes') return this.create(body as HomeInput);
 
     const match = HOME_PATH.exec(path);

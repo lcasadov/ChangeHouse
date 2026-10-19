@@ -144,9 +144,11 @@ describe('Mis casas', () => {
   it('mientras carga se anuncia y, si falla, explica qué hacer y permite reintentar', async () => {
     const backend = new FakeBackend({ registered: true, homes: [draftHome()] });
     const auth = new FakeAuthService({ initialUser: authUser() });
+    // «Explorar» ya pide las viviendas al abrir la app y comparte la consulta con «Mis casas»
+    // y al abrir «Mis casas» reintenta la consulta fallida
+    backend.homes.rejectNextList(500, 2);
     await renderSessionApp({ auth, backend });
     const tab = await screen.findByRole('button', { name: es.tabs.homes });
-    backend.failNext = 'server';
 
     await fireEvent.press(tab);
 
