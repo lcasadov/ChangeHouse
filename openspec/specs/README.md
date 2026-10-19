@@ -10,4 +10,4 @@ Capacidades implementadas. Cada una se crea o amplía al archivar un change
 | [`api-errors`](api-errors/spec.md) | Formato único de error de la API (`Problem`) con identificador de correlación | `2026-10-19-add-waitlist` |
 | [`accounts`](accounts/spec.md) | Registro, acceso, verificación del email, recuperación de la contraseña, alta con consentimiento | `2026-10-19-add-authentication` |
 | [`authorization`](authorization/spec.md) | Autenticación de las peticiones, roles derivados y asignados, denegación por defecto | `2026-10-19-add-authentication` |
-| [`homes`](homes/spec.md) | Alta en borrador con asistente, varias viviendas por usuario, dirección privada y ubicación por zona o exacta, envío a revisión, vistas según quién consulta y rol de propietario derivado | `2026-10-19-add-home-listing` |
+| [`homes`](homes/spec.md) | Alta en borrador con asistente, fotos sin metadatos (de 3 a 20), varias viviendas por usuario, dirección privada y ubicación por zona o exacta, envío a revisión, vistas según quién consulta y rol de propietario derivado | `2026-10-19-add-home-listing` (ampliado por `add-home-photos`) |
