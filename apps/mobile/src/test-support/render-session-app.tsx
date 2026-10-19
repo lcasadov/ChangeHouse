@@ -6,6 +6,9 @@ import AccessRoute from '../../app/(auth)/access';
 import ForgotPasswordRoute from '../../app/(auth)/forgot-password';
 import WelcomeRoute from '../../app/(auth)/welcome';
 import TabsLayout from '../../app/(tabs)/_layout';
+import AdminLayout from '../../app/(tabs)/admin/_layout';
+import ModerationDetailRoute from '../../app/(tabs)/admin/[homeId]';
+import AdminQueueRoute from '../../app/(tabs)/admin/index';
 import HomesLayout from '../../app/(tabs)/homes/_layout';
 import EditHomeRoute from '../../app/(tabs)/homes/[homeId]/edit';
 import HomeDetailRoute from '../../app/(tabs)/homes/[homeId]/index';
@@ -18,6 +21,7 @@ import NotFoundRoute from '../../app/+not-found';
 import OnboardingRoute from '../../app/onboarding';
 import { createApiClient } from '../api/client';
 import { createHttpAccountApi } from '../features/account/http-account-api';
+import { createHttpAdminApi } from '../features/admin/http-admin-api';
 import type { SocialSignIn } from '../features/auth/auth-service';
 import type { AddressSuggestions } from '../features/homes/address-suggestions';
 import { createFixtureAddressSuggestions } from '../features/homes/fixture-address-suggestions';
@@ -41,6 +45,10 @@ export function fakeServices(overrides: Partial<AppServices> = {}): AppServices 
   return {
     auth: new FakeAuthService({ initialUser: authUser() }),
     accountApi: { getMe: () => Promise.resolve(me()), upsertMe: () => Promise.resolve(me()) },
+    adminApi: {
+      listPending: () => Promise.resolve({ items: [], nextCursor: null }),
+      moderate: () => Promise.reject(new Error('Sin moderación en este doble')),
+    },
     homesApi: {
       listMine: () => Promise.resolve([]),
       get: () => Promise.reject(new Error('Sin viviendas en este doble')),
@@ -95,6 +103,7 @@ export function renderSessionApp({
     auth,
     accountApi: createHttpAccountApi(client),
     homesApi: createHttpHomesApi(client),
+    adminApi: createHttpAdminApi(client),
     addressSuggestions,
     photoPicker,
     photoUploader,
@@ -127,6 +136,9 @@ export function renderSessionApp({
       '(tabs)/homes/new': NewHomeRoute,
       '(tabs)/homes/[homeId]/index': HomeDetailRoute,
       '(tabs)/homes/[homeId]/edit': EditHomeRoute,
+      '(tabs)/admin/_layout': AdminLayout,
+      '(tabs)/admin/index': AdminQueueRoute,
+      '(tabs)/admin/[homeId]': ModerationDetailRoute,
       '(tabs)/profile': ProfileRoute,
     },
     { initialUrl: url },

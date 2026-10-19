@@ -11,14 +11,14 @@
 
 ## 2. App
 
-- [ ] T2 Escribir las pruebas de componentes de la sección de administración (visible solo para `admin`, cola, aprobar, rechazar con motivo obligatorio) y del motivo de rechazo en «Mis casas», y comprobar que fallan. ref: Aprobación y rechazo con motivo · est: 3h · disc: qa
+- [x] T2 Escribir las pruebas de componentes de la sección de administración (visible solo para `admin`, cola, aprobar, rechazar con motivo obligatorio) y del motivo de rechazo en «Mis casas», y comprobar que fallan. ref: Aprobación y rechazo con motivo · est: 3h · disc: qa
   - GIVEN un usuario `owner` WHEN abre la app THEN no ve la sección de administración
-- [ ] F1 Implementar la sección «Administración» con la cola, el detalle con fotos y las acciones, y el aviso de rechazo con su motivo en «Mis casas», y verificar que pasan las pruebas de T2. ref: Cola de moderación de viviendas · est: 5h · disc: front
+- [x] F1 Implementar la sección «Administración» con la cola, el detalle con fotos y las acciones, y el aviso de rechazo con su motivo en «Mis casas», y verificar que pasan las pruebas de T2. ref: Cola de moderación de viviendas · est: 5h · disc: front
   - GIVEN una vivienda rechazada WHEN su propietario abre «Mis casas» THEN ve el motivo y puede corregirla y reenviarla
 
 ## 3. Integración
 
-- [ ] V1 Ejecutar `pnpm lint`, `pnpm typecheck`, `pnpm test:coverage`, `pnpm test:integration` y `pnpm build` y verificar que todo pasa con cobertura ≥ 80 %. ref: Cola de moderación de viviendas · est: 1h · disc: qa
+- [x] V1 Ejecutar `pnpm lint`, `pnpm typecheck`, `pnpm test:coverage`, `pnpm test:integration` y `pnpm build` y verificar que todo pasa con cobertura ≥ 80 %. ref: Cola de moderación de viviendas · est: 1h · disc: qa
   - GIVEN el change implementado WHEN se ejecuta la puerta de calidad local THEN todos los comandos terminan con éxito
 
 ## Workflow follow-up

@@ -6,7 +6,7 @@ import { View } from 'react-native';
 import { Badge, Button, FormScreen, Notice, Text } from '../../ui';
 import { LoadingView } from '../session/LoadingView';
 import { homeRoutes } from './home-routes';
-import { STATUS_PRESENTATION } from './home-status';
+import { rejectionOf, STATUS_PRESENTATION } from './home-status';
 import { useHomeTitle } from './HomeCard';
 import { HomeCover, HomeGallery } from './HomeCover';
 import { type Home, HomesApiError } from './homes-api';
@@ -23,6 +23,7 @@ function HomeDetail({ home }: Readonly<{ home: Home }>) {
   const router = useRouter();
   const title = useHomeTitle(home);
   const { tone, icon } = STATUS_PRESENTATION[home.status];
+  const rejection = rejectionOf(home);
 
   return (
     <FormScreen>
@@ -42,7 +43,18 @@ function HomeDetail({ home }: Readonly<{ home: Home }>) {
       <Text accessibilityLiveRegion="polite">{t(`homes.detail.statusNote.${home.status}`)}</Text>
       <Text tone="textMuted">{t('homes.detail.privateAddress')}</Text>
       <HomeSummary home={home} />
-      {home.status === 'draft' ? (
+      {rejection ? (
+        <View style={{ gap: theme.space[3] }}>
+          <Notice tone="warning">{t('homes.rejection.notice', { reason: rejection })}</Notice>
+          <Button
+            label={t('homes.rejection.action')}
+            onPress={() => {
+              router.push(homeRoutes.edit(home.id));
+            }}
+          />
+        </View>
+      ) : null}
+      {home.status === 'draft' && !rejection ? (
         <View style={{ gap: theme.space[3] }}>
           <SubmitAction
             home={home}

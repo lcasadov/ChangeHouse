@@ -21,6 +21,23 @@ export const TABS: readonly TabDefinition[] = [
   { route: 'profile', section: 'profile', icon: { active: 'person', inactive: 'person-outline' } },
 ];
 
+/** «Administración» sustituye a «Mis casas» para el rol `admin`, que no publica viviendas. */
+const ADMIN_TAB: TabDefinition = {
+  route: 'admin',
+  section: 'admin',
+  icon: { active: 'shield-checkmark', inactive: 'shield-checkmark-outline' },
+};
+
+/** Las pestañas que ve la persona: las cuatro de siempre o, si es admin, con «Administración». */
+export function tabsFor(isAdmin: boolean): readonly TabDefinition[] {
+  return isAdmin ? TABS.map((tab) => (tab.section === 'homes' ? ADMIN_TAB : tab)) : TABS;
+}
+
+/** La ruta que existe pero no se ofrece como pestaña a esta persona. */
+export function hiddenTabRoute(isAdmin: boolean): string {
+  return isAdmin ? 'homes' : ADMIN_TAB.route;
+}
+
 export type NavigationLayout = 'bottom' | 'side';
 
 /** Barra lateral solo en web ancha (`expanded`); en el resto, pestañas inferiores. */

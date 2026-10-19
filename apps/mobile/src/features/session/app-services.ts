@@ -1,5 +1,6 @@
 import { createApiClient } from '../../api/client';
 import { createHttpAccountApi } from '../account/http-account-api';
+import { createHttpAdminApi } from '../admin/http-admin-api';
 import type { AuthService, SocialSignIn } from '../auth/auth-service';
 import { createFirebaseAuth } from '../auth/create-firebase-auth';
 import { createFirebaseAuthService } from '../auth/firebase-auth-service';
@@ -46,6 +47,7 @@ export function createAppServices(
     auth,
     accountApi: createHttpAccountApi(client),
     homesApi: createHttpHomesApi(client),
+    adminApi: createHttpAdminApi(client),
     addressSuggestions: createAddressSuggestions(env),
     photoPicker: createExpoPhotoPicker(),
     photoUploader: createXhrPhotoUploader(),

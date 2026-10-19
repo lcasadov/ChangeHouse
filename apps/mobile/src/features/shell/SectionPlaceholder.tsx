@@ -3,10 +3,10 @@ import { useTranslation } from 'react-i18next';
 
 import { EmptyState, Screen } from '../../ui';
 
-export type Section = 'explore' | 'matches' | 'homes' | 'profile';
+export type Section = 'explore' | 'matches' | 'homes' | 'admin' | 'profile';
 
-/** Las secciones que aún no tienen feature propia: el perfil y «Mis casas» ya no son provisionales. */
-export type PlaceholderSection = Exclude<Section, 'profile' | 'homes'>;
+/** Las secciones que aún no tienen feature propia: el perfil, «Mis casas» y «Administración» ya no son provisionales. */
+export type PlaceholderSection = Exclude<Section, 'profile' | 'homes' | 'admin'>;
 
 export interface SectionPlaceholderProps {
   section: PlaceholderSection;

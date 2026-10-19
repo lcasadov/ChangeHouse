@@ -74,6 +74,7 @@ describe('createAppServices', () => {
     const services = createAppServices(env, []);
 
     expect(typeof services.homesApi.listMine).toBe('function');
+    expect(typeof services.adminApi.listPending).toBe('function');
     expect(await services.addressSuggestions.suggest('malasaña')).toMatchObject([
       { placeId: 'fixture-malasana' },
     ]);

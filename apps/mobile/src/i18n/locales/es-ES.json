@@ -6,7 +6,8 @@
     "explore": "Explorar",
     "matches": "Matches",
     "homes": "Mis casas",
-    "profile": "Perfil"
+    "profile": "Perfil",
+    "admin": "Administración"
   },
   "explore": {
     "empty": {
@@ -273,6 +274,11 @@
         "confirm": "Salir y descartar",
         "cancel": "Seguir aquí"
       }
+    },
+    "rejection": {
+      "notice": "No hemos podido publicar tu casa. Motivo: {{reason}}",
+      "action": "Corregir y reenviar",
+      "actionLabel": "Corregir y reenviar: {{title}}"
     }
   },
   "profile": {
@@ -388,6 +394,73 @@
       "title": "No hemos podido cargar tu cuenta",
       "description": "Comprueba tu conexión y vuelve a intentarlo.",
       "retry": "Reintentar"
+    }
+  },
+  "admin": {
+    "title": "Administración",
+    "queue": {
+      "title": "Pendientes de revisión",
+      "intro": "Las más antiguas, primero.",
+      "empty": {
+        "title": "No hay nada pendiente",
+        "description": "Cuando alguien envíe su casa a revisión, aparecerá aquí."
+      },
+      "loadFailed": "No hemos podido cargar la cola de revisión. Comprueba tu conexión y vuelve a intentarlo.",
+      "retry": "Reintentar",
+      "loadMore": "Cargar más",
+      "loadMoreFailed": "No hemos podido cargar más viviendas. Inténtalo de nuevo.",
+      "open": "Revisar {{title}}",
+      "created": "Alta: {{date}}"
+    },
+    "detail": {
+      "back": "Volver a la cola",
+      "loading": "Buscando la vivienda en la cola",
+      "gone": "Esta vivienda ya no está pendiente de revisión.",
+      "created": "Alta: {{date}}",
+      "photos": {
+        "position": "Foto {{position}} de {{total}} de {{title}}",
+        "counter": "Foto {{position}} de {{total}}",
+        "previous": "Foto anterior",
+        "next": "Foto siguiente",
+        "none": "Esta vivienda no tiene fotos."
+      }
+    },
+    "approve": {
+      "action": "Aprobar",
+      "title": "¿Aprobar esta vivienda?",
+      "description": "Se publicará y su propietario podrá recibir matches.",
+      "confirm": "Sí, aprobar",
+      "cancel": "Cancelar"
+    },
+    "reject": {
+      "action": "Rechazar",
+      "title": "Rechazar esta vivienda",
+      "description": "La vivienda volverá a borrador y su propietario verá el motivo para corregirla.",
+      "reasonLabel": "Motivo del rechazo",
+      "reasonHint": "Entre 1 y 1000 caracteres.",
+      "shortcuts": "Motivos frecuentes",
+      "reasons": {
+        "photos": "Las fotos no corresponden a la vivienda",
+        "data": "Faltan datos o son incoherentes",
+        "content": "Contenido inadecuado"
+      },
+      "confirm": "Rechazar vivienda",
+      "cancel": "Cancelar",
+      "errors": {
+        "required": "Escribe el motivo del rechazo.",
+        "tooLong": "El motivo no puede superar los 1000 caracteres.",
+        "invalid": "El servidor no ha aceptado el motivo. Revísalo e inténtalo de nuevo."
+      }
+    },
+    "outcome": {
+      "approved": "Vivienda aprobada: ya está publicada.",
+      "rejected": "Vivienda rechazada: su propietario verá el motivo.",
+      "gone": "Otra persona ya ha moderado esta vivienda. La cola se ha actualizado.",
+      "back": "Volver a la cola"
+    },
+    "failure": {
+      "network": "No hemos podido guardar tu decisión. Comprueba tu conexión y vuelve a intentarlo.",
+      "unknown": "No hemos podido guardar tu decisión. Inténtalo de nuevo en unos minutos."
     }
   }
 }
