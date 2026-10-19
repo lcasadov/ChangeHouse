@@ -44,6 +44,8 @@ const COMPLETE_HOME = {
   isPrimaryResidence: true,
 };
 
+const PREFERENCES = { municipalities: ['Madrid'], maxToPayCents: 30_000_00, minToReceiveCents: 0 };
+
 /** Una petición válida por operación implementada: la matriz mide la autorización, no la validación. */
 const REQUESTS: Record<string, RequestTemplate> = {
   joinWaitlist: {
@@ -93,6 +95,25 @@ const REQUESTS: Record<string, RequestTemplate> = {
   deleteHomePhoto: {
     method: 'DELETE',
     url: (context) => `/v1/homes/${context.ownHomeId}/photos/${context.ownPhotoId}`,
+  },
+  getMySearchPreferences: { method: 'GET', url: '/v1/me/search-preferences' },
+  putMySearchPreferences: {
+    method: 'PUT',
+    url: '/v1/me/search-preferences',
+    payload: () => PREFERENCES,
+  },
+  getHomeSearchPreferences: {
+    method: 'GET',
+    url: (context) => `/v1/homes/${context.ownHomeId}/search-preferences`,
+  },
+  putHomeSearchPreferences: {
+    method: 'PUT',
+    url: (context) => `/v1/homes/${context.ownHomeId}/search-preferences`,
+    payload: () => PREFERENCES,
+  },
+  deleteHomeSearchPreferences: {
+    method: 'DELETE',
+    url: (context) => `/v1/homes/${context.ownHomeId}/search-preferences`,
   },
   adminListHomes: { method: 'GET', url: '/v1/admin/homes?status=in_review' },
   adminModerateHome: {
@@ -218,6 +239,13 @@ async function authorizationFor(
     context.ownHomeId = created.json<{ id: string }>().id;
     await addReadyPhotos(context.ownHomeId);
     context.ownPhotoId = await uploadedPhoto(headers, context.ownHomeId);
+    // Con preferencias propias y de la vivienda, las lecturas y el borrado de la matriz tienen algo que devolver
+    for (const url of [
+      '/v1/me/search-preferences',
+      `/v1/homes/${context.ownHomeId}/search-preferences`,
+    ]) {
+      await api.app.inject({ method: 'PUT', url, headers, payload: PREFERENCES });
+    }
   }
   return { headers, context };
 }

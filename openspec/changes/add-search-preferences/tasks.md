@@ -2,11 +2,11 @@
 
 ## 1. API
 
-- [ ] B1 Crear la tabla `search_preferences` (por usuario con `home_id` nulo o por vivienda, zonas en PostGIS y municipios, `value_reference_pct` 0–100) con sus restricciones de unicidad y su migración, y verificar que se aplica. ref: Preferencias por defecto del usuario · est: 2h · disc: bd
+- [x] B1 Crear la tabla `search_preferences` (por usuario con `home_id` nulo o por vivienda, zonas en PostGIS y municipios, `value_reference_pct` 0–100) con sus restricciones de unicidad y su migración, y verificar que se aplica. ref: Preferencias por defecto del usuario · est: 2h · disc: bd
   - GIVEN dos preferencias por defecto para el mismo usuario WHEN se insertan THEN la segunda viola la restricción de unicidad
-- [ ] T1 Escribir las pruebas de integración de las cinco operaciones de preferencias (guardar y leer, sin zona 422, punto fuera de rango 400, preferencias por vivienda que sustituyen, borrado y 404, vivienda ajena 404) con sus filas en la matriz, y comprobar que fallan. ref: Preferencias propias de una vivienda · est: 3h · disc: qa
+- [x] T1 Escribir las pruebas de integración de las cinco operaciones de preferencias (guardar y leer, sin zona 422, punto fuera de rango 400, preferencias por vivienda que sustituyen, borrado y 404, vivienda ajena 404) con sus filas en la matriz, y comprobar que fallan. ref: Preferencias propias de una vivienda · est: 3h · disc: qa
   - GIVEN preferencias propias de una vivienda WHEN se resuelven las efectivas para ella THEN se usan las propias y no las del usuario
-- [ ] B2 Implementar los casos de uso (incluida la resolución de las preferencias efectivas de una vivienda, que usará el descubrimiento), el repositorio y las rutas, y verificar que pasan las pruebas de T1. ref: Preferencias por defecto del usuario · est: 4h · disc: back
+- [x] B2 Implementar los casos de uso (incluida la resolución de las preferencias efectivas de una vivienda, que usará el descubrimiento), el repositorio y las rutas, y verificar que pasan las pruebas de T1. ref: Preferencias por defecto del usuario · est: 4h · disc: back
   - GIVEN una vivienda sin preferencias propias WHEN se resuelven sus preferencias efectivas THEN son las del usuario
 
 ## 2. App

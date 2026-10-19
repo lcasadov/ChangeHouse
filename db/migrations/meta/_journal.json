@@ -43,6 +43,13 @@
       "when": 1792407094620,
       "tag": "0005_moderation",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792410852983,
+      "tag": "0006_search_preferences",
+      "breakpoints": true
     }
   ]
 }

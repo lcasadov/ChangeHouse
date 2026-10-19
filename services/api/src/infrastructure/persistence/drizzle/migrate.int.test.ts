@@ -207,6 +207,108 @@ describe('migraciones', () => {
     expect(kept?.at).toBeInstanceOf(Date);
   });
 
+  it('GIVEN la base migrada WHEN se inspecciona THEN search_preferences tiene centro PostGIS, municipios normalizados, usuario y vivienda con FK y valor de referencia 50 por defecto', async () => {
+    const target = openSql(urlFor(EMPTY_DB));
+    const columns = await target<{ column_name: string; udt_name: string; is_nullable: string }[]>`
+      SELECT column_name, udt_name, is_nullable FROM information_schema.columns
+      WHERE table_name = 'search_preferences' ORDER BY column_name`;
+    const reference = await target<{ column_default: string }[]>`
+      SELECT column_default FROM information_schema.columns
+      WHERE table_name = 'search_preferences' AND column_name = 'value_reference_pct'`;
+    const references = await target<{ constraint_name: string; delete_rule: string }[]>`
+      SELECT constraint_name, delete_rule FROM information_schema.referential_constraints
+      WHERE constraint_name LIKE 'search_preferences_%' ORDER BY constraint_name`;
+    await target.end();
+
+    expect(columns).toEqual([
+      { column_name: 'center', udt_name: 'geography', is_nullable: 'YES' },
+      { column_name: 'filters', udt_name: 'jsonb', is_nullable: 'NO' },
+      { column_name: 'home_id', udt_name: 'uuid', is_nullable: 'YES' },
+      { column_name: 'id', udt_name: 'uuid', is_nullable: 'NO' },
+      { column_name: 'max_to_pay_cents', udt_name: 'int8', is_nullable: 'NO' },
+      { column_name: 'min_to_receive_cents', udt_name: 'int8', is_nullable: 'NO' },
+      { column_name: 'municipalities', udt_name: '_text', is_nullable: 'NO' },
+      { column_name: 'municipalities_normalized', udt_name: '_text', is_nullable: 'NO' },
+      { column_name: 'radius_km', udt_name: 'numeric', is_nullable: 'YES' },
+      { column_name: 'user_id', udt_name: 'uuid', is_nullable: 'NO' },
+      { column_name: 'value_reference_pct', udt_name: 'int2', is_nullable: 'NO' },
+    ]);
+    expect(reference).toEqual([{ column_default: '50' }]);
+    expect(references).toEqual([
+      { constraint_name: 'search_preferences_home_id_homes_id_fk', delete_rule: 'CASCADE' },
+      { constraint_name: 'search_preferences_user_id_users_id_fk', delete_rule: 'RESTRICT' },
+    ]);
+  });
+
+  it('Scenario: Guardar preferencias - dos preferencias por defecto del mismo usuario violan la unicidad, y una por vivienda también', async () => {
+    const target = openSql(urlFor(EMPTY_DB));
+    const user = '0199c1a2-0000-7000-8000-0000000000c1';
+    const home = '0199c1a2-0000-7000-8000-0000000000c2';
+    await target`INSERT INTO users (id, firebase_uid, email, display_name)
+                 VALUES (${user}, 'uid-prefs', 'prefs@example.com', 'Ana')`;
+    await target`INSERT INTO homes (id, owner_id, type, exact_address, exact_location, approx_location, area_name)
+                 VALUES (${home}, ${user}, 'piso', ${Buffer.from('x')},
+                         ST_SetSRID(ST_MakePoint(-3.7, 40.4), 4326)::geography,
+                         ST_SetSRID(ST_MakePoint(-3.7, 40.4), 4326)::geography, 'Malasaña')`;
+    const insert = (id: string, homeId: string | null) => target`
+      INSERT INTO search_preferences (id, user_id, home_id, municipalities, municipalities_normalized,
+                                      max_to_pay_cents, min_to_receive_cents)
+      VALUES (${id}, ${user}, ${homeId}, ARRAY['Getafe'], ARRAY['getafe'], 3000000, 0)`;
+
+    await insert('0199c1a2-0000-7000-8000-0000000000d1', null);
+    await expect(insert('0199c1a2-0000-7000-8000-0000000000d2', null)).rejects.toThrow(
+      /search_preferences_user_default_key/,
+    );
+    await insert('0199c1a2-0000-7000-8000-0000000000d3', home);
+    await expect(insert('0199c1a2-0000-7000-8000-0000000000d4', home)).rejects.toThrow(
+      /search_preferences_home_key/,
+    );
+    const [defaults] = await target<{ value_reference_pct: number }[]>`
+      SELECT value_reference_pct FROM search_preferences WHERE home_id IS NULL`;
+    await target`DELETE FROM homes WHERE id = ${home}`;
+    const [left] = await target<
+      { total: string }[]
+    >`SELECT count(*) AS total FROM search_preferences`;
+    await target.end();
+
+    expect(defaults?.value_reference_pct).toBe(50);
+    expect(left?.total).toBe('1');
+  });
+
+  it('search_preferences exige una zona, centro y radio juntos, radio entre 0 y 200 km y referencia entre 0 y 100', async () => {
+    const target = openSql(urlFor(EMPTY_DB));
+    const user = '0199c1a2-0000-7000-8000-0000000000e1';
+    await target`INSERT INTO users (id, firebase_uid, email, display_name)
+                 VALUES (${user}, 'uid-checks', 'checks@example.com', 'Beto')`;
+    const insert = (
+      zone: { municipalities?: string[]; radius?: number | null; centre?: boolean },
+      pct = 50,
+    ) => target`
+      INSERT INTO search_preferences (id, user_id, center, radius_km, municipalities,
+                 municipalities_normalized, max_to_pay_cents, min_to_receive_cents, value_reference_pct)
+      VALUES (${crypto.randomUUID()}, ${user},
+        ${zone.centre ? target`ST_SetSRID(ST_MakePoint(-3.7, 40.4), 4326)::geography` : null},
+        ${zone.radius ?? null}, ${zone.municipalities ?? []}, ${zone.municipalities ?? []}, 0, 0, ${pct})`;
+
+    await expect(insert({})).rejects.toThrow(/search_preferences_has_zone/);
+    await expect(insert({ centre: true, municipalities: ['a'] })).rejects.toThrow(
+      /search_preferences_center_with_radius/,
+    );
+    await expect(insert({ radius: 5, municipalities: ['a'] })).rejects.toThrow(
+      /search_preferences_center_with_radius/,
+    );
+    await expect(insert({ centre: true, radius: 0 })).rejects.toThrow(
+      /search_preferences_radius_range/,
+    );
+    await expect(insert({ centre: true, radius: 201 })).rejects.toThrow(
+      /search_preferences_radius_range/,
+    );
+    await expect(insert({ municipalities: ['a'] }, 101)).rejects.toThrow(
+      /search_preferences_reference_range/,
+    );
+    await target.end();
+  });
+
   it('el rol de la aplicación pierde UPDATE, DELETE y TRUNCATE sobre audit_log y conserva INSERT y SELECT', async () => {
     await admin.unsafe(`DO $do$ BEGIN
       IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${APP_ROLE}') THEN

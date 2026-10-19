@@ -446,7 +446,10 @@ paths:
       tags: [preferencias]
       operationId: putMySearchPreferences
       summary: Define las preferencias de búsqueda por defecto del usuario (RF-30 a RF-33)
-      description: Valen para todas sus viviendas salvo las que tengan preferencias propias.
+      description: |
+        Valen para todas sus viviendas salvo las que tengan preferencias propias. Reemplaza el
+        documento entero. Un centro sin `radiusKm`, o un radio sin `center`, es 400; sin ningún
+        municipio ni centro con radio, 422 con `code: SEARCH_PREFERENCES_INCOMPLETE`.
       x-roles: [owner, seeker]
       requestBody:
         required: true
@@ -487,6 +490,10 @@ paths:
       tags: [preferencias]
       operationId: putHomeSearchPreferences
       summary: Define preferencias propias de una vivienda, que sustituyen a las del usuario para ella
+      description: |
+        Reemplaza el documento entero (no hereda campos de las del usuario). Mismas reglas de forma
+        y de zona que `putMySearchPreferences`: 400 por forma, 422 con `code:
+        SEARCH_PREFERENCES_INCOMPLETE` si no hay zona.
       x-roles: [resourceOwner]
       requestBody:
         required: true
@@ -511,7 +518,11 @@ paths:
       responses:
         '204': { description: Eliminadas }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '404':
+          description: La vivienda no es del usuario, o no tiene preferencias propias que eliminar
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
 
   /discover:
     get:
@@ -1455,6 +1466,7 @@ components:
           items: { type: string, maxLength: 120 }
         filters:
           type: object
+          additionalProperties: false
           properties:
             types:
               type: array

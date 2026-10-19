@@ -11,11 +11,16 @@ import type { OriginalFile, PhotoStorage } from '../src/application/home/photo-s
 import type { PlaceResolver } from '../src/application/home/place-resolver.js';
 import type { AuditEntry, AuditLog } from '../src/application/moderation/audit-log.js';
 import type { ModerationScope, UnitOfWork } from '../src/application/moderation/unit-of-work.js';
+import type {
+  PreferencesScope,
+  SearchPreferencesRepository,
+} from '../src/application/search-preferences/search-preferences-repository.js';
 import type { Consent } from '../src/domain/account/consent.js';
 import type { User } from '../src/domain/account/user.js';
 import { InvalidImageError } from '../src/domain/home/errors.js';
 import type { Home, HomeLocation } from '../src/domain/home/home.js';
 import { firstFreePosition, type HomePhoto, MAX_PHOTOS } from '../src/domain/home/photo.js';
+import type { SearchPreferences } from '../src/domain/search-preferences/search-preferences.js';
 
 const DEFAULT_CREATED_AT = new Date('2026-10-01T09:00:00.000Z');
 
@@ -320,5 +325,37 @@ export class StubImageProcessor implements ImageProcessor {
       width: 2048,
       height: 1536,
     });
+  }
+}
+
+/** Almacén en memoria de preferencias: una fila por ámbito (usuario o vivienda), como los índices únicos. */
+export class InMemorySearchPreferencesRepository implements SearchPreferencesRepository {
+  readonly rows: { id: string; scope: PreferencesScope; preferences: SearchPreferences }[] = [];
+
+  private indexOf(scope: PreferencesScope): number {
+    return this.rows.findIndex((row) =>
+      scope.homeId === null
+        ? row.scope.homeId === null && row.scope.userId === scope.userId
+        : row.scope.homeId === scope.homeId,
+    );
+  }
+
+  find(scope: PreferencesScope): Promise<SearchPreferences | null> {
+    return Promise.resolve(this.rows[this.indexOf(scope)]?.preferences ?? null);
+  }
+
+  upsert(scope: PreferencesScope, id: string, preferences: SearchPreferences) {
+    const index = this.indexOf(scope);
+    const current = this.rows[index];
+    if (current) this.rows[index] = { ...current, preferences };
+    else this.rows.push({ id, scope, preferences });
+    return Promise.resolve(preferences);
+  }
+
+  deleteForHome(homeId: string): Promise<boolean> {
+    const index = this.indexOf({ userId: '', homeId });
+    if (index < 0) return Promise.resolve(false);
+    this.rows.splice(index, 1);
+    return Promise.resolve(true);
   }
 }
