@@ -14,7 +14,7 @@
 | Cobertura sobre código nuevo | `$COVERAGE_CMD` con umbral configurado en la herramienta | Check requerido |
 | Dependencias vulnerables | Escaneo de dependencias en la CI (severidad crítica) | Check requerido |
 | Coherencia de OpenSpec | `openspec-sync` en GitHub Actions | Check requerido |
-| Revisión automática | CodeRabbit (`coderabbitai[bot]`) | Cero conversaciones abiertas y revisión no en *changes requested* |
+| Revisión automática | CodeRabbit (`coderabbitai[bot]`) | Cero conversaciones abiertas y revisión sobre el HEAD en estado `APPROVED` o `COMMENTED` |
 
 ## Umbrales
 
@@ -92,7 +92,7 @@ gh pr checks <PR>                       # todos en verde, ninguno pendiente
 # Si devuelve null, CodeRabbit no ha revisado el último commit: pide la revisión
 # (`gh pr comment <PR> --body "@coderabbitai review"`) y espera. Nunca se fusiona con null.
 gh pr view <PR> --json headRefOid,reviews \
-  --jq '(.headRefOid) as $head | [.reviews[] | select(.author.login=="coderabbitai" and .commit.oid==$head)] | max_by(.submittedAt) | .state'
+  --jq '(.headRefOid) as $head | [.reviews[] | select(.author.login=="coderabbitai" and .commit.oid==$head)] | max_by(.submittedAt) | if .state == "APPROVED" or .state == "COMMENTED" then .state else null end'
 gh api graphql -f query='query($o:String!,$r:String!,$n:Int!){repository(owner:$o,name:$r){pullRequest(number:$n){reviewThreads(first:100){nodes{isResolved}}}}}' \
   -F o=lcasadov -F r=ChangeHouse -F n=<PR> \
   --jq '[.data.repository.pullRequest.reviewThreads.nodes[]|select(.isResolved==false)]|length'   # debe ser 0
