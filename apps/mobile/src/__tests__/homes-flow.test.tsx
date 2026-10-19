@@ -7,7 +7,7 @@ import type { Home } from '../features/homes/homes-api';
 import es from '../i18n/locales/es-ES.json';
 import { authUser, FakeAuthService } from '../test-support/fake-auth-service';
 import { FakeBackend } from '../test-support/fake-backend';
-import { completeHome, draftHome } from '../test-support/fake-homes';
+import { completeHome, draftHome, readyPhotos } from '../test-support/fake-homes';
 import { problem } from '../test-support/http-responses';
 import { renderSessionApp } from '../test-support/render-session-app';
 import { styleOf, THEME_NAMES } from '../test-utils';
@@ -27,7 +27,7 @@ const checkbox = (name: string) => screen.getByRole('checkbox', { name });
 const field = (label: string) => screen.getByLabelText(label);
 const stepBar = (current: number) =>
   screen.findByRole('progressbar', {
-    name: h.wizard.step.replace('{{current}}', String(current)).replace('{{total}}', '5'),
+    name: h.wizard.step.replace('{{current}}', String(current)).replace('{{total}}', '6'),
   });
 const cardAction = (action: string, title = MALASANA_TITLE) =>
   h.card.action.replace('{{action}}', action).replace('{{title}}', title);
@@ -58,15 +58,22 @@ async function chooseAddress(query: string, suggestion: string) {
   await fireEvent.press(await screen.findByRole('button', { name: suggestion }));
 }
 
+/** El paso de fotos no bloquea: un borrador admite avanzar sin ellas y subirlas más tarde. */
+async function skipPhotos() {
+  await fireEvent.press(button(h.wizard.next));
+  await stepBar(2);
+}
+
 /** Del estado vacío al segundo paso: crea el borrador con el piso de Malasaña. */
 async function startWizard(options: OpenOptions = {}) {
   const opened = await openHomes(options);
   await fireEvent.press(await screen.findByRole('button', { name: h.empty.action }));
   await stepBar(1);
+  await skipPhotos();
   await fireEvent.press(radio(h.type.piso));
   await chooseAddress('pez', MALASANA?.formatted ?? '');
   await fireEvent.press(button(h.wizard.next));
-  await stepBar(2);
+  await stepBar(3);
   return opened;
 }
 
@@ -80,7 +87,7 @@ describe('Mis casas', () => {
     await fireEvent.press(button(h.empty.action));
 
     expect(await stepBar(1)).toBeTruthy();
-    expect(screen.getByRole('header', { name: h.wizard.steps.type })).toBeTruthy();
+    expect(screen.getByRole('header', { name: h.wizard.steps.photos })).toBeTruthy();
   });
 
   it('Scenario: Segunda vivienda - muestra las dos viviendas, cada una con su estado', async () => {
@@ -88,11 +95,12 @@ describe('Mis casas', () => {
     const { backend } = await openHomes({ homes: [published] });
     await fireEvent.press(await screen.findByRole('button', { name: h.add }));
     await stepBar(1);
+    await skipPhotos();
 
     await fireEvent.press(radio(h.type.piso));
     await chooseAddress('santa engracia', CHAMBERI?.formatted ?? '');
     await fireEvent.press(button(h.wizard.next));
-    await stepBar(2);
+    await stepBar(3);
     await fireEvent.press(button(h.wizard.exit));
 
     expect(await screen.findByText(h.status.published)).toBeTruthy();
@@ -120,8 +128,9 @@ describe('Mis casas', () => {
     for (const status of ['in_review', 'published', 'paused'] as const) {
       expect(screen.getByText(h.status[status])).toBeTruthy();
     }
-    // Hasta que haya fotos, un marcador
-    expect(screen.getAllByText(h.card.noPhotos)).toHaveLength(5);
+    // Solo el borrador sin fotos muestra el marcador; las demás tienen portada
+    expect(screen.getAllByText(h.card.noPhotos)).toHaveLength(1);
+    expect(screen.getAllByTestId('home-cover')).toHaveLength(4);
   });
 
   it('muestra el rango de valor en euros con formato es-ES, o que falta indicarlo', async () => {
@@ -170,12 +179,14 @@ describe('Asistente de alta', () => {
     ]);
 
     // Cierra la app y vuelve a «Mis casas»
+    // Con las fotos ya subidas, el borrador continúa en el primer paso que falta
+    backend.homes.all()[0]!.photos = readyPhotos(3);
     await view.unmount();
     await openHomes({ backend });
 
     expect(await screen.findByText(h.status.draft)).toBeTruthy();
     await fireEvent.press(button(cardAction(h.actions.continue)));
-    expect(await stepBar(2)).toBeTruthy();
+    expect(await stepBar(3)).toBeTruthy();
   });
 
   it('guarda las características en el segundo paso y al reabrir el borrador continúa en el tercero con los datos guardados', async () => {
@@ -189,7 +200,7 @@ describe('Asistente de alta', () => {
     await fireEvent.press(checkbox(h.features.terrace));
     await fireEvent.press(radio('C'));
     await fireEvent.press(button(h.wizard.next));
-    await stepBar(3);
+    await stepBar(4);
 
     const [patch, ...others] = backend.requests.filter((request) => request.method === 'PATCH');
     expect(others).toEqual([]);
@@ -205,15 +216,17 @@ describe('Asistente de alta', () => {
       features: { terrace: true },
     });
 
+    // Con las fotos ya subidas, el borrador continúa en el primer paso que falta
+    backend.homes.all()[0]!.photos = readyPhotos(3);
     await view.unmount();
     await openHomes({ backend });
     await fireEvent.press(
       await screen.findByRole('button', { name: cardAction(h.actions.continue) }),
     );
-    await stepBar(3);
+    await stepBar(4);
 
     await fireEvent.press(button(h.wizard.back));
-    await stepBar(2);
+    await stepBar(3);
     expect(field(h.form.usefulM2).props.value).toBe('80,5');
     expect(field(h.form.bedrooms).props.value).toBe('3');
     expect(checkbox(h.form.hasLift).props.accessibilityState).toMatchObject({ checked: true });
@@ -230,13 +243,14 @@ describe('Asistente de alta', () => {
     expect(await screen.findByText(h.errors.bedrooms)).toBeTruthy();
     expect(screen.getByRole('alert', { name: h.errors.bedrooms })).toBeTruthy();
     expect(backend.requests.filter((request) => request.method === 'PATCH')).toHaveLength(0);
-    expect(await stepBar(2)).toBeTruthy();
+    expect(await stepBar(3)).toBeTruthy();
   });
 
   it('el primer paso exige elegir tipo y dirección sin llamar a la API', async () => {
     const { backend } = await openHomes();
     await fireEvent.press(await screen.findByRole('button', { name: h.empty.action }));
     await stepBar(1);
+    await skipPhotos();
 
     await fireEvent.press(button(h.wizard.next));
 
@@ -256,6 +270,7 @@ describe('Asistente de alta', () => {
     await openHomes({ addressSuggestions: failing });
     await fireEvent.press(await screen.findByRole('button', { name: h.empty.action }));
     await stepBar(1);
+    await skipPhotos();
 
     await fireEvent.changeText(field(h.form.address), 'zzzz');
     expect(await screen.findByText(h.form.addressNoResults)).toBeTruthy();
@@ -273,6 +288,7 @@ describe('Asistente de alta', () => {
     const { backend } = await openHomes({ addressSuggestions: unknown });
     await fireEvent.press(await screen.findByRole('button', { name: h.empty.action }));
     await stepBar(1);
+    await skipPhotos();
     await fireEvent.press(radio(h.type.piso));
     await chooseAddress('inventada', 'Calle Inventada, 1');
 
@@ -280,7 +296,7 @@ describe('Asistente de alta', () => {
 
     expect(await screen.findByText(h.errors.addressNotResolved)).toBeTruthy();
     expect(backend.homes.all()).toHaveLength(0);
-    expect(await stepBar(1)).toBeTruthy();
+    expect(await stepBar(2)).toBeTruthy();
     // Elegir otra sugerencia quita el error
     await fireEvent.changeText(field(h.form.address), 'inventada 2');
     await fireEvent.press(await screen.findByRole('button', { name: 'Calle Inventada, 1' }));
@@ -290,13 +306,13 @@ describe('Asistente de alta', () => {
   it('cambiar la dirección de un borrador la actualiza en el primer paso', async () => {
     const { backend } = await startWizard();
     await fireEvent.press(button(h.wizard.back));
-    await stepBar(1);
+    await stepBar(2);
     expect(radio(h.type.piso).props.accessibilityState).toMatchObject({ checked: true });
 
     await fireEvent.press(radio(h.type.atico));
     await chooseAddress('santa engracia', CHAMBERI?.formatted ?? '');
     await fireEvent.press(button(h.wizard.next));
-    await stepBar(2);
+    await stepBar(3);
 
     expect(backend.requestsTo('PATCH', `/homes/${backend.homes.all()[0]?.id ?? ''}`)).toMatchObject(
       [
@@ -317,7 +333,7 @@ describe('Asistente de alta', () => {
     await fireEvent.press(
       await screen.findByRole('button', { name: cardAction(h.actions.continue) }),
     );
-    await stepBar(3);
+    await stepBar(4);
 
     await fireEvent.changeText(field(h.form.valueMin), '300000');
     await fireEvent.changeText(field(h.form.valueMax), '250000');
@@ -326,13 +342,13 @@ describe('Asistente de alta', () => {
     expect(await screen.findByText(h.errors.valueRange)).toBeTruthy();
     expect(screen.getByRole('alert', { name: h.errors.valueRange })).toBeTruthy();
     expect(backend.requests.filter((request) => request.method === 'PATCH')).toHaveLength(0);
-    expect(await stepBar(3)).toBeTruthy();
+    expect(await stepBar(4)).toBeTruthy();
     expect(backend.homes.all()[0]?.valueMinCents).toBeNull();
 
     // Corregido, se guarda en céntimos
     await fireEvent.changeText(field(h.form.valueMax), '350.000');
     await fireEvent.press(button(h.wizard.next));
-    await stepBar(4);
+    await stepBar(5);
     expect(backend.homes.all()[0]).toMatchObject({
       valueMinCents: 30_000_000,
       valueMaxCents: 35_000_000,
@@ -344,7 +360,7 @@ describe('Asistente de alta', () => {
     await fireEvent.press(
       await screen.findByRole('button', { name: cardAction(h.actions.continue) }),
     );
-    await stepBar(3);
+    await stepBar(4);
 
     await fireEvent.changeText(field(h.form.valueMin), '250000');
     expect(
@@ -362,7 +378,7 @@ describe('Asistente de alta', () => {
     await fireEvent.press(
       await screen.findByRole('button', { name: cardAction(h.actions.continue) }),
     );
-    await stepBar(3);
+    await stepBar(4);
     jest.spyOn(backend.homes, 'respond').mockReturnValueOnce(
       problem(422, {
         code: 'INVALID_VALUE_RANGE',
@@ -375,7 +391,7 @@ describe('Asistente de alta', () => {
     await fireEvent.press(button(h.wizard.next));
 
     expect(await screen.findByText(h.errors.valueRange)).toBeTruthy();
-    expect(await stepBar(3)).toBeTruthy();
+    expect(await stepBar(4)).toBeTruthy();
   });
 
   it('Scenario: Ubicación por zona por defecto - el barrio está elegido y se guarda sin cambiarlo', async () => {
@@ -383,9 +399,9 @@ describe('Asistente de alta', () => {
     await fireEvent.press(
       await screen.findByRole('button', { name: cardAction(h.actions.submit) }),
     );
-    await stepBar(5);
+    await stepBar(6);
     await fireEvent.press(button(h.wizard.back));
-    await stepBar(4);
+    await stepBar(5);
 
     expect(radio(h.location.area).props.accessibilityState).toMatchObject({ checked: true });
     expect(radio(h.location.exact).props.accessibilityState).toMatchObject({ checked: false });
@@ -395,7 +411,7 @@ describe('Asistente de alta', () => {
     expect(screen.getByText(h.location.privacy)).toBeTruthy();
 
     await fireEvent.press(button(h.wizard.next));
-    await stepBar(5);
+    await stepBar(6);
 
     expect(backend.requests.filter((request) => request.method === 'PATCH')).toMatchObject([
       { body: { locationVisibility: 'area' } },
@@ -407,9 +423,9 @@ describe('Asistente de alta', () => {
     await fireEvent.press(
       await screen.findByRole('button', { name: cardAction(h.actions.submit) }),
     );
-    await stepBar(5);
+    await stepBar(6);
     await fireEvent.press(button(h.wizard.back));
-    await stepBar(4);
+    await stepBar(5);
 
     await fireEvent.press(radio(h.location.exact));
 
@@ -420,7 +436,7 @@ describe('Asistente de alta', () => {
       screen.queryByText(h.location.areaExplanation.replace('{{area}}', 'Malasaña')),
     ).toBeNull();
     await fireEvent.press(button(h.wizard.next));
-    await stepBar(5);
+    await stepBar(6);
     expect(backend.homes.all()[0]?.location.visibility).toBe('exact');
   });
 
@@ -432,11 +448,11 @@ describe('Asistente de alta', () => {
     await fireEvent.press(button(h.wizard.next));
 
     expect(await screen.findByText(h.errors.network)).toBeTruthy();
-    expect(await stepBar(2)).toBeTruthy();
+    expect(await stepBar(3)).toBeTruthy();
     expect(field(h.form.bedrooms).props.value).toBe('3');
 
     await fireEvent.press(button(h.wizard.next));
-    await stepBar(3);
+    await stepBar(4);
     expect(screen.queryByText(h.errors.network)).toBeNull();
   });
 
@@ -469,7 +485,7 @@ describe('Asistente de alta', () => {
     await fireEvent.press(button(h.wizard.next));
     await fireEvent.press(button(h.wizard.next));
     release();
-    await stepBar(3);
+    await stepBar(4);
 
     expect(backend.requests.filter((request) => request.method === 'PATCH')).toHaveLength(1);
   });
@@ -483,7 +499,7 @@ describe('Asistente de alta', () => {
   });
 
   it('si la casa no carga lo explica y permite reintentar; si no existe, lo dice', async () => {
-    const home = draftHome();
+    const home = draftHome({ photos: readyPhotos(3) });
     const { backend } = await openHomes({ homes: [home] });
     await screen.findByText(MALASANA_TITLE);
     backend.failNext = 'server';
@@ -492,7 +508,7 @@ describe('Asistente de alta', () => {
 
     expect(await screen.findByText(h.wizard.loadFailed)).toBeTruthy();
     await fireEvent.press(button(h.retry));
-    expect(await stepBar(2)).toBeTruthy();
+    expect(await stepBar(3)).toBeTruthy();
   });
 });
 
@@ -502,7 +518,7 @@ describe('Envío a revisión', () => {
     await fireEvent.press(
       await screen.findByRole('button', { name: cardAction(h.actions.submit) }),
     );
-    await stepBar(5);
+    await stepBar(6);
     expect(screen.getByRole('header', { name: h.review.title })).toBeTruthy();
     // La revisión resume los datos, con la dirección completa
     expect(screen.getByText(MALASANA?.formatted ?? '')).toBeTruthy();
@@ -523,7 +539,7 @@ describe('Envío a revisión', () => {
     await fireEvent.press(
       await screen.findByRole('button', { name: cardAction(h.actions.submit) }),
     );
-    await stepBar(5);
+    await stepBar(6);
     const release = backend.hold();
 
     await fireEvent.press(button(h.submit.action));
@@ -546,12 +562,12 @@ describe('Envío a revisión', () => {
     await fireEvent.press(
       await screen.findByRole('button', { name: cardAction(h.actions.continue) }),
     );
-    await stepBar(3);
+    await stepBar(4);
     // Se avanza sin rellenar el valor: un borrador admite guardar a medias
     await fireEvent.press(button(h.wizard.next));
-    await stepBar(4);
-    await fireEvent.press(button(h.wizard.next));
     await stepBar(5);
+    await fireEvent.press(button(h.wizard.next));
+    await stepBar(6);
 
     await fireEvent.press(button(h.submit.action));
 
@@ -565,7 +581,7 @@ describe('Envío a revisión', () => {
 
     // Lleva al paso donde faltan
     await fireEvent.press(button(h.submit.complete));
-    expect(await stepBar(3)).toBeTruthy();
+    expect(await stepBar(4)).toBeTruthy();
   });
 
   it('un fallo de red, un conflicto o un error del servidor al enviar se explican', async () => {
@@ -573,7 +589,7 @@ describe('Envío a revisión', () => {
     await fireEvent.press(
       await screen.findByRole('button', { name: cardAction(h.actions.submit) }),
     );
-    await stepBar(5);
+    await stepBar(6);
 
     backend.failNext = 'network';
     await fireEvent.press(button(h.submit.action));
@@ -655,7 +671,7 @@ describe('Detalle de la vivienda', () => {
     ).toBeTruthy();
     await fireEvent.press(button(h.submit.complete));
 
-    expect(await stepBar(2)).toBeTruthy();
+    expect(await stepBar(3)).toBeTruthy();
   });
 
   it('una casa publicada se consulta sin acciones de envío', async () => {
@@ -668,7 +684,7 @@ describe('Detalle de la vivienda', () => {
   });
 
   it('un borrador se puede seguir editando desde el detalle', async () => {
-    await openHomes({ homes: [draftHome()] });
+    await openHomes({ homes: [draftHome({ photos: readyPhotos(3) })] });
     await fireEvent.press(
       await screen.findByRole('link', { name: h.card.open.replace('{{title}}', MALASANA_TITLE) }),
     );
@@ -676,7 +692,7 @@ describe('Detalle de la vivienda', () => {
 
     await fireEvent.press(button(h.detail.edit));
 
-    expect(await stepBar(2)).toBeTruthy();
+    expect(await stepBar(3)).toBeTruthy();
   });
 
   it('si no carga lo explica y permite reintentar', async () => {
@@ -697,13 +713,13 @@ describe('Detalle de la vivienda', () => {
 describe.each(THEME_NAMES)('tema %s', (name) => {
   it('la lista, el asistente y el detalle usan los tokens del tema', async () => {
     const { color } = themes[name];
-    await openHomes({ homes: [draftHome()], theme: name });
+    await openHomes({ homes: [draftHome({ photos: readyPhotos(3) })], theme: name });
 
     expect(styleOf(await screen.findByText(MALASANA_TITLE)).color).toBe(color.text);
     expect(styleOf(screen.getByText(h.status.draft)).color).toBe(color.textMuted);
 
     await fireEvent.press(button(cardAction(h.actions.continue)));
-    await stepBar(2);
+    await stepBar(3);
     expect(styleOf(screen.getByRole('header', { name: h.wizard.steps.features })).color).toBe(
       color.text,
     );

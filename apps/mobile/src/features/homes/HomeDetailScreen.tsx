@@ -7,11 +7,15 @@ import { Badge, Button, FormScreen, Notice, Text } from '../../ui';
 import { LoadingView } from '../session/LoadingView';
 import { homeRoutes } from './home-routes';
 import { STATUS_PRESENTATION } from './home-status';
-import { PhotoPlaceholder, useHomeTitle } from './HomeCard';
+import { useHomeTitle } from './HomeCard';
+import { HomeCover, HomeGallery } from './HomeCover';
 import { type Home, HomesApiError } from './homes-api';
 import { HomeSummary } from './HomeSummary';
 import { SubmitAction } from './SubmitAction';
 import { useHome } from './use-homes';
+
+/** Estados en los que el propietario puede seguir cambiando las fotos sin pasar por el asistente. */
+const MANAGEABLE_PHOTOS = new Set<Home['status']>(['published', 'paused']);
 
 function HomeDetail({ home }: Readonly<{ home: Home }>) {
   const { t } = useTranslation();
@@ -29,7 +33,8 @@ function HomeDetail({ home }: Readonly<{ home: Home }>) {
           router.dismissTo(homeRoutes.list);
         }}
       />
-      <PhotoPlaceholder />
+      <HomeCover home={home} title={title} />
+      <HomeGallery home={home} title={title} />
       <Text variant="title" accessibilityRole="header">
         {title}
       </Text>
@@ -53,6 +58,15 @@ function HomeDetail({ home }: Readonly<{ home: Home }>) {
             }}
           />
         </View>
+      ) : null}
+      {MANAGEABLE_PHOTOS.has(home.status) ? (
+        <Button
+          variant="secondary"
+          label={t('homes.detail.managePhotos')}
+          onPress={() => {
+            router.push(homeRoutes.edit(home.id, 1));
+          }}
+        />
       ) : null}
     </FormScreen>
   );

@@ -1,9 +1,15 @@
-import type { HomeInput, HomePatch } from '@changehouse/shared';
+import type { HomeInput, HomePatch, PhotoContentType } from '@changehouse/shared';
 
 import type { components } from '../../api/schema';
 
 /** Ficha completa de una vivienda propia (`Home` del contrato). */
 export type Home = components['schemas']['Home'];
+
+/** Foto procesada y visible de una vivienda (`Photo` del contrato). */
+export type HomePhoto = components['schemas']['Photo'];
+
+/** URL firmada para subir una foto (`PhotoUpload` del contrato). */
+export type PhotoUpload = components['schemas']['PhotoUpload'];
 
 export type HomesApiErrorKind =
   /** Sin respuesta del servidor: red caída o tiempo agotado. */
@@ -22,6 +28,14 @@ export type HomesApiErrorKind =
   | 'invalid-value-range'
   /** Faltan datos obligatorios para enviar (422 `HOME_INCOMPLETE`); `fields` los nombra. */
   | 'incomplete'
+  /** Ya hay 20 fotos (409 `PHOTO_LIMIT_REACHED`). */
+  | 'photo-limit'
+  /** Una vivienda publicada no puede quedarse con menos de 3 fotos (409 `HOME_MIN_PHOTOS`). */
+  | 'min-photos'
+  /** El fichero subido no es una imagen válida (422 `INVALID_IMAGE`). */
+  | 'invalid-image'
+  /** Se confirmó la subida sin que el fichero hubiera llegado (422 `PHOTO_NOT_UPLOADED`). */
+  | 'photo-not-uploaded'
   | 'server';
 
 export class HomesApiError extends Error {
@@ -47,4 +61,10 @@ export interface HomesApi {
   update: (homeId: string, patch: HomePatch) => Promise<Home>;
   /** Envía el borrador a revisión (`submitHome`). */
   submit: (homeId: string) => Promise<Home>;
+  /** Pide la URL firmada para subir una foto (`createHomePhotoUpload`). */
+  createPhotoUpload: (homeId: string, contentType: PhotoContentType) => Promise<PhotoUpload>;
+  /** Confirma la subida: la API procesa la foto y la hace visible (`completeHomePhotoUpload`). */
+  completePhotoUpload: (homeId: string, photoId: string) => Promise<HomePhoto>;
+  /** Elimina una foto, subida o pendiente (`deleteHomePhoto`). */
+  deletePhoto: (homeId: string, photoId: string) => Promise<void>;
 }

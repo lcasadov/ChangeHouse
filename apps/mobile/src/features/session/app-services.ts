@@ -10,6 +10,8 @@ import {
   createAddressSuggestions,
 } from '../homes/create-address-suggestions';
 import { createHttpHomesApi } from '../homes/http-homes-api';
+import { createExpoPhotoPicker } from '../homes/photo-picker';
+import { createXhrPhotoUploader } from '../homes/xhr-photo-uploader';
 import type { AppServices } from './services';
 
 export interface AppEnv extends FirebaseEnv, GoogleEnv, AddressSuggestionsEnv {
@@ -45,6 +47,8 @@ export function createAppServices(
     accountApi: createHttpAccountApi(client),
     homesApi: createHttpHomesApi(client),
     addressSuggestions: createAddressSuggestions(env),
+    photoPicker: createExpoPhotoPicker(),
+    photoUploader: createXhrPhotoUploader(),
     social,
     legalUrls: { terms: `${legalBase}/terminos`, privacy: `${legalBase}/privacidad` },
   };

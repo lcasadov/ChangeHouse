@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useAuth } from '../auth/AuthProvider';
 import { useServices } from '../session/services';
-import type { Home } from './homes-api';
+import type { Home, HomePhoto } from './homes-api';
 
 const homesKey = (uid: string | undefined) => ['homes', uid] as const;
 const homeKey = (uid: string | undefined, homeId: string | undefined) =>
@@ -70,5 +70,45 @@ export function useSubmitHome(homeId: string) {
   return useMutation<Home, Error, void>({
     mutationFn: () => homesApi.submit(homeId),
     onSuccess: remember,
+  });
+}
+
+/** Cambia las fotos de una vivienda en la caché y marca la lista como desactualizada. */
+function useEditPhotos() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  return (homeId: string, edit: (photos: HomePhoto[]) => HomePhoto[]) => {
+    queryClient.setQueryData<Home>(homeKey(user?.uid, homeId), (home) =>
+      home ? { ...home, photos: edit(home.photos ?? []) } : home,
+    );
+    void queryClient.invalidateQueries({ queryKey: homesKey(user?.uid) });
+  };
+}
+
+/** Añade a la ficha una foto recién procesada. */
+export function useAddedPhoto() {
+  const edit = useEditPhotos();
+  return (homeId: string, photo: HomePhoto) => {
+    edit(homeId, (photos) =>
+      [...photos.filter((existing) => existing.id !== photo.id), photo].sort(
+        (a, b) => a.position - b.position,
+      ),
+    );
+  };
+}
+
+/** Elimina una foto de la vivienda; las demás conservan su orden. */
+export function useDeletePhoto(homeId: string) {
+  const { homesApi } = useServices();
+  const edit = useEditPhotos();
+  return useMutation<void, Error, string>({
+    mutationFn: (photoId) => homesApi.deletePhoto(homeId, photoId),
+    onSuccess: (_, photoId) => {
+      edit(homeId, (photos) =>
+        photos
+          .filter((photo) => photo.id !== photoId)
+          .map((photo, index) => ({ ...photo, position: index + 1 })),
+      );
+    },
   });
 }

@@ -18,14 +18,14 @@
 
 ## 3. App
 
-- [ ] T3 Escribir las pruebas de componentes del paso de fotos (selección, progreso por foto, error y reintento, límite, borrado con confirmación) y comprobar que fallan. ref: Fotos de la vivienda · est: 3h · disc: qa
+- [x] T3 Escribir las pruebas de componentes del paso de fotos (selección, progreso por foto, error y reintento, límite, borrado con confirmación) y comprobar que fallan. ref: Fotos de la vivienda · est: 3h · disc: qa
   - GIVEN una subida que falla WHEN se muestra THEN la foto ofrece «Reintentar» sin perder las demás
-- [ ] F1 Implementar el paso de fotos como primer paso del asistente con `expo-image-picker`, subida directa a la URL firmada con progreso y confirmación, y verificar que pasan las pruebas de T3. ref: Fotos de la vivienda · est: 5h · disc: front
+- [x] F1 Implementar el paso de fotos como primer paso del asistente con `expo-image-picker`, subida directa a la URL firmada con progreso y confirmación, y verificar que pasan las pruebas de T3. ref: Fotos de la vivienda · est: 5h · disc: front
   - GIVEN tres fotos subidas WHEN se avanza THEN el asistente pasa al paso de tipo y dirección
 
 ## 4. Integración
 
-- [ ] V1 Ejecutar `pnpm lint`, `pnpm typecheck`, `pnpm test:coverage`, `pnpm test:integration` y `pnpm build` y verificar que todo pasa con cobertura ≥ 80 %. ref: Fotos de la vivienda · est: 1h · disc: qa
+- [x] V1 Ejecutar `pnpm lint`, `pnpm typecheck`, `pnpm test:coverage`, `pnpm test:integration` y `pnpm build` y verificar que todo pasa con cobertura ≥ 80 %. ref: Fotos de la vivienda · est: 1h · disc: qa
   - GIVEN el change implementado WHEN se ejecuta la puerta de calidad local THEN todos los comandos terminan con éxito
 
 ## Workflow follow-up

@@ -1,6 +1,6 @@
 import { createApiClient } from '../../api/client';
 import { FakeBackend } from '../../test-support/fake-backend';
-import { completeHome, draftHome } from '../../test-support/fake-homes';
+import { completeHome, draftHome, readyPhotos } from '../../test-support/fake-homes';
 import { type Home, HomesApiError } from './homes-api';
 import { createHttpHomesApi } from './http-homes-api';
 
@@ -197,5 +197,119 @@ describe('submit', () => {
     ).toMatchObject({
       kind: 'conflict',
     });
+  });
+});
+
+describe('fotos', () => {
+  const upload = (api: ReturnType<typeof setup>, homeId: string) =>
+    api.createPhotoUpload(homeId, 'image/jpeg');
+
+  it('pide la URL firmada con el tipo de contenido (POST /homes/{id}/photos)', async () => {
+    const home = draftHome();
+    const backend = new FakeBackend({ homes: [home] });
+
+    const target = await upload(setup(backend), home.id);
+
+    expect(target.uploadUrl).toContain('storage.changehouse.test');
+    expect(backend.requestsTo('POST', `/homes/${home.id}/photos`)).toMatchObject([
+      { body: { contentType: 'image/jpeg' } },
+    ]);
+  });
+
+  it('confirma la subida y devuelve la foto procesada', async () => {
+    const home = draftHome();
+    const backend = new FakeBackend({ homes: [home] });
+    const api = setup(backend);
+    const target = await upload(api, home.id);
+    backend.homes.receiveUpload(target.uploadUrl, true);
+
+    const photo = await api.completePhotoUpload(home.id, target.photoId);
+
+    expect(photo).toMatchObject({ id: target.photoId, position: 1 });
+    expect(backend.homes.all()[0]?.photos).toHaveLength(1);
+  });
+
+  it('elimina una foto (DELETE /homes/{id}/photos/{photoId})', async () => {
+    const home = completeHome();
+    const backend = new FakeBackend({ homes: [home] });
+    const photoId = home.photos?.[0]?.id ?? '';
+
+    await setup(backend).deletePhoto(home.id, photoId);
+
+    expect(backend.requestsTo('DELETE', `/homes/${home.id}/photos/${photoId}`)).toHaveLength(1);
+    expect(backend.homes.all()[0]?.photos).toHaveLength(2);
+  });
+
+  it('pedir otra URL con 20 fotos es photo-limit (409 PHOTO_LIMIT_REACHED)', async () => {
+    const home = draftHome({ photos: readyPhotos(20) });
+    const backend = new FakeBackend({ homes: [home] });
+
+    expect(await failureOf(setup(backend).createPhotoUpload(home.id, 'image/png'))).toMatchObject({
+      kind: 'photo-limit',
+    });
+  });
+
+  it('un fichero que no es imagen es invalid-image (422 INVALID_IMAGE)', async () => {
+    const home = draftHome();
+    const backend = new FakeBackend({ homes: [home] });
+    const api = setup(backend);
+    const target = await upload(api, home.id);
+    backend.homes.receiveUpload(target.uploadUrl, false);
+
+    expect(await failureOf(api.completePhotoUpload(home.id, target.photoId))).toMatchObject({
+      kind: 'invalid-image',
+    });
+  });
+
+  it('confirmar sin haber subido es photo-not-uploaded (422 PHOTO_NOT_UPLOADED)', async () => {
+    const home = draftHome();
+    const api = setup(new FakeBackend({ homes: [home] }));
+    const target = await upload(api, home.id);
+
+    expect(await failureOf(api.completePhotoUpload(home.id, target.photoId))).toMatchObject({
+      kind: 'photo-not-uploaded',
+    });
+  });
+
+  it('borrar por debajo del mínimo en una publicada es min-photos (409 HOME_MIN_PHOTOS)', async () => {
+    const home = completeHome({ status: 'published' });
+    const api = setup(new FakeBackend({ homes: [home] }));
+
+    expect(await failureOf(api.deletePhoto(home.id, home.photos?.[0]?.id ?? ''))).toMatchObject({
+      kind: 'min-photos',
+    });
+  });
+
+  it('otro 409 sigue siendo conflict y un 404, not-found', async () => {
+    const home = draftHome({ status: 'closed' });
+    const api = setup(new FakeBackend({ homes: [home] }));
+
+    expect(await failureOf(api.createPhotoUpload(home.id, 'image/png'))).toMatchObject({
+      kind: 'conflict',
+    });
+    expect(await failureOf(api.deletePhoto(home.id, 'no-existe'))).toMatchObject({
+      kind: 'conflict',
+    });
+    expect(await failureOf(api.completePhotoUpload('no-existe', 'x'))).toMatchObject({
+      kind: 'not-found',
+    });
+  });
+
+  it('un fallo de red al pedir la URL es network', async () => {
+    const home = draftHome();
+    const backend = new FakeBackend({ homes: [home] });
+    backend.failNext = 'network';
+
+    expect(await failureOf(setup(backend).createPhotoUpload(home.id, 'image/png'))).toMatchObject({
+      kind: 'network',
+    });
+  });
+
+  it('enviar con menos de 3 fotos señala photos entre los campos que faltan', async () => {
+    const home = completeHome({ photos: readyPhotos(2) });
+
+    expect(
+      await failureOf(setup(new FakeBackend({ homes: [home] })).submit(home.id)),
+    ).toMatchObject({ kind: 'incomplete', fields: ['photos'] });
   });
 });

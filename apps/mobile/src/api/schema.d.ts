@@ -181,7 +181,8 @@ export interface paths {
      * @description Exige los campos obligatorios completos (`usefulM2`, `builtM2`, `bedrooms`, `bathrooms`,
      *     `hasLift`, `garage`, `storageRoom`, `valueMinCents`, `valueMaxCents`, `isPrimaryResidence`);
      *     si faltan, 422 con `code: HOME_INCOMPLETE` y `errors` con cada campo. La exigencia de al
-     *     menos 3 fotos (RF-11) se incorpora con `add-home-photos`.
+     *     menos 3 fotos procesadas (RF-11); si faltan, el mismo 422 incluye `photos` entre los
+     *     `errors`.
      */
     post: operations['submitHome'];
     delete?: never;
@@ -241,11 +242,40 @@ export interface paths {
     put?: never;
     /**
      * Solicita una URL firmada para subir una foto (máx. 20, RF-11)
-     * @description Devuelve una URL firmada de subida de corta duración. Tras la subida, la
-     *     API comprime la imagen y elimina los metadatos EXIF de ubicación antes
-     *     de publicarla.
+     * @description Devuelve una URL firmada de subida (`PUT`, válida 15 minutos, con el
+     *     `Content-Type` indicado). La foto nace `pending` y no aparece en la vivienda hasta
+     *     que se confirma la subida con `completeHomePhotoUpload`, momento en que la API la
+     *     comprime y elimina los metadatos EXIF de ubicación antes de publicarla.
      */
     post: operations['createHomePhotoUpload'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/homes/{homeId}/photos/{photoId}/complete': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        homeId: components['parameters']['HomeId'];
+        photoId: components['parameters']['PhotoId'];
+      };
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Confirma que la foto ya se subió y la procesa
+     * @description La API descarga el original subido, elimina todos los metadatos (incluida la ubicación),
+     *     corrige la orientación, limita el lado mayor a 2048 px, la comprime a WebP y la publica;
+     *     solo entonces la foto pasa a `ready` y aparece en `photos` de la vivienda. Es idempotente
+     *     sobre una foto ya `ready`. Si el fichero no es una imagen válida: 422 con
+     *     `code: INVALID_IMAGE`, el fichero se elimina y la foto se descarta. Si la subida aún no se
+     *     ha hecho: 422 con `code: PHOTO_NOT_UPLOADED` y la foto sigue `pending`.
+     */
+    post: operations['completeHomePhotoUpload'];
     delete?: never;
     options?: never;
     head?: never;
@@ -265,7 +295,10 @@ export interface paths {
     get?: never;
     put?: never;
     post?: never;
-    /** Elimina una foto */
+    /**
+     * Elimina una foto
+     * @description Elimina también los ficheros. Sirve para fotos `pending` y `ready`.
+     */
     delete: operations['deleteHomePhoto'];
     options?: never;
     head?: never;
@@ -1597,6 +1630,41 @@ export interface operations {
           'application/problem+json': components['schemas']['Problem'];
         };
       };
+    };
+  };
+  completeHomePhotoUpload: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        homeId: components['parameters']['HomeId'];
+        photoId: components['parameters']['PhotoId'];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Foto procesada y visible */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Photo'];
+        };
+      };
+      401: components['responses']['Unauthorized'];
+      404: components['responses']['NotFound'];
+      /** @description Ya hay 20 fotos, o la vivienda no admite cambios */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      422: components['responses']['Unprocessable'];
     };
   };
   deleteHomePhoto: {

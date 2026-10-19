@@ -22,11 +22,14 @@ import type { SocialSignIn } from '../features/auth/auth-service';
 import type { AddressSuggestions } from '../features/homes/address-suggestions';
 import { createFixtureAddressSuggestions } from '../features/homes/fixture-address-suggestions';
 import { createHttpHomesApi } from '../features/homes/http-homes-api';
+import type { PhotoPicker } from '../features/homes/photo-picker';
+import type { PhotoUploader } from '../features/homes/photo-uploader';
 import type { AppServices } from '../features/session/services';
 import { SessionRoot } from '../features/session/SessionRoot';
 import { AppThemeProvider } from '../theme/AppThemeProvider';
 import { authUser, FakeAuthService } from './fake-auth-service';
 import { type FakeBackend, me } from './fake-backend';
+import { FakePhotoPicker, FakePhotoUploader } from './fake-photos';
 
 export const TEST_LEGAL_URLS = {
   terms: 'https://changehouse.test/terminos',
@@ -44,7 +47,12 @@ export function fakeServices(overrides: Partial<AppServices> = {}): AppServices 
       create: () => Promise.reject(new Error('Sin viviendas en este doble')),
       update: () => Promise.reject(new Error('Sin viviendas en este doble')),
       submit: () => Promise.reject(new Error('Sin viviendas en este doble')),
+      createPhotoUpload: () => Promise.reject(new Error('Sin viviendas en este doble')),
+      completePhotoUpload: () => Promise.reject(new Error('Sin viviendas en este doble')),
+      deletePhoto: () => Promise.reject(new Error('Sin viviendas en este doble')),
     },
+    photoPicker: { pick: () => Promise.resolve([]) },
+    photoUploader: { upload: () => Promise.resolve() },
     addressSuggestions: createFixtureAddressSuggestions(),
     social: [],
     legalUrls: TEST_LEGAL_URLS,
@@ -58,6 +66,10 @@ export interface SessionAppOptions {
   social?: readonly SocialSignIn[];
   /** Autocompletado de direcciones; por defecto, los lugares de prueba. */
   addressSuggestions?: AddressSuggestions;
+  /** La galería del dispositivo; por defecto, una vacía. */
+  photoPicker?: PhotoPicker;
+  /** El envío a la URL firmada; por defecto, uno que deja el fichero en el backend simulado. */
+  photoUploader?: PhotoUploader;
   theme?: ThemeName;
   /** Ruta a la que se abre la app (por defecto la raíz, que es una pestaña protegida). */
   url?: string;
@@ -69,6 +81,8 @@ export function renderSessionApp({
   backend,
   social = [],
   addressSuggestions = createFixtureAddressSuggestions(),
+  photoPicker = new FakePhotoPicker(),
+  photoUploader = new FakePhotoUploader(backend),
   theme = 'light',
   url = '/',
 }: SessionAppOptions) {
@@ -82,6 +96,8 @@ export function renderSessionApp({
     accountApi: createHttpAccountApi(client),
     homesApi: createHttpHomesApi(client),
     addressSuggestions,
+    photoPicker,
+    photoUploader,
     social,
     legalUrls: TEST_LEGAL_URLS,
   };

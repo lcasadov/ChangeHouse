@@ -1,4 +1,4 @@
-import { completeHome, draftHome } from '../../test-support/fake-homes';
+import { completeHome, draftHome, readyPhotos } from '../../test-support/fake-homes';
 import {
   characteristicsDefaults,
   characteristicsResolver,
@@ -84,12 +84,18 @@ describe('formato es-ES', () => {
 });
 
 describe('firstIncompleteStep', () => {
-  it('un borrador con solo el primer paso continúa en el segundo', () => {
-    expect(firstIncompleteStep(draftHome())).toBe(2);
+  it('un borrador sin 3 fotos procesadas continúa en el paso de fotos', () => {
+    expect(firstIncompleteStep(draftHome())).toBe(1);
+    expect(firstIncompleteStep(completeHome({ photos: readyPhotos(2) }))).toBe(1);
+  });
+
+  it('con 3 fotos y solo el tipo y la dirección continúa en las características', () => {
+    expect(firstIncompleteStep(draftHome({ photos: readyPhotos(3) }))).toBe(3);
   });
 
   it('con las características guardadas continúa en el valor', () => {
     const home = draftHome({
+      photos: readyPhotos(3),
       usefulM2: 80,
       builtM2: 95,
       bedrooms: 3,
@@ -99,26 +105,27 @@ describe('firstIncompleteStep', () => {
       storageRoom: false,
     });
 
-    expect(firstIncompleteStep(home)).toBe(3);
+    expect(firstIncompleteStep(home)).toBe(4);
   });
 
   it('con todo guardado salta a la revisión', () => {
-    expect(firstIncompleteStep(completeHome())).toBe(5);
+    expect(firstIncompleteStep(completeHome())).toBe(6);
   });
 
   it('un rango a medias sigue en el paso de valor', () => {
-    expect(firstIncompleteStep(completeHome({ valueMaxCents: null }))).toBe(3);
+    expect(firstIncompleteStep(completeHome({ valueMaxCents: null }))).toBe(4);
   });
 });
 
 describe('stepOfFields', () => {
   it('devuelve el paso más temprano que contiene alguno de los campos', () => {
-    expect(stepOfFields(['valueMinCents', 'bedrooms'])).toBe(2);
-    expect(stepOfFields(['isPrimaryResidence', 'valueMaxCents'])).toBe(3);
+    expect(stepOfFields(['valueMinCents', 'bedrooms'])).toBe(3);
+    expect(stepOfFields(['isPrimaryResidence', 'valueMaxCents'])).toBe(4);
+    expect(stepOfFields(['valueMaxCents', 'photos'])).toBe(1);
   });
 
   it('un campo desconocido lleva a la revisión', () => {
-    expect(stepOfFields(['otraCosa'])).toBe(5);
+    expect(stepOfFields(['otraCosa'])).toBe(6);
   });
 });
 

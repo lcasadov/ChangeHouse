@@ -10,8 +10,13 @@ import type { FieldErrors, Resolver } from 'react-hook-form';
 import { DEFAULT_LANGUAGE } from '../../i18n';
 import type { Home } from './homes-api';
 
-export type WizardStep = 1 | 2 | 3 | 4 | 5;
-export const TOTAL_STEPS = 5;
+/** Fotos, tipo y dirección, características, valor, ubicación y revisión. */
+export type WizardStep = 1 | 2 | 3 | 4 | 5 | 6;
+export const TOTAL_STEPS = 6;
+
+/** Fotos por vivienda: el mínimo para enviarla a revisión y el máximo que admite la API. */
+export const MIN_PHOTOS = 3;
+export const MAX_PHOTOS = 20;
 
 /** Características de sí o no de `HomeFeatures`, en el orden en que se ofrecen. */
 export const FEATURE_FLAGS = [
@@ -324,17 +329,24 @@ type SubmitField = Extract<
 >;
 
 /** Los campos que exige `submitHome`, por el paso del asistente donde se rellenan. */
-const SUBMIT_FIELDS: readonly (readonly [WizardStep, readonly SubmitField[]])[] = [
-  [2, ['usefulM2', 'builtM2', 'bedrooms', 'bathrooms', 'hasLift', 'garage', 'storageRoom']],
-  [3, ['valueMinCents', 'valueMaxCents', 'isPrimaryResidence']],
+const SUBMIT_FIELDS: readonly (readonly [WizardStep, readonly (SubmitField | 'photos')[]])[] = [
+  [1, ['photos']],
+  [3, ['usefulM2', 'builtM2', 'bedrooms', 'bathrooms', 'hasLift', 'garage', 'storageRoom']],
+  [4, ['valueMinCents', 'valueMaxCents', 'isPrimaryResidence']],
 ];
 
-const REVIEW_STEP: WizardStep = 5;
+export const REVIEW_STEP: WizardStep = 6;
 
-/** El primer paso con datos obligatorios por rellenar; si no falta nada, la revisión final. */
+const isMissing = (home: Home, field: SubmitField | 'photos') =>
+  field === 'photos' ? (home.photos?.length ?? 0) < MIN_PHOTOS : (home[field] ?? null) === null;
+
+/**
+ * El primer paso con datos obligatorios por rellenar; si no falta nada, la revisión final. Las fotos
+ * van primero y están completas con 3 procesadas.
+ */
 export function firstIncompleteStep(home: Home): WizardStep {
   for (const [step, fields] of SUBMIT_FIELDS) {
-    if (fields.some((field) => home[field] === null || home[field] === undefined)) return step;
+    if (fields.some((field) => isMissing(home, field))) return step;
   }
   return REVIEW_STEP;
 }

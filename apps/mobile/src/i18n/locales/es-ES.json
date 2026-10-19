@@ -24,7 +24,7 @@
     "title": "Mis casas",
     "empty": {
       "title": "Aún no has publicado ninguna casa",
-      "description": "Publica tu casa en cinco pasos. Sin una casa publicada no puede haber matches.",
+      "description": "Publica tu casa en seis pasos. Sin una casa publicada no puede haber matches.",
       "action": "Publicar mi casa"
     },
     "add": "Añadir otra casa",
@@ -65,6 +65,7 @@
     "wizard": {
       "step": "Paso {{current}} de {{total}}",
       "steps": {
+        "photos": "Fotos de tu casa",
         "type": "Tipo y dirección",
         "features": "Características",
         "value": "Valor y cargas",
@@ -156,7 +157,8 @@
       "primaryResidence": "Vivienda habitual",
       "yes": "Sí",
       "no": "No",
-      "pending": "Sin indicar"
+      "pending": "Sin indicar",
+      "photos": "Fotos"
     },
     "submit": {
       "action": "Enviar a revisión",
@@ -176,7 +178,8 @@
       "storageRoom": "Trastero",
       "valueMinCents": "Valor mínimo",
       "valueMaxCents": "Valor máximo",
-      "isPrimaryResidence": "Vivienda habitual"
+      "isPrimaryResidence": "Vivienda habitual",
+      "photos": "Fotos (mínimo 3)"
     },
     "errors": {
       "type": "Elige el tipo de vivienda.",
@@ -210,6 +213,65 @@
         "paused": "Tu casa está pausada: otras personas no la ven.",
         "in_operation": "Tu casa está en una operación de permuta.",
         "closed": "Esta casa ya no está activa."
+      },
+      "managePhotos": "Gestionar fotos",
+      "photosTitle": "Fotos"
+    },
+    "photos": {
+      "intro": "Las casas con buenas fotos se descubren antes. La primera será la portada.",
+      "add": "Añadir fotos",
+      "counter": "{{count}}/20 fotos",
+      "minHint": "Añade al menos 3 fotos para poder enviar tu casa a revisión.",
+      "limitReached": "Has llegado al máximo de 20 fotos. Elimina alguna para añadir otra.",
+      "pickFailed": "No hemos podido abrir tu galería. Comprueba los permisos de la app y vuelve a intentarlo.",
+      "cover": "Portada",
+      "done": "Listo",
+      "coverAlt": "Portada de {{title}}",
+      "galleryAlt": "Foto {{position}} de {{total}} de {{title}}",
+      "tile": "Foto {{position}} de {{total}}",
+      "coverTile": "Foto de portada, 1 de {{total}}",
+      "uploadingTile": "Foto {{position}} de {{total}}: {{status}}",
+      "status": {
+        "queued": "Se subirá al guardar el tipo y la dirección",
+        "uploading": "Subiendo… {{percent}} %",
+        "processing": "Procesando…",
+        "waiting": "En cola"
+      },
+      "remove": "Eliminar foto {{position}}",
+      "retry": "Reintentar",
+      "retryLabel": "Reintentar la subida de la foto {{position}}",
+      "discard": "Quitar",
+      "discardLabel": "Quitar la foto {{position}}",
+      "failures": {
+        "unsupported": "Este formato no es válido. Usa fotos JPEG, PNG, HEIC o WebP.",
+        "upload": "No hemos podido subir esta foto. Comprueba tu conexión y vuelve a intentarlo.",
+        "invalidImage": "Este fichero no es una imagen válida. Quítalo y elige otra foto.",
+        "notUploaded": "La foto no llegó completa. Vuelve a intentarlo.",
+        "limit": "Ya tienes 20 fotos. Elimina alguna para añadir otra.",
+        "notEditable": "Esta casa ya no admite cambios en sus fotos.",
+        "network": "No hemos podido conectar. Comprueba tu conexión y vuelve a intentarlo.",
+        "unknown": "No hemos podido guardar esta foto. Inténtalo de nuevo en unos minutos."
+      },
+      "delete": {
+        "title": "¿Eliminar esta foto?",
+        "description": "La foto se borrará de tu casa y no podrás recuperarla.",
+        "confirm": "Sí, eliminar foto",
+        "cancel": "Cancelar",
+        "minimum": "Una casa publicada necesita al menos 3 fotos. Añade otra antes de eliminar esta.",
+        "failed": "No hemos podido eliminar la foto. Comprueba tu conexión y vuelve a intentarlo."
+      },
+      "banner": {
+        "uploading_one": "Se está subiendo {{count}} foto.",
+        "uploading_other": "Se están subiendo {{count}} fotos.",
+        "failed_one": "No se ha podido subir {{count}} foto.",
+        "failed_other": "No se han podido subir {{count}} fotos.",
+        "show": "Ver fotos"
+      },
+      "exit": {
+        "title": "¿Salir sin terminar de subir las fotos?",
+        "description": "Hay fotos que aún no se han subido. Si sales ahora se perderán y tendrás que añadirlas de nuevo.",
+        "confirm": "Salir y descartar",
+        "cancel": "Seguir aquí"
       }
     }
   },

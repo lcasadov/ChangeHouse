@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
-import { FormScreen, Notice, ProgressBar, Text } from '../../ui';
+import { Dialog, FormScreen, Notice, ProgressBar, Text } from '../../ui';
 import { LoadingView } from '../session/LoadingView';
 import { CharacteristicsStep } from './CharacteristicsStep';
 import { firstIncompleteStep, TOTAL_STEPS, type WizardStep } from './home-form';
@@ -12,19 +12,25 @@ import { homeRoutes } from './home-routes';
 import type { Home } from './homes-api';
 import { HomesApiError } from './homes-api';
 import { LocationStep } from './LocationStep';
+import { PhotosStep } from './PhotosStep';
 import { ReviewStep } from './ReviewStep';
 import type { StepProps } from './steps';
 import { TypeStep } from './TypeStep';
+import { UploadsBanner } from './UploadsBanner';
 import { useHome } from './use-homes';
+import { type PhotoUploads, usePhotoUploads } from './use-photo-uploads';
 import { ValueStep } from './ValueStep';
 
 const STEP_TITLES = {
-  1: 'homes.wizard.steps.type',
-  2: 'homes.wizard.steps.features',
-  3: 'homes.wizard.steps.value',
-  4: 'homes.wizard.steps.location',
-  5: 'homes.review.title',
+  1: 'homes.wizard.steps.photos',
+  2: 'homes.wizard.steps.type',
+  3: 'homes.wizard.steps.features',
+  4: 'homes.wizard.steps.value',
+  5: 'homes.wizard.steps.location',
+  6: 'homes.review.title',
 } as const satisfies Record<WizardStep, string>;
+
+const PHOTOS_STEP: WizardStep = 1;
 
 const asStep = (value: number): WizardStep =>
   Math.min(Math.max(value, 1), TOTAL_STEPS) as WizardStep;
@@ -35,28 +41,98 @@ function requestedStep(param: string | undefined): WizardStep | undefined {
   return Number.isInteger(step) && step >= 1 && step <= TOTAL_STEPS ? asStep(step) : undefined;
 }
 
+interface StepViewProps {
+  step: WizardStep;
+  home: Home | undefined;
+  uploads: PhotoUploads;
+  stepProps: StepProps;
+  onGoTo: (step: number) => void;
+  onSubmitted: (home: Home) => void;
+}
+
+/** El contenido del paso en curso. */
+function StepView({
+  step,
+  home,
+  uploads,
+  stepProps,
+  onGoTo,
+  onSubmitted,
+}: Readonly<StepViewProps>) {
+  switch (step) {
+    case 1:
+      return (
+        <PhotosStep
+          home={home}
+          uploads={uploads}
+          onNext={() => {
+            onGoTo(2);
+          }}
+          onExit={stepProps.onExit}
+        />
+      );
+    case 2:
+      return <TypeStep {...stepProps} />;
+    case 3:
+      return <CharacteristicsStep {...stepProps} />;
+    case 4:
+      return <ValueStep {...stepProps} />;
+    case 5:
+      return <LocationStep {...stepProps} />;
+    default:
+      return home ? (
+        <ReviewStep
+          home={home}
+          onSubmitted={onSubmitted}
+          onComplete={onGoTo}
+          onBack={() => {
+            onGoTo(step - 1);
+          }}
+          onExit={stepProps.onExit}
+        />
+      ) : null;
+  }
+}
+
 interface WizardBodyProps {
   home: Home | undefined;
   initialStep: WizardStep;
+  /** El primer paso con datos crea el borrador: desde ahí el asistente trabaja sobre él. */
+  onCreated: (homeId: string) => void;
 }
 
-/** Los cinco pasos con su progreso. El avance se guarda en cada paso; salir nunca pierde datos. */
-function WizardBody({ home, initialStep }: Readonly<WizardBodyProps>) {
+/**
+ * Los seis pasos con su progreso. El avance se guarda en cada paso; salir nunca pierde datos
+ * guardados. Las fotos elegidas antes de que exista el borrador esperan en el dispositivo y se suben
+ * al crearlo, así que el asistente es quien las gestiona.
+ */
+function WizardBody({ home, initialStep, onCreated }: Readonly<WizardBodyProps>) {
   const { t } = useTranslation();
   const theme = useTheme();
   const router = useRouter();
+  const uploads = usePhotoUploads();
   const [step, setStep] = useState<WizardStep>(initialStep);
+  const [confirmingExit, setConfirmingExit] = useState(false);
+  // Una vivienda ya enviada solo permite gestionar sus fotos, no repetir el alta
+  const photosOnly = home !== undefined && home.status !== 'draft';
 
-  const exit = () => {
+  const leave = () => {
     router.dismissTo(homeRoutes.list);
+  };
+  const exit = () => {
+    // Las fotos sin subir no se guardan en ningún sitio: se pide confirmación antes de perderlas
+    if (uploads.items.length > 0) setConfirmingExit(true);
+    else leave();
   };
   const goTo = (target: number) => {
     setStep(asStep(target));
   };
   const saved = (savedHome: Home) => {
-    // El primer paso del alta crea la vivienda: desde ahí el asistente trabaja sobre ella
-    if (home) goTo(step + 1);
-    else router.replace(homeRoutes.edit(savedHome.id));
+    if (!home) {
+      onCreated(savedHome.id);
+      uploads.flush(savedHome.id);
+    }
+    goTo(step + 1);
   };
 
   const stepProps: StepProps = {
@@ -71,6 +147,23 @@ function WizardBody({ home, initialStep }: Readonly<WizardBodyProps>) {
     onExit: exit,
   };
 
+  if (photosOnly) {
+    return (
+      <FormScreen>
+        <Text variant="title" accessibilityRole="header">
+          {t(STEP_TITLES[PHOTOS_STEP])}
+        </Text>
+        <PhotosStep
+          home={home}
+          uploads={uploads}
+          onDone={() => {
+            router.dismissTo(homeRoutes.detail(home.id));
+          }}
+        />
+      </FormScreen>
+    );
+  }
+
   return (
     <FormScreen>
       <ProgressBar
@@ -82,38 +175,58 @@ function WizardBody({ home, initialStep }: Readonly<WizardBodyProps>) {
         {t(STEP_TITLES[step])}
       </Text>
       {step === 1 ? <Text tone="textMuted">{t('homes.wizard.intro')}</Text> : null}
+      {step === PHOTOS_STEP ? null : (
+        <UploadsBanner
+          items={uploads.items}
+          onShowPhotos={() => {
+            goTo(PHOTOS_STEP);
+          }}
+        />
+      )}
       <View style={{ gap: theme.space[4] }}>
-        {step === 1 ? <TypeStep {...stepProps} /> : null}
-        {step === 2 ? <CharacteristicsStep {...stepProps} /> : null}
-        {step === 3 ? <ValueStep {...stepProps} /> : null}
-        {step === 4 ? <LocationStep {...stepProps} /> : null}
-        {step === 5 && home ? (
-          <ReviewStep
-            home={home}
-            onSubmitted={(submitted) => {
-              router.replace(homeRoutes.detail(submitted.id));
-            }}
-            onComplete={goTo}
-            onBack={() => {
-              goTo(step - 1);
-            }}
-            onExit={exit}
-          />
-        ) : null}
+        <StepView
+          step={step}
+          home={home}
+          uploads={uploads}
+          stepProps={stepProps}
+          onGoTo={goTo}
+          onSubmitted={(submitted) => {
+            router.replace(homeRoutes.detail(submitted.id));
+          }}
+        />
       </View>
+      <Dialog
+        visible={confirmingExit}
+        title={t('homes.photos.exit.title')}
+        description={t('homes.photos.exit.description')}
+        confirmLabel={t('homes.photos.exit.confirm')}
+        cancelLabel={t('homes.photos.exit.cancel')}
+        onConfirm={() => {
+          setConfirmingExit(false);
+          leave();
+        }}
+        onCancel={() => {
+          setConfirmingExit(false);
+        }}
+      />
     </FormScreen>
   );
 }
 
 /**
- * Asistente de alta de una vivienda en cinco pasos. Sin `homeId` empieza una nueva; con él continúa
- * el borrador por `step` (o por el primer paso con datos por rellenar).
+ * Asistente de alta de una vivienda en seis pasos, empezando por las fotos. Sin `homeId` empieza una
+ * nueva; con él continúa el borrador por `step` (o por el primer paso con datos por rellenar).
  */
 export function HomeWizard({ homeId, step }: Readonly<{ homeId?: string; step?: string }>) {
   const { t } = useTranslation();
-  const query = useHome(homeId);
+  const [createdId, setCreatedId] = useState<string>();
+  const currentId = homeId ?? createdId;
+  const query = useHome(currentId);
+  const key = homeId ?? 'new';
 
-  if (homeId === undefined) return <WizardBody home={undefined} initialStep={1} />;
+  if (currentId === undefined) {
+    return <WizardBody key={key} home={undefined} initialStep={1} onCreated={setCreatedId} />;
+  }
   if (query.isPending) return <LoadingView />;
   if (!query.data) {
     const notFound = query.error instanceof HomesApiError && query.error.kind === 'not-found';
@@ -139,9 +252,10 @@ export function HomeWizard({ homeId, step }: Readonly<{ homeId?: string; step?: 
   }
   return (
     <WizardBody
-      key={query.data.id}
+      key={key}
       home={query.data}
       initialStep={requestedStep(step) ?? firstIncompleteStep(query.data)}
+      onCreated={setCreatedId}
     />
   );
 }
