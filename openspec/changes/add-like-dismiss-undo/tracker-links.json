@@ -52,25 +52,25 @@
       "key": "B1",
       "id": 173,
       "parent": 168,
-      "state": "open"
+      "state": "doing"
     },
     {
       "key": "T1",
       "id": 174,
       "parent": 169,
-      "state": "open"
+      "state": "doing"
     },
     {
       "key": "B2",
       "id": 175,
       "parent": 168,
-      "state": "open"
+      "state": "doing"
     },
     {
       "key": "B3",
       "id": 176,
       "parent": 171,
-      "state": "open"
+      "state": "doing"
     },
     {
       "key": "T2",
