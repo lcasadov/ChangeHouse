@@ -36,20 +36,20 @@ personas; la zona generada la reescribe `plan-sync` en cada operación.
 
 | change | estado | % | completadas/total | fase |
 |---|---|---|---|---|
-| add-home-listing | 🔄 EN PROGRESO | 64 % | 7/11 | ❌ SIN EMPEZAR |
+| — | — | — | — | — |
 
-**Progreso global de los changes activos**: 7/11 (64 %)
+**Progreso global de los changes activos**: 0/0
 
 | estado | changes |
 |---|---|
-| 🔄 EN PROGRESO | 1 |
-| ✅ ARCHIVADO | 4 |
+| ✅ ARCHIVADO | 5 |
 
 ### Changes archivados
 
 | change | tareas | fecha |
 |---|---|---|
 | 2026-10-19-add-authentication | 13/13 | 2026-10-19 |
+| 2026-10-19-add-home-listing | 11/11 | 2026-10-19 |
 | 2026-10-19-add-landing | 12/12 | 2026-10-19 |
 | 2026-10-19-add-user-profile | 6/6 | 2026-10-19 |
 | 2026-10-19-add-waitlist | 12/12 | 2026-10-19 |

@@ -100,25 +100,25 @@
       "key": "T4",
       "id": 108,
       "parent": 94,
-      "state": "doing"
+      "state": "done"
     },
     {
       "key": "F1",
       "id": 109,
       "parent": 95,
-      "state": "doing"
+      "state": "done"
     },
     {
       "key": "F2",
       "id": 110,
       "parent": 99,
-      "state": "doing"
+      "state": "done"
     },
     {
       "key": "V1",
       "id": 111,
       "parent": 94,
-      "state": "doing"
+      "state": "done"
     }
   ],
   "bugs": [],
