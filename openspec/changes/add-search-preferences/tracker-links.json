@@ -1,0 +1,84 @@
+{
+  "tracker": "github-issues",
+  "change": "add-search-preferences",
+  "sprint": {
+    "path": "Sprint en curso",
+    "created": false
+  },
+  "epic": {
+    "capability": "search-preferences",
+    "id": 137,
+    "reused": false
+  },
+  "related_epics": [],
+  "feature": {
+    "id": 138,
+    "reused": false
+  },
+  "stories": [
+    {
+      "key": "Preferencias por defecto del usuario",
+      "id": 139,
+      "reused": false,
+      "prio": "P1"
+    },
+    {
+      "key": "Preferencias propias de una vivienda",
+      "id": 140,
+      "reused": false,
+      "prio": "P2"
+    },
+    {
+      "key": "Búsqueda en un toque",
+      "id": 141,
+      "reused": false,
+      "prio": "P1"
+    }
+  ],
+  "tasks": [
+    {
+      "key": "B1",
+      "id": 142,
+      "parent": 139,
+      "state": "open"
+    },
+    {
+      "key": "T1",
+      "id": 143,
+      "parent": 140,
+      "state": "open"
+    },
+    {
+      "key": "B2",
+      "id": 144,
+      "parent": 139,
+      "state": "open"
+    },
+    {
+      "key": "T2",
+      "id": 145,
+      "parent": 141,
+      "state": "open"
+    },
+    {
+      "key": "F1",
+      "id": 146,
+      "parent": 141,
+      "state": "open"
+    },
+    {
+      "key": "F2",
+      "id": 147,
+      "parent": 140,
+      "state": "open"
+    },
+    {
+      "key": "V1",
+      "id": 148,
+      "parent": 139,
+      "state": "open"
+    }
+  ],
+  "bugs": [],
+  "pending": []
+}
