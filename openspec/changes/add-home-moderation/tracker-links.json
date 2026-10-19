@@ -40,19 +40,19 @@
       "key": "B1",
       "id": 130,
       "parent": 129,
-      "state": "open"
+      "state": "doing"
     },
     {
       "key": "T1",
       "id": 131,
       "parent": 128,
-      "state": "open"
+      "state": "doing"
     },
     {
       "key": "B2",
       "id": 132,
       "parent": 127,
-      "state": "open"
+      "state": "doing"
     },
     {
       "key": "T2",
