@@ -36,14 +36,13 @@ personas; la zona generada la reescribe `plan-sync` en cada operación.
 
 | change | estado | % | completadas/total | fase |
 |---|---|---|---|---|
-| add-user-profile | 🟢 COMPLETO — sin archivar | 100 % | 6/6 | ❌ SIN EMPEZAR |
+| — | — | — | — | — |
 
-**Progreso global de los changes activos**: 6/6 (100 %)
+**Progreso global de los changes activos**: 0/0
 
 | estado | changes |
 |---|---|
-| 🟢 COMPLETO — sin archivar | 1 |
-| ✅ ARCHIVADO | 3 |
+| ✅ ARCHIVADO | 4 |
 
 ### Changes archivados
 
@@ -51,6 +50,7 @@ personas; la zona generada la reescribe `plan-sync` en cada operación.
 |---|---|---|
 | 2026-10-19-add-authentication | 13/13 | 2026-10-19 |
 | 2026-10-19-add-landing | 12/12 | 2026-10-19 |
+| 2026-10-19-add-user-profile | 6/6 | 2026-10-19 |
 | 2026-10-19-add-waitlist | 12/12 | 2026-10-19 |
 
 <!-- catalogo:generado:fin -->
