@@ -1,13 +1,16 @@
 import { FIXTURE_PLACES } from '@changehouse/shared';
 
+import type { AdminGrantRepository } from '../src/application/account/admin-grant.js';
 import type { ConsentRepository } from '../src/application/account/consent-repository.js';
 import type { HomeOwnership } from '../src/application/account/home-ownership.js';
 import type { ProfileChanges, UserRepository } from '../src/application/account/user-repository.js';
-import type { HomeRepository } from '../src/application/home/home-repository.js';
+import type { HomeRepository, ModerationListing } from '../src/application/home/home-repository.js';
 import type { ImageProcessor, ProcessedImage } from '../src/application/home/image-processor.js';
 import type { PhotoRepository } from '../src/application/home/photo-repository.js';
 import type { OriginalFile, PhotoStorage } from '../src/application/home/photo-storage.js';
 import type { PlaceResolver } from '../src/application/home/place-resolver.js';
+import type { AuditEntry, AuditLog } from '../src/application/moderation/audit-log.js';
+import type { ModerationScope, UnitOfWork } from '../src/application/moderation/unit-of-work.js';
 import type { Consent } from '../src/domain/account/consent.js';
 import type { User } from '../src/domain/account/user.js';
 import { InvalidImageError } from '../src/domain/home/errors.js';
@@ -122,6 +125,89 @@ export class InMemoryHomeRepository implements HomeRepository {
 
   listByOwner(ownerId: string): Promise<Home[]> {
     return Promise.resolve([...this.homes.values()].filter((home) => home.ownerId === ownerId));
+  }
+
+  findByIdForUpdate(id: string): Promise<Home | null> {
+    return this.findById(id);
+  }
+
+  /** Misma ordenación que la real: la cola por envío ascendente; el resto, de la más reciente a la más antigua. */
+  listForModeration(query: ModerationListing): Promise<Home[]> {
+    const queue = query.status === 'in_review';
+    const sign = queue ? 1 : -1;
+    const at = (home: Home): number => (queue ? home.submittedAt : home.createdAt)?.getTime() ?? 0;
+    const compare = (a: { at: number; id: string }, b: { at: number; id: string }): number =>
+      sign * (a.at - b.at || a.id.localeCompare(b.id));
+    const ordered = [...this.homes.values()]
+      .filter((home) => query.status === undefined || home.status === query.status)
+      .sort((a, b) => compare({ at: at(a), id: a.id }, { at: at(b), id: b.id }));
+    const after = query.after;
+    const rest = after
+      ? ordered.filter(
+          (home) =>
+            compare({ at: at(home), id: home.id }, { at: after.at.getTime(), id: after.id }) > 0,
+        )
+      : ordered;
+    return Promise.resolve(rest.slice(0, query.limit));
+  }
+}
+
+/** Registro de auditoría en memoria; `failWith` simula un fallo al escribir. */
+export class InMemoryAuditLog implements AuditLog {
+  entries: AuditEntry[] = [];
+  failWith: Error | null = null;
+
+  record(entry: AuditEntry): Promise<void> {
+    if (this.failWith) return Promise.reject(this.failWith);
+    this.entries.push(entry);
+    return Promise.resolve();
+  }
+}
+
+/** Unidad de trabajo en memoria: si el trabajo falla, vuelve al estado anterior (como un `ROLLBACK`). */
+export class InMemoryUnitOfWork implements UnitOfWork {
+  constructor(
+    private readonly homes: InMemoryHomeRepository,
+    private readonly audit: InMemoryAuditLog,
+  ) {}
+
+  async run<T>(work: (scope: ModerationScope) => Promise<T>): Promise<T> {
+    const homes = new Map(this.homes.homes);
+    const entries = [...this.audit.entries];
+    try {
+      return await work({ homes: this.homes, audit: this.audit });
+    } catch (error) {
+      this.homes.homes.clear();
+      for (const [id, home] of homes) this.homes.homes.set(id, home);
+      this.audit.entries = entries;
+      throw error;
+    }
+  }
+}
+
+/** Concesión del rol `admin` en memoria sobre los usuarios del repositorio de pruebas. */
+export class InMemoryAdminGrants implements AdminGrantRepository {
+  readonly activeHomeOwners = new Set<string>();
+
+  constructor(private readonly users: InMemoryUserRepository) {}
+
+  findByEmail(email: string): Promise<User | null> {
+    return Promise.resolve(
+      [...this.users.users.values()].find(
+        (user) => user.email.toLowerCase() === email.toLowerCase(),
+      ) ?? null,
+    );
+  }
+
+  hasActiveHomes(userId: string): Promise<boolean> {
+    return Promise.resolve(this.activeHomeOwners.has(userId));
+  }
+
+  assignAdmin(userId: string): Promise<void> {
+    const user = this.users.users.get(userId);
+    if (!user) return Promise.reject(new Error(`Usuario inexistente: ${userId}`));
+    this.users.users.set(userId, { ...user, assignedRole: 'admin' });
+    return Promise.resolve();
   }
 }
 

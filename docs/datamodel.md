@@ -89,6 +89,7 @@ erDiagram
         geography approx_location
         text area_name "barrio o zona"
         text moderation_note
+        timestamptz submitted_at "entrada en la cola de moderación"
         timestamptz relevant_changed_at
         timestamptz created_at
     }
@@ -279,6 +280,7 @@ confirmado. Identificadores: `uuid` v7 generado en la aplicación —
 | `approx_location` | geography(Point, 4326) | sí | Centro del barrio o zona: lo único público si `location_visibility = area` (RF-13) |
 | `area_name` | text | sí | Nombre del barrio o zona (de Google Places); también es la «zona» de las métricas |
 | `moderation_note` | text | no | Motivo del último rechazo de moderación, visible para el propietario |
+| `submitted_at` | timestamptz | no | Cuándo entró en la cola de moderación por última vez (`submitHome`, o un cambio relevante tras publicar). Ordena la cola (`in_review`); nula si nunca se envió |
 | `relevant_changed_at` | timestamptz | sí | Se actualiza cuando cambian el rango de valor o las fotos; un descarte anterior a esta fecha vuelve a mostrarse (RF-44) |
 
 ### `home_photos` — fotos de una vivienda (3–20, RF-11)
@@ -370,7 +372,13 @@ nueva.
 
 ### `audit_log` — acciones administrativas y sensibles (RF-93)
 
-`actor_id`, `action`, `entity`, `entity_id`, `at`. Solo inserción.
+`id` (bigint identidad), `actor_id` (FK → `users`, `RESTRICT`, obligatorio), `action`, `entity`, `entity_id` (uuid), `at`.
+Solo inserción: un disparador rechaza `UPDATE` y `DELETE` (también al propietario de la tabla) y la
+migración retira `UPDATE`, `DELETE` y `TRUNCATE` al rol de la aplicación `changehouse_app` cuando existe.
+Se escribe en la misma transacción que la acción auditada. Acciones actuales: `home.approve` y
+`home.reject` sobre la entidad `home`; el motivo de un rechazo no se guarda aquí (vive en
+`homes.moderation_note`). La concesión del rol `admin` con `admin:grant` no genera entrada (no hay
+actor usuario): queda en el log estructurado del proceso.
 Retención: 2 años (`$LOG_RETENTION`).
 
 ### `waitlist` — lista de espera de la landing (RF-101)

@@ -99,7 +99,7 @@ async function getHome(
 
 async function submitOwnHome(deps: HomeDeps, ownerId: string, homeId: string): Promise<HomeView> {
   const home = await ownHome(deps.homes, ownerId, homeId);
-  const submitted = submitHome(home, await deps.photos.countReady(homeId));
+  const submitted = submitHome(home, await deps.photos.countReady(homeId), deps.clock.now());
   await deps.homes.save(submitted);
   return toHomeView(submitted, await photosOf(deps, homeId));
 }

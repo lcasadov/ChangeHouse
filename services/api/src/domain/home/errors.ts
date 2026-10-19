@@ -40,6 +40,26 @@ export class HomeIncompleteError extends DomainError {
   }
 }
 
+export class HomeNotInReviewError extends DomainError {
+  readonly code = 'HOME_NOT_IN_REVIEW';
+  override readonly kind: DomainErrorKind = 'conflict';
+
+  constructor() {
+    super('Solo una vivienda en revisión se puede aprobar o rechazar');
+    this.name = 'HomeNotInReviewError';
+  }
+}
+
+export class InvalidModerationReasonError extends DomainError {
+  readonly code = 'INVALID_MODERATION_REASON';
+
+  constructor() {
+    super('El motivo del rechazo debe tener entre 1 y 1000 caracteres');
+    this.name = 'InvalidModerationReasonError';
+    this.fields = ['reason'];
+  }
+}
+
 export class InvalidImageError extends DomainError {
   readonly code = 'INVALID_IMAGE';
   constructor() {

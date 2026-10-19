@@ -44,8 +44,11 @@ export const policy: Policy = {
   createHomePhotoUpload: { kind: 'roles', roles: HOME_OWNER_ROLES },
   completeHomePhotoUpload: { kind: 'roles', roles: HOME_OWNER_ROLES },
   deleteHomePhoto: { kind: 'roles', roles: HOME_OWNER_ROLES },
-  // El admin consulta viviendas ajenas, pero en su forma pública hasta que exista la moderación
+  // El admin consulta viviendas ajenas en su forma pública; la ficha para moderar sale de adminListHomes
   getHome: { kind: 'roles', roles: [...HOME_OWNER_ROLES, 'admin'] },
+  // Moderación (RF-18, RF-93): solo el admin; la decisión queda auditada
+  adminListHomes: { kind: 'roles', roles: ['admin'] },
+  adminModerateHome: { kind: 'roles', roles: ['admin'] },
 };
 
 /** Único punto de decisión: ¿puede este actor invocar una operación con este acceso? */

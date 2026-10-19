@@ -78,6 +78,12 @@ const HOMES_REQUESTS: Record<string, RequestTemplate> = {
     url: `/v1/homes/${MISSING_ID}/photos/${MISSING_ID}/complete`,
   },
   deleteHomePhoto: { method: 'DELETE', url: `/v1/homes/${MISSING_ID}/photos/${MISSING_ID}` },
+  adminListHomes: { method: 'GET', url: '/v1/admin/homes?status=in_review' },
+  adminModerateHome: {
+    method: 'POST',
+    url: `/v1/admin/homes/${MISSING_ID}/moderation`,
+    payload: () => ({ decision: 'approve' }),
+  },
 };
 Object.assign(REQUESTS, HOMES_REQUESTS);
 

@@ -1,9 +1,12 @@
-import { asc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, lt, or, type SQL } from 'drizzle-orm';
 
-import type { HomeRepository } from '../../../application/home/home-repository.js';
+import type {
+  HomeRepository,
+  ModerationListing,
+} from '../../../application/home/home-repository.js';
 import type { Home } from '../../../domain/home/home.js';
 import type { AddressCipher } from '../../crypto/address-cipher.js';
-import type { Database } from './database.js';
+import type { Executor } from './database.js';
 import { homes } from './schema.js';
 
 type HomeRow = typeof homes.$inferSelect;
@@ -11,7 +14,7 @@ type HomeValues = typeof homes.$inferInsert;
 
 export class DrizzleHomeRepository implements HomeRepository {
   constructor(
-    private readonly db: Database,
+    private readonly db: Executor,
     private readonly cipher: AddressCipher,
   ) {}
 
@@ -38,12 +41,41 @@ export class DrizzleHomeRepository implements HomeRepository {
     return row ? this.toHome(row) : null;
   }
 
+  async findByIdForUpdate(id: string): Promise<Home | null> {
+    const [row] = await this.db.select().from(homes).where(eq(homes.id, id)).limit(1).for('update');
+    return row ? this.toHome(row) : null;
+  }
+
   async listByOwner(ownerId: string): Promise<Home[]> {
     const rows = await this.db
       .select()
       .from(homes)
       .where(eq(homes.ownerId, ownerId))
       .orderBy(asc(homes.createdAt), asc(homes.id));
+    return rows.map((row) => this.toHome(row));
+  }
+
+  /**
+   * La cola (`in_review`) va de la enviada antes a la enviada después; cualquier otro listado, de la
+   * dada de alta más recientemente a la más antigua. El id desempata y completa el cursor.
+   */
+  async listForModeration(query: ModerationListing): Promise<Home[]> {
+    const queue = query.status === 'in_review';
+    const sortColumn = queue ? homes.submittedAt : homes.createdAt;
+    const [order, past] = queue ? [asc, gt] : [desc, lt];
+    const { after } = query;
+    const conditions: (SQL | undefined)[] = [
+      query.status === undefined ? undefined : eq(homes.status, query.status),
+      after
+        ? or(past(sortColumn, after.at), and(eq(sortColumn, after.at), past(homes.id, after.id)))
+        : undefined,
+    ];
+    const rows = await this.db
+      .select()
+      .from(homes)
+      .where(and(...conditions))
+      .orderBy(order(sortColumn), order(homes.id))
+      .limit(query.limit);
     return rows.map((row) => this.toHome(row));
   }
 
@@ -77,6 +109,7 @@ export class DrizzleHomeRepository implements HomeRepository {
       approxLocation: home.location.areaCenter,
       areaName: home.location.areaName,
       moderationNote: home.moderationNote,
+      submittedAt: home.submittedAt,
       relevantChangedAt: home.relevantChangedAt,
     };
   }
@@ -114,6 +147,7 @@ export class DrizzleHomeRepository implements HomeRepository {
       vppProtectionEnd: row.vppProtectionEnd,
       vppMaxLegalPriceCents: row.vppMaxLegalPriceCents,
       moderationNote: row.moderationNote,
+      submittedAt: row.submittedAt,
       relevantChangedAt: row.relevantChangedAt,
       createdAt: row.createdAt,
     };

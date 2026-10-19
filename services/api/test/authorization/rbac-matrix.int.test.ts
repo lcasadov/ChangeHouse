@@ -14,6 +14,8 @@ interface HomeContext {
   /** Una foto propia ya subida y sin confirmar (`pending`). */
   ownPhotoId: string;
   publishedHomeId: string;
+  /** Una vivienda ajena en revisión, solo para el admin (moderarla cambia su estado). */
+  reviewHomeId: string;
 }
 
 interface RequestTemplate {
@@ -92,6 +94,12 @@ const REQUESTS: Record<string, RequestTemplate> = {
     method: 'DELETE',
     url: (context) => `/v1/homes/${context.ownHomeId}/photos/${context.ownPhotoId}`,
   },
+  adminListHomes: { method: 'GET', url: '/v1/admin/homes?status=in_review' },
+  adminModerateHome: {
+    method: 'POST',
+    url: (context) => `/v1/admin/homes/${context.reviewHomeId}/moderation`,
+    payload: () => ({ decision: 'approve' }),
+  },
   acceptConsent: {
     method: 'POST',
     url: '/v1/me/consents',
@@ -135,6 +143,24 @@ async function publishedHome(): Promise<string> {
   return publishedHomeId;
 }
 
+/** Una vivienda ajena enviada a revisión, nueva en cada caso: moderarla la cambia. */
+async function homeInReview(): Promise<string> {
+  const landlord = await signUp();
+  const landlordId = crypto.randomUUID();
+  await sql`INSERT INTO users (id, firebase_uid, email, display_name)
+            VALUES (${landlordId}, ${landlord.uid}, ${landlord.email}, 'Propietario en revisión')`;
+  const created = await api.app.inject({
+    method: 'POST',
+    url: '/v1/homes',
+    headers: { authorization: `Bearer ${landlord.idToken}` },
+    payload: COMPLETE_HOME,
+  });
+  const homeId = created.json<{ id: string }>().id;
+  await addReadyPhotos(homeId);
+  await sql`UPDATE homes SET status = 'in_review', submitted_at = now() WHERE id = ${homeId}`;
+  return homeId;
+}
+
 /** Tres fotos ya procesadas: con ellas la vivienda propia puede enviarse a revisión (RF-11). */
 async function addReadyPhotos(homeId: string): Promise<void> {
   for (let position = 1; position <= 3; position += 1) {
@@ -169,6 +195,7 @@ async function authorizationFor(
     ownHomeId: MISSING_HOME,
     ownPhotoId: MISSING_HOME,
     publishedHomeId: await publishedHome(),
+    reviewHomeId: MISSING_HOME,
   };
   if (actor === 'anon') return { headers: {}, context };
   const { uid, email, idToken } = await signUp();
@@ -176,6 +203,7 @@ async function authorizationFor(
   if (actor === 'unregistered') return { headers, context };
 
   const assigned = actor === 'agency' || actor === 'admin' ? actor : null;
+  if (actor === 'admin') context.reviewHomeId = await homeInReview();
   const id = crypto.randomUUID();
   await sql`INSERT INTO users (id, firebase_uid, email, display_name, assigned_role)
             VALUES (${id}, ${uid}, ${email}, 'Actor de prueba', ${assigned})`;

@@ -39,6 +39,12 @@ export {
 export { HOME_TYPES, type HomeType } from './home-type.js';
 export { PRIVACY_VERSION, TERMS_VERSION } from './legal.js';
 export {
+  MAX_MODERATION_REASON,
+  type ModerationInput,
+  moderationInputSchema,
+  validateModerationInput,
+} from './moderation.js';
+export {
   PHOTO_CONTENT_TYPES,
   type PhotoContentType,
   type PhotoUploadInput,

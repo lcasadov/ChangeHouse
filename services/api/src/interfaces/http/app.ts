@@ -4,6 +4,7 @@ import Fastify, { type FastifyInstance, type FastifyServerOptions, LogController
 import { registerSecurity, type SecurityOptions } from './authorization/security.js';
 import { generateCorrelationId, registerProblemHandling } from './problem.js';
 import { type AccountRouteOptions, accountRoutes } from './routes/accounts.js';
+import { type AdminHomeRouteOptions, adminHomeRoutes } from './routes/admin-homes.js';
 import { type HomeRouteOptions, homeRoutes } from './routes/homes.js';
 import { type PhotoRouteOptions, photoRoutes } from './routes/photos.js';
 import { type WaitlistRouteOptions, waitlistRoutes } from './routes/waitlist.js';
@@ -22,6 +23,7 @@ export interface AppOptions {
   accounts?: AccountRouteOptions;
   homes?: HomeRouteOptions;
   photos?: PhotoRouteOptions;
+  adminHomes?: AdminHomeRouteOptions;
 }
 
 /** Confía solo en los `hops` saltos más cercanos: la IP real es la que añadió el último proxy. */
@@ -90,6 +92,7 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
       if (options.accounts) await versioned.register(accountRoutes(options.accounts));
       if (options.homes) await versioned.register(homeRoutes(options.homes));
       if (options.photos) await versioned.register(photoRoutes(options.photos));
+      if (options.adminHomes) await versioned.register(adminHomeRoutes(options.adminHomes));
     },
     { prefix: API_PREFIX },
   );

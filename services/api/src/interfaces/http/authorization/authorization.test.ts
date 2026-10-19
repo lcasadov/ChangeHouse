@@ -94,6 +94,9 @@ describe('política de autorización', () => {
       completeHomePhotoUpload: { kind: 'roles', roles: ['seeker', 'owner'] },
       deleteHomePhoto: { kind: 'roles', roles: ['seeker', 'owner'] },
       getHome: { kind: 'roles', roles: ['seeker', 'owner', 'admin'] },
+      // Moderación: solo el admin (RF-18, RF-93)
+      adminListHomes: { kind: 'roles', roles: ['admin'] },
+      adminModerateHome: { kind: 'roles', roles: ['admin'] },
     });
   });
 });

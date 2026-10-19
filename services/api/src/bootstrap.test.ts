@@ -50,6 +50,8 @@ describe('createApi', () => {
     expect(responses.map((response) => response.statusCode)).toEqual([401, 401, 401, 401]);
     expect([...app.operations].sort()).toEqual([
       'acceptConsent',
+      'adminListHomes',
+      'adminModerateHome',
       'completeHomePhotoUpload',
       'createHome',
       'createHomePhotoUpload',

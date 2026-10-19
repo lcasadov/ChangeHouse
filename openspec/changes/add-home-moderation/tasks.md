@@ -2,11 +2,11 @@
 
 ## 1. API de moderación
 
-- [ ] B1 Crear la tabla `audit_log` (solo inserción: sin permisos de `UPDATE`/`DELETE` para el rol de la aplicación) con su migración y el script `pnpm --filter @changehouse/api admin:grant <email>`, y verificar la migración y el script contra el PostgreSQL local. ref: Registro de auditoría de la moderación · est: 2h · disc: bd
+- [x] B1 Crear la tabla `audit_log` (solo inserción: sin permisos de `UPDATE`/`DELETE` para el rol de la aplicación) con su migración y el script `pnpm --filter @changehouse/api admin:grant <email>`, y verificar la migración y el script contra el PostgreSQL local. ref: Registro de auditoría de la moderación · est: 2h · disc: bd
   - GIVEN un usuario existente WHEN se ejecuta `admin:grant` con su email THEN su `assigned_role` pasa a `admin`
-- [ ] T1 Escribir las pruebas de dominio y de integración de la moderación (cola ordenada, vacía, 403 sin rol, aprobar, rechazar con y sin motivo, 409 fuera de revisión, auditoría en la misma transacción y fallo de auditoría que revierte), con sus filas en la matriz, y comprobar que fallan. ref: Aprobación y rechazo con motivo · est: 4h · disc: qa
+- [x] T1 Escribir las pruebas de dominio y de integración de la moderación (cola ordenada, vacía, 403 sin rol, aprobar, rechazar con y sin motivo, 409 fuera de revisión, auditoría en la misma transacción y fallo de auditoría que revierte), con sus filas en la matriz, y comprobar que fallan. ref: Aprobación y rechazo con motivo · est: 4h · disc: qa
   - GIVEN un fallo simulado del registro de auditoría WHEN se aprueba THEN la vivienda sigue en `in_review`
-- [ ] B2 Implementar las transiciones `in_review → published | draft` en el dominio, el puerto `AuditLog`, los casos de uso transaccionales y las rutas `adminListHomes` y `adminModerateHome`, y verificar que pasan las pruebas de T1. ref: Cola de moderación de viviendas · est: 4h · disc: back
+- [x] B2 Implementar las transiciones `in_review → published | draft` en el dominio, el puerto `AuditLog`, los casos de uso transaccionales y las rutas `adminListHomes` y `adminModerateHome`, y verificar que pasan las pruebas de T1. ref: Cola de moderación de viviendas · est: 4h · disc: back
   - GIVEN una vivienda aprobada WHEN su propietario consulta `GET /me` THEN su rol es `owner`
 
 ## 2. App
