@@ -7,6 +7,9 @@ import { FakeBackend, me } from '../test-support/fake-backend';
 import { renderSessionApp } from '../test-support/render-session-app';
 import { styleOf, THEME_NAMES } from '../test-utils';
 
+// Flujos completos de la app: el primer test carga todos los módulos y, con la máquina cargada, supera los 5 s
+jest.setTimeout(30_000);
+
 const { access, errors, forgot, verify, welcome } = es.auth;
 
 const EMAIL = 'ana@example.com';

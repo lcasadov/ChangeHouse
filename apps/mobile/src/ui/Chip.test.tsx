@@ -31,6 +31,35 @@ describe('Chip', () => {
     expect(onChange).toHaveBeenLastCalledWith(true);
   });
 
+  it('como filtro de un toque expone un botón con el estado «seleccionado» y pide el valor contrario', async () => {
+    const onChange = jest.fn();
+    const view = await renderThemed(
+      <Chip label="Garaje" selected={false} kind="toggle" onChange={onChange} />,
+    );
+    const chip = screen.getByRole('button', { name: 'Garaje' });
+    expect(chip.props.accessibilityState).toMatchObject({ selected: false });
+    expect((chip.props.accessibilityState as { checked?: boolean }).checked).toBeUndefined();
+
+    await fireEvent.press(chip);
+    expect(onChange).toHaveBeenLastCalledWith(true);
+
+    await view.rerender(<Chip label="Garaje" selected kind="toggle" onChange={onChange} />);
+    const selected = screen.getByRole('button', { name: 'Garaje' });
+    expect(selected.props.accessibilityState).toMatchObject({ selected: true });
+    await fireEvent.press(selected);
+    expect(onChange).toHaveBeenLastCalledWith(false);
+  });
+
+  it('un filtro que despliega opciones anuncia si está expandido', async () => {
+    await renderThemed(
+      <Chip label="Tipo" selected={false} kind="toggle" expanded onChange={jest.fn()} />,
+    );
+
+    expect(screen.getByRole('button', { name: 'Tipo' }).props.accessibilityState).toMatchObject({
+      expanded: true,
+    });
+  });
+
   it('el elegido lleva una marca además del color', async () => {
     await renderThemed(<Chip label="Terraza" selected onChange={jest.fn()} />);
 

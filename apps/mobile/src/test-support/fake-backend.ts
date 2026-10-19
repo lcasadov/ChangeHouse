@@ -2,8 +2,10 @@ import { PRIVACY_VERSION, TERMS_VERSION } from '@changehouse/shared';
 
 import type { Me } from '../features/account/account-api';
 import type { Home } from '../features/homes/homes-api';
+import type { SearchPreferences } from '../features/search/search-preferences-api';
 import { FakeHomes } from './fake-homes';
 import { FakeModeration } from './fake-moderation';
+import { FakeSearchPreferences } from './fake-search-preferences';
 import { json, problem } from './http-responses';
 
 export interface RecordedRequest {
@@ -44,6 +46,15 @@ function profileChangesOf(body: UpsertBody): Partial<Me> {
   return changes;
 }
 
+/** Una búsqueda ya guardada: Getafe, 30.000 € a pagar y nada que recibir; el punto medio del rango. */
+export const DEFAULT_SEARCH_PREFERENCES: SearchPreferences = {
+  municipalities: ['Getafe'],
+  filters: {},
+  maxToPayCents: 3_000_000,
+  minToReceiveCents: 0,
+  valueReferencePct: 50,
+};
+
 export type Failure = 'network' | 'server' | 'legal-outdated' | 'unauthorized' | 'invalid';
 
 /**
@@ -57,6 +68,8 @@ export class FakeBackend {
   profile: Me;
   /** Las viviendas del usuario, con las reglas de la API. */
   readonly homes: FakeHomes;
+  /** Las preferencias de búsqueda del usuario y las de cada vivienda. */
+  readonly searchPreferences: FakeSearchPreferences;
   /** La cola de moderación sobre esas mismas viviendas. */
   private readonly moderation: FakeModeration;
 
@@ -64,10 +77,18 @@ export class FakeBackend {
     registered = false,
     profile = me(),
     homes = [],
-  }: { registered?: boolean; profile?: Me; homes?: readonly Home[] } = {}) {
+    searchPreferences = DEFAULT_SEARCH_PREFERENCES,
+  }: {
+    registered?: boolean;
+    profile?: Me;
+    homes?: readonly Home[];
+    /** Las preferencias ya guardadas del usuario; `null` si aún no las ha definido (primer uso). */
+    searchPreferences?: SearchPreferences | null;
+  } = {}) {
     this.registered = registered;
     this.profile = profile;
     this.homes = new FakeHomes(homes);
+    this.searchPreferences = new FakeSearchPreferences(this.homes, searchPreferences);
     this.moderation = new FakeModeration(this.homes);
   }
 
@@ -117,6 +138,9 @@ export class FakeBackend {
       return this.profile.roles.includes('admin')
         ? this.moderation.respond(path, method, search, body)
         : problem(403);
+    }
+    if (path.endsWith('/search-preferences')) {
+      return this.searchPreferences.respond(method, path, body);
     }
     if (path === '/me/homes' || path.startsWith('/homes')) {
       return this.homes.respond(method, path, body);

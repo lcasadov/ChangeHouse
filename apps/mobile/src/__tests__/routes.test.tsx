@@ -59,7 +59,8 @@ describe('navegación principal', () => {
     for (const [label] of TAB_CASES) {
       expect(await screen.findByRole('button', { name: label })).toBeTruthy();
     }
-    expect(screen.getByText(es.explore.empty.title)).toBeTruthy();
+    // «Explorar» carga la búsqueda guardada antes de mostrarse
+    expect(await screen.findByText(es.explore.empty.title)).toBeTruthy();
   });
 
   it.each(TAB_CASES)(
@@ -81,7 +82,7 @@ describe('navegación principal', () => {
       await renderRouter(ROUTES);
 
       const tab = await screen.findByRole('button', { name: es.tabs.explore });
-      const title = screen.getByText(es.explore.empty.title);
+      const title = await screen.findByText(es.explore.empty.title);
 
       expect(styleOf(title).color).toBe(themes[scheme].color.text);
       expect(JSON.stringify(screen.toJSON())).toContain(themes[scheme].color.primary);
@@ -96,6 +97,7 @@ describe('navegación principal', () => {
     for (const [label] of TAB_CASES) {
       expect(await screen.findByRole('button', { name: label })).toBeTruthy();
     }
-    expect(screen.getByText(es.explore.empty.title)).toBeTruthy();
+    // «Explorar» carga la búsqueda guardada antes de mostrarse
+    expect(await screen.findByText(es.explore.empty.title)).toBeTruthy();
   });
 });

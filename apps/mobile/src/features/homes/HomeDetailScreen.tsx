@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
 import { Badge, Button, FormScreen, Notice, Text } from '../../ui';
+import { HomePreferences } from '../search/HomePreferences';
 import { LoadingView } from '../session/LoadingView';
 import { homeRoutes } from './home-routes';
 import { rejectionOf, STATUS_PRESENTATION } from './home-status';
@@ -80,6 +81,7 @@ function HomeDetail({ home }: Readonly<{ home: Home }>) {
           }}
         />
       ) : null}
+      <HomePreferences homeId={home.id} />
     </FormScreen>
   );
 }

@@ -1,5 +1,1 @@
-import { SectionPlaceholder } from '../../src/features/shell/SectionPlaceholder';
-
-export default function ExploreScreen() {
-  return <SectionPlaceholder section="explore" icon="compass-outline" />;
-}
+export { ExploreScreen as default } from '../../src/features/search/ExploreScreen';

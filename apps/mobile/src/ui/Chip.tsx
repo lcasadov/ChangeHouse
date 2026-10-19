@@ -11,21 +11,44 @@ export interface ChipProps {
   selected: boolean;
   /** Pide el nuevo valor: el contrario si es una casilla; siempre `true` si es una opción. */
   onChange: (selected: boolean) => void;
-  /** `checkbox`: varias a la vez; `radio`: una opción de un grupo (`ChoiceChips`). */
-  kind?: 'checkbox' | 'radio';
+  /**
+   * `checkbox`: varias a la vez; `radio`: una opción de un grupo (`ChoiceChips`); `toggle`: filtro
+   * de un toque que se anuncia como botón «seleccionado» (barra de filtros de la búsqueda).
+   */
+  kind?: 'checkbox' | 'radio' | 'toggle';
+  /** Solo con `toggle`: el filtro despliega opciones; se anuncia si están a la vista. */
+  expanded?: boolean;
+}
+
+/** Rol y estado accesibles de cada tipo de chip. */
+function semanticsOf(kind: NonNullable<ChipProps['kind']>, selected: boolean, expanded?: boolean) {
+  if (kind === 'toggle') {
+    return {
+      role: 'button',
+      state: { selected, ...(expanded === undefined ? {} : { expanded }) },
+    } as const;
+  }
+  return { role: kind, state: { checked: selected } } as const;
 }
 
 /** Chip seleccionable (`docs/style-guide.md` §3): el elegido lleva marca además del color. */
-export function Chip({ label, selected, onChange, kind = 'checkbox' }: Readonly<ChipProps>) {
+export function Chip({
+  label,
+  selected,
+  onChange,
+  kind = 'checkbox',
+  expanded,
+}: Readonly<ChipProps>) {
   const theme = useTheme();
   const focusRing = useFocusRing();
   const foreground = selected ? theme.color.textOnPrimary : theme.color.text;
+  const { role, state } = semanticsOf(kind, selected, expanded);
 
   return (
     <Pressable
-      accessibilityRole={kind}
+      accessibilityRole={role}
       accessibilityLabel={label}
-      accessibilityState={{ checked: selected }}
+      accessibilityState={state}
       onPress={() => {
         onChange(kind === 'radio' ? true : !selected);
       }}

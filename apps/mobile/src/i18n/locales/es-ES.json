@@ -462,5 +462,104 @@
       "network": "No hemos podido guardar tu decisión. Comprueba tu conexión y vuelve a intentarlo.",
       "unknown": "No hemos podido guardar tu decisión. Inténtalo de nuevo en unos minutos."
     }
+  },
+  "search": {
+    "bar": {
+      "label": "¿Dónde quieres vivir?",
+      "hint": "Escribe un municipio o un barrio y elige una sugerencia.",
+      "searching": "Buscando sitios",
+      "noResults": "No encontramos ese sitio. Prueba con el nombre de un municipio o de un barrio.",
+      "failed": "No hemos podido buscar sitios. Comprueba tu conexión y vuelve a intentarlo."
+    },
+    "zone": {
+      "selected": "Zonas de búsqueda",
+      "remove": "Quitar {{name}}",
+      "around": "{{name}} (radio de {{km}} km)",
+      "point": "Un punto elegido (radio de {{km}} km)",
+      "radius": "Radio de búsqueda",
+      "radiusOption": "{{km}} km",
+      "required": "Elige una zona para poder buscar."
+    },
+    "chips": {
+      "label": "Filtros rápidos",
+      "garage": "Garaje",
+      "lift": "Ascensor",
+      "exterior": "Exterior",
+      "bedrooms": "Dormitorios",
+      "bedroomsMin": "Dormitorios ≥ {{count}}",
+      "bedroomsHint": "Toca para cambiar el mínimo de dormitorios",
+      "type": "Tipo",
+      "more": "Más filtros"
+    },
+    "status": {
+      "saving": "Guardando tu búsqueda",
+      "saved": "Búsqueda guardada",
+      "failed": "No hemos podido guardar el cambio y lo hemos deshecho. Comprueba tu conexión y vuelve a intentarlo."
+    },
+    "sheet": {
+      "title": "Filtros y compensación",
+      "close": "Cerrar",
+      "save": "Guardar",
+      "saveFailed": "No hemos podido guardar tus preferencias. Comprueba tu conexión y vuelve a intentarlo.",
+      "filters": "Filtros",
+      "compensation": "Compensación"
+    },
+    "form": {
+      "maxToPay": "Puedo pagar hasta",
+      "maxToPayHint": "Lo máximo que añadirías en euros si tu casa vale menos. Pon 0 si nada.",
+      "minToReceive": "Quiero recibir al menos",
+      "minToReceiveHint": "Lo mínimo que quieres recibir si tu casa vale más. Pon 0 si te da igual.",
+      "amountPreview": "Son {{amount}}",
+      "minUsefulM2": "Superficie útil mínima (m²)",
+      "minBedrooms": "Dormitorios (mínimo)",
+      "minBathrooms": "Baños (mínimo)",
+      "types": "Tipo de vivienda",
+      "features": "Características",
+      "garage": "Con garaje",
+      "lift": "Con ascensor",
+      "exterior": "Exterior"
+    },
+    "valueReference": {
+      "label": "Punto de tu rango de valor",
+      "value": "{{pct}} %",
+      "explanation": "Calculamos la compensación con este punto del rango de valor de tu casa: 0 % es el mínimo y 100 %, el máximo.",
+      "lower": "Bajar el punto del rango",
+      "higher": "Subir el punto del rango"
+    },
+    "errors": {
+      "maxToPay": "Indica un importe válido, por ejemplo 30.000.",
+      "minToReceive": "Indica un importe válido, por ejemplo 0.",
+      "valueReferencePct": "Elige un punto entre 0 y 100 %.",
+      "minUsefulM2": "Indica unos metros válidos, por ejemplo 80.",
+      "radius": "El radio debe estar entre 1 y 200 km.",
+      "general": "Revisa los datos e inténtalo de nuevo."
+    },
+    "firstUse": {
+      "title": "¿Dónde quieres vivir y cuánto puedes compensar?",
+      "description": "Elige una zona y cuánto estarías dispuesto a pagar o a recibir. Podrás cambiarlo cuando quieras.",
+      "action": "Ver viviendas"
+    },
+    "summary": {
+      "description": "Buscas en {{zones}}. Puedes pagar hasta {{maxToPay}} y quieres recibir al menos {{minToReceive}}. Aquí aparecerán las viviendas compatibles.",
+      "none": "ninguna zona"
+    },
+    "loadFailed": "No hemos podido cargar tu búsqueda. Comprueba tu conexión y vuelve a intentarlo.",
+    "retry": "Reintentar",
+    "home": {
+      "title": "Preferencias de esta vivienda",
+      "own": "Esta vivienda busca con sus propias preferencias.",
+      "inherited": "Esta vivienda usa tus preferencias de búsqueda.",
+      "define": "Definir preferencias propias",
+      "edit": "Editar preferencias de esta vivienda",
+      "useMine": "Usar las mías",
+      "sheetTitle": "Preferencias propias de esta vivienda",
+      "confirmTitle": "¿Usar tus preferencias?",
+      "confirmDescription": "Se eliminarán las preferencias propias de esta vivienda y buscará con las tuyas.",
+      "confirmAction": "Sí, usar las mías",
+      "cancel": "Cancelar",
+      "loadFailed": "No hemos podido cargar las preferencias de esta vivienda.",
+      "deleteFailed": "No hemos podido eliminar las preferencias propias. Inténtalo de nuevo.",
+      "notFound": "Esta vivienda ya no existe."
+    }
   }
 }

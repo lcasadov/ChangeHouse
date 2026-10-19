@@ -11,16 +11,16 @@
 
 ## 2. App
 
-- [ ] T2 Escribir las pruebas de componentes de la barra «¿Dónde quieres vivir?», los chips, la hoja de filtros y compensación, y el paso de primer uso, y comprobar que fallan. ref: Búsqueda en un toque · est: 3h · disc: qa
+- [x] T2 Escribir las pruebas de componentes de la barra «¿Dónde quieres vivir?», los chips, la hoja de filtros y compensación, y el paso de primer uso, y comprobar que fallan. ref: Búsqueda en un toque · est: 3h · disc: qa
   - GIVEN un usuario sin preferencias WHEN entra en «Explorar» THEN ve el paso de primer uso
-- [ ] F1 Implementar la búsqueda en un toque (autocompletado con sugerencias de prueba sin clave, chips accesibles, hoja inferior con compensación y punto del rango) y el paso de primer uso, y verificar que pasan las pruebas de T2. ref: Búsqueda en un toque · est: 6h · disc: front
+- [x] F1 Implementar la búsqueda en un toque (autocompletado con sugerencias de prueba sin clave, chips accesibles, hoja inferior con compensación y punto del rango) y el paso de primer uso, y verificar que pasan las pruebas de T2. ref: Búsqueda en un toque · est: 6h · disc: front
   - GIVEN el chip «Garaje» WHEN se toca THEN su estado se anuncia como activado
-- [ ] F2 Implementar en el detalle de una vivienda propia la opción «Preferencias de esta vivienda» (definir, editar, volver a las del usuario) y verificar sus pruebas de componentes. ref: Preferencias propias de una vivienda · est: 3h · disc: front
+- [x] F2 Implementar en el detalle de una vivienda propia la opción «Preferencias de esta vivienda» (definir, editar, volver a las del usuario) y verificar sus pruebas de componentes. ref: Preferencias propias de una vivienda · est: 3h · disc: front
   - GIVEN una vivienda con preferencias propias WHEN se elige «Usar las mías» THEN se eliminan y se muestran las del usuario
 
 ## 3. Integración
 
-- [ ] V1 Ejecutar `pnpm lint`, `pnpm typecheck`, `pnpm test:coverage`, `pnpm test:integration` y `pnpm build` y verificar que todo pasa con cobertura ≥ 80 %. ref: Preferencias por defecto del usuario · est: 1h · disc: qa
+- [x] V1 Ejecutar `pnpm lint`, `pnpm typecheck`, `pnpm test:coverage`, `pnpm test:integration` y `pnpm build` y verificar que todo pasa con cobertura ≥ 80 %. ref: Preferencias por defecto del usuario · est: 1h · disc: qa
   - GIVEN el change implementado WHEN se ejecuta la puerta de calidad local THEN todos los comandos terminan con éxito
 
 ## Workflow follow-up

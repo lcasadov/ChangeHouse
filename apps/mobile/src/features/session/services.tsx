@@ -7,6 +7,8 @@ import type { AddressSuggestions } from '../homes/address-suggestions';
 import type { HomesApi } from '../homes/homes-api';
 import type { PhotoPicker } from '../homes/photo-picker';
 import type { PhotoUploader } from '../homes/photo-uploader';
+import type { SearchPreferencesApi } from '../search/search-preferences-api';
+import type { ZoneSuggestions } from '../search/zone-suggestions';
 
 /** Los puertos de salida que usa la interfaz; en la app van sobre Firebase y HTTP, en las pruebas son dobles. */
 export interface AppServices {
@@ -21,6 +23,10 @@ export interface AppServices {
   photoPicker: PhotoPicker;
   /** El envío directo de cada foto a su URL firmada de subida. */
   photoUploader: PhotoUploader;
+  /** Las preferencias de búsqueda del usuario y las propias de cada vivienda. */
+  searchPreferencesApi: SearchPreferencesApi;
+  /** Autocompletado de la zona de búsqueda: municipios y lugares (sugerencias de prueba sin clave). */
+  zoneSuggestions: ZoneSuggestions;
   /** Proveedores externos configurados en este dispositivo (vacío si no hay ninguno). */
   social: readonly SocialSignIn[];
   /** Dónde se leen los textos legales cuyas versiones se aceptan en el alta. */

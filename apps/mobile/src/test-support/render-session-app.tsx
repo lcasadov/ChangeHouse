@@ -28,11 +28,14 @@ import { createFixtureAddressSuggestions } from '../features/homes/fixture-addre
 import { createHttpHomesApi } from '../features/homes/http-homes-api';
 import type { PhotoPicker } from '../features/homes/photo-picker';
 import type { PhotoUploader } from '../features/homes/photo-uploader';
+import { createFixtureZoneSuggestions } from '../features/search/fixture-zone-suggestions';
+import { createHttpSearchPreferencesApi } from '../features/search/http-search-preferences-api';
+import type { ZoneSuggestions } from '../features/search/zone-suggestions';
 import type { AppServices } from '../features/session/services';
 import { SessionRoot } from '../features/session/SessionRoot';
 import { AppThemeProvider } from '../theme/AppThemeProvider';
 import { authUser, FakeAuthService } from './fake-auth-service';
-import { type FakeBackend, me } from './fake-backend';
+import { DEFAULT_SEARCH_PREFERENCES, type FakeBackend, me } from './fake-backend';
 import { FakePhotoPicker, FakePhotoUploader } from './fake-photos';
 
 export const TEST_LEGAL_URLS = {
@@ -61,6 +64,14 @@ export function fakeServices(overrides: Partial<AppServices> = {}): AppServices 
     },
     photoPicker: { pick: () => Promise.resolve([]) },
     photoUploader: { upload: () => Promise.resolve() },
+    searchPreferencesApi: {
+      getMine: () => Promise.resolve(DEFAULT_SEARCH_PREFERENCES),
+      putMine: () => Promise.reject(new Error('Sin preferencias en este doble')),
+      getForHome: () => Promise.resolve(null),
+      putForHome: () => Promise.reject(new Error('Sin preferencias en este doble')),
+      deleteForHome: () => Promise.resolve(),
+    },
+    zoneSuggestions: createFixtureZoneSuggestions(),
     addressSuggestions: createFixtureAddressSuggestions(),
     social: [],
     legalUrls: TEST_LEGAL_URLS,
@@ -78,6 +89,8 @@ export interface SessionAppOptions {
   photoPicker?: PhotoPicker;
   /** El envío a la URL firmada; por defecto, uno que deja el fichero en el backend simulado. */
   photoUploader?: PhotoUploader;
+  /** Autocompletado de zonas de búsqueda; por defecto, los municipios y lugares de prueba. */
+  zoneSuggestions?: ZoneSuggestions;
   theme?: ThemeName;
   /** Ruta a la que se abre la app (por defecto la raíz, que es una pestaña protegida). */
   url?: string;
@@ -91,6 +104,7 @@ export function renderSessionApp({
   addressSuggestions = createFixtureAddressSuggestions(),
   photoPicker = new FakePhotoPicker(),
   photoUploader = new FakePhotoUploader(backend),
+  zoneSuggestions = createFixtureZoneSuggestions(),
   theme = 'light',
   url = '/',
 }: SessionAppOptions) {
@@ -107,6 +121,8 @@ export function renderSessionApp({
     addressSuggestions,
     photoPicker,
     photoUploader,
+    searchPreferencesApi: createHttpSearchPreferencesApi(client),
+    zoneSuggestions,
     social,
     legalUrls: TEST_LEGAL_URLS,
   };
