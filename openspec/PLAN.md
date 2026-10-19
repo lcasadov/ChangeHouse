@@ -36,19 +36,18 @@ personas; la zona generada la reescribe `plan-sync` en cada operación.
 
 | change | estado | % | completadas/total | fase |
 |---|---|---|---|---|
-| add-landing | 🟢 COMPLETO — sin archivar | 100 % | 12/12 | 🔄 EN PROGRESO |
+| — | — | — | — | — |
 
-**Progreso global de los changes activos**: 12/12 (100 %)
+**Progreso global de los changes activos**: 0/0
 
 | estado | changes |
 |---|---|
-| 🟢 COMPLETO — sin archivar | 1 |
-| ✅ ARCHIVADO | 0 |
+| ✅ ARCHIVADO | 1 |
 
 ### Changes archivados
 
 | change | tareas | fecha |
 |---|---|---|
-| — | — | — |
+| 2026-10-19-add-landing | 12/12 | 2026-10-19 |
 
 <!-- catalogo:generado:fin -->
