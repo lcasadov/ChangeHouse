@@ -1,0 +1,72 @@
+{
+  "tracker": "github-issues",
+  "change": "add-user-profile",
+  "sprint": {
+    "path": "Sprint en curso",
+    "created": false
+  },
+  "epic": {
+    "capability": "accounts",
+    "id": 59,
+    "reused": true
+  },
+  "related_epics": [],
+  "feature": {
+    "id": 83,
+    "reused": false
+  },
+  "stories": [
+    {
+      "key": "Edición del perfil",
+      "id": 84,
+      "reused": false,
+      "prio": "P1"
+    },
+    {
+      "key": "Privacidad del teléfono",
+      "id": 85,
+      "reused": false,
+      "prio": "P1"
+    }
+  ],
+  "tasks": [
+    {
+      "key": "T1",
+      "id": 86,
+      "parent": 84,
+      "state": "open"
+    },
+    {
+      "key": "B1",
+      "id": 87,
+      "parent": 84,
+      "state": "open"
+    },
+    {
+      "key": "T2",
+      "id": 88,
+      "parent": 85,
+      "state": "open"
+    },
+    {
+      "key": "T3",
+      "id": 89,
+      "parent": 84,
+      "state": "open"
+    },
+    {
+      "key": "F1",
+      "id": 90,
+      "parent": 84,
+      "state": "open"
+    },
+    {
+      "key": "V1",
+      "id": 91,
+      "parent": 84,
+      "state": "open"
+    }
+  ],
+  "bugs": [],
+  "pending": []
+}
