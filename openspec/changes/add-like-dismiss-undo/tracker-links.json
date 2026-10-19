@@ -76,19 +76,19 @@
       "key": "T2",
       "id": 177,
       "parent": 172,
-      "state": "open"
+      "state": "doing"
     },
     {
       "key": "F1",
       "id": 178,
       "parent": 172,
-      "state": "open"
+      "state": "doing"
     },
     {
       "key": "V1",
       "id": 179,
       "parent": 168,
-      "state": "open"
+      "state": "doing"
     }
   ],
   "bugs": [],
