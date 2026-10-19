@@ -36,14 +36,13 @@ personas; la zona generada la reescribe `plan-sync` en cada operación.
 
 | change | estado | % | completadas/total | fase |
 |---|---|---|---|---|
-| add-home-moderation | 🔄 EN PROGRESO | 50 % | 3/6 | ❌ SIN EMPEZAR |
+| — | — | — | — | — |
 
-**Progreso global de los changes activos**: 3/6 (50 %)
+**Progreso global de los changes activos**: 0/0
 
 | estado | changes |
 |---|---|
-| 🔄 EN PROGRESO | 1 |
-| ✅ ARCHIVADO | 6 |
+| ✅ ARCHIVADO | 7 |
 
 ### Changes archivados
 
@@ -51,6 +50,7 @@ personas; la zona generada la reescribe `plan-sync` en cada operación.
 |---|---|---|
 | 2026-10-19-add-authentication | 13/13 | 2026-10-19 |
 | 2026-10-19-add-home-listing | 11/11 | 2026-10-19 |
+| 2026-10-19-add-home-moderation | 6/6 | 2026-10-19 |
 | 2026-10-19-add-home-photos | 8/8 | 2026-10-19 |
 | 2026-10-19-add-landing | 12/12 | 2026-10-19 |
 | 2026-10-19-add-user-profile | 6/6 | 2026-10-19 |

@@ -58,19 +58,19 @@
       "key": "T2",
       "id": 133,
       "parent": 128,
-      "state": "doing"
+      "state": "done"
     },
     {
       "key": "F1",
       "id": 134,
       "parent": 127,
-      "state": "doing"
+      "state": "done"
     },
     {
       "key": "V1",
       "id": 135,
       "parent": 127,
-      "state": "doing"
+      "state": "done"
     }
   ],
   "bugs": [],
