@@ -1,0 +1,126 @@
+{
+  "tracker": "github-issues",
+  "change": "add-home-listing",
+  "sprint": {
+    "path": "Sprint en curso",
+    "created": false
+  },
+  "epic": {
+    "capability": "homes",
+    "id": 92,
+    "reused": false
+  },
+  "related_epics": [],
+  "feature": {
+    "id": 93,
+    "reused": false
+  },
+  "stories": [
+    {
+      "key": "Alta de vivienda en borrador",
+      "id": 94,
+      "reused": false,
+      "prio": "P1"
+    },
+    {
+      "key": "Varias viviendas por usuario",
+      "id": 95,
+      "reused": false,
+      "prio": "P2"
+    },
+    {
+      "key": "Ubicación y dirección privada",
+      "id": 96,
+      "reused": false,
+      "prio": "P1"
+    },
+    {
+      "key": "Detalle de vivienda según quién la consulta",
+      "id": 98,
+      "reused": false,
+      "prio": "P1"
+    },
+    {
+      "key": "Envío a revisión",
+      "id": 99,
+      "reused": false,
+      "prio": "P1"
+    },
+    {
+      "key": "Rol de propietario derivado de sus viviendas",
+      "id": 100,
+      "reused": false,
+      "prio": "P1"
+    }
+  ],
+  "tasks": [
+    {
+      "key": "T1",
+      "id": 101,
+      "parent": 99,
+      "state": "open"
+    },
+    {
+      "key": "B1",
+      "id": 102,
+      "parent": 94,
+      "state": "open"
+    },
+    {
+      "key": "B2",
+      "id": 103,
+      "parent": 96,
+      "state": "open"
+    },
+    {
+      "key": "T2",
+      "id": 104,
+      "parent": 98,
+      "state": "open"
+    },
+    {
+      "key": "B3",
+      "id": 105,
+      "parent": 96,
+      "state": "open"
+    },
+    {
+      "key": "T3",
+      "id": 106,
+      "parent": 100,
+      "state": "open"
+    },
+    {
+      "key": "B4",
+      "id": 107,
+      "parent": 100,
+      "state": "open"
+    },
+    {
+      "key": "T4",
+      "id": 108,
+      "parent": 94,
+      "state": "open"
+    },
+    {
+      "key": "F1",
+      "id": 109,
+      "parent": 95,
+      "state": "open"
+    },
+    {
+      "key": "F2",
+      "id": 110,
+      "parent": 99,
+      "state": "open"
+    },
+    {
+      "key": "V1",
+      "id": 111,
+      "parent": 94,
+      "state": "open"
+    }
+  ],
+  "bugs": [],
+  "pending": []
+}
