@@ -215,6 +215,8 @@ describe('Registro e inicio de sesión', () => {
 
     await fireEvent.press(await screen.findByRole('button', { name: es.tabs.profile }));
     await fireEvent.press(await screen.findByRole('button', { name: es.auth.signOut }));
+    // Desde el perfil se pide confirmación (spec add-user-profile)
+    await fireEvent.press(await screen.findByRole('button', { name: es.profile.signOut.confirm }));
 
     // Vuelve a la bienvenida y las pestañas dejan de ser accesibles
     expect(await screen.findByText(welcome.title)).toBeTruthy();

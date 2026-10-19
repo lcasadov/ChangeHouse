@@ -18,18 +18,52 @@ export const CONSENT_TYPES = [
 
 export type ConsentType = (typeof CONSENT_TYPES)[number];
 
-/** `MeInput` (`docs/api/openapi.yaml`): cerrado, de modo que un campo de rol o de estado da 400 (RC-17). */
-export const meInputSchema = z.strictObject({
-  displayName: z.string().trim().min(1).max(MAX_DISPLAY_NAME),
-  municipality: z.string().trim().max(MAX_MUNICIPALITY).optional(),
-  phone: z.string().regex(E164).optional(),
+const displayNameSchema = z.string().trim().min(1).max(MAX_DISPLAY_NAME);
+const municipalitySchema = z.string().trim().max(MAX_MUNICIPALITY);
+const phoneSchema = z.string().regex(E164);
+
+/**
+ * Datos de perfil que el usuario edita (`MeInput` sin los textos legales). Cerrado, de modo que un campo de
+ * rol o de estado da 400 (RC-17). Lo comparten la API y el formulario del perfil.
+ */
+export const profileSchema = z.strictObject({
+  displayName: displayNameSchema,
+  municipality: municipalitySchema.optional(),
+  phone: phoneSchema.optional(),
   meetsVppRequirements: z.boolean().optional(),
   isOver65: z.boolean().optional(),
+});
+
+export type ProfileInput = z.infer<typeof profileSchema>;
+
+/** `MeInput` (`docs/api/openapi.yaml`): el perfil más las versiones legales del primer acceso. */
+export const meInputSchema = profileSchema.extend({
   acceptedTermsVersion: z.string().optional(),
   acceptedPrivacyVersion: z.string().optional(),
 });
 
 export type MeInput = z.infer<typeof meInputSchema>;
+
+/** Espacios y guiones al escribir un teléfono no lo hacen distinto: se quitan antes de validar. */
+const PHONE_SEPARATORS = /[\s-]/g;
+
+/**
+ * Lo que escribe la persona en el formulario del perfil: cada texto llega como cadena (vacía si no
+ * lo rellena) y se valida con las mismas reglas que la API. Un teléfono vacío es «no indicado».
+ */
+export const profileFormSchema = z.object({
+  displayName: displayNameSchema,
+  municipality: municipalitySchema,
+  phone: z
+    .string()
+    .transform((value) => value.replace(PHONE_SEPARATORS, ''))
+    .pipe(z.union([z.literal('').transform(() => undefined), phoneSchema])),
+  meetsVppRequirements: z.boolean(),
+  isOver65: z.boolean(),
+});
+
+export type ProfileFormValues = z.input<typeof profileFormSchema>;
+export type ProfileFormData = z.output<typeof profileFormSchema>;
 
 /** `ConsentInput` (`docs/api/openapi.yaml`). */
 export const consentInputSchema = z.strictObject({
@@ -38,6 +72,8 @@ export const consentInputSchema = z.strictObject({
 });
 
 export type ConsentInput = z.infer<typeof consentInputSchema>;
+
+export const validateProfileForm = (input: unknown) => validateWith(profileFormSchema, input);
 
 export const validateMeInput = (input: unknown) => validateWith(meInputSchema, input);
 

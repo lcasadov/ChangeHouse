@@ -106,6 +106,17 @@ describe('upsertMe', () => {
     expect(repository.consents).toHaveLength(2);
   });
 
+  it('Scenario: Guardar cambios del perfil - un municipio en blanco lo borra y un alta sin municipio lo deja vacío', async () => {
+    const { run } = setup();
+    const created = await run({ ...signUpInput, municipality: '' });
+    await run({ displayName: 'Ana', municipality: 'Madrid' });
+
+    const cleared = await run({ displayName: 'Ana', municipality: '' });
+
+    expect(created.me.municipality).toBeNull();
+    expect(cleared.me.municipality).toBeNull();
+  });
+
   it('un usuario ya dado de alta no necesita volver a enviar las versiones legales', async () => {
     const { run } = setup([{ id: 'u1', firebaseUid: 'uid-1', displayName: 'Ana' }]);
 

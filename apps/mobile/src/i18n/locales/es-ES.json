@@ -27,9 +27,36 @@
     }
   },
   "profile": {
-    "empty": {
-      "title": "Tu perfil estará aquí",
-      "description": "Desde aquí podrás revisar tus datos, cambiar el tema de la aplicación y gestionar tu cuenta."
+    "title": "Tu perfil",
+    "description": "Así te ven las demás personas, salvo tu teléfono, que solo ves tú.",
+    "email": "Email de la cuenta: {{email}}",
+    "form": {
+      "displayName": "Nombre visible",
+      "displayNameHint": "Es el nombre que verán las demás personas.",
+      "municipality": "Municipio (opcional)",
+      "phone": "Teléfono (opcional)",
+      "phoneHint": "Solo lo ves tú; no se muestra a otras personas. Formato internacional, por ejemplo +34612345678.",
+      "meetsVppRequirements": "Cumplo los requisitos de acceso a vivienda protegida (VPP)",
+      "isOver65": "Tengo más de 65 años",
+      "submit": "Guardar cambios"
+    },
+    "saved": "Cambios guardados.",
+    "errors": {
+      "displayNameRequired": "Escribe tu nombre visible.",
+      "displayNameTooLong": "El nombre visible puede tener como máximo 60 caracteres.",
+      "municipalityTooLong": "El municipio puede tener como máximo 120 caracteres.",
+      "phoneInvalid": "Escribe el teléfono en formato internacional, por ejemplo +34612345678.",
+      "invalid": "Revisa los datos del formulario y vuelve a intentarlo.",
+      "network": "No hemos podido guardar los cambios. Comprueba tu conexión y vuelve a intentarlo.",
+      "unknown": "No hemos podido guardar los cambios. Vuelve a intentarlo en unos minutos.",
+      "loadFailed": "No hemos podido cargar tu perfil. Comprueba tu conexión y vuelve a intentarlo.",
+      "retry": "Reintentar"
+    },
+    "signOut": {
+      "title": "¿Cerrar sesión?",
+      "description": "Tendrás que volver a identificarte para entrar en ChangeHouse.",
+      "confirm": "Sí, cerrar sesión",
+      "cancel": "Cancelar"
     }
   },
   "auth": {

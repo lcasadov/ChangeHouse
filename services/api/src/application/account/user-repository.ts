@@ -4,7 +4,8 @@ import type { User } from '../../domain/account/user.js';
 /** Datos del perfil que el propio usuario puede cambiar. */
 export interface ProfileChanges {
   displayName?: string;
-  municipality?: string;
+  /** `null` borra el municipio. */
+  municipality?: string | null;
   phone?: string;
   meetsVppRequirements?: boolean;
   isOver65?: boolean;

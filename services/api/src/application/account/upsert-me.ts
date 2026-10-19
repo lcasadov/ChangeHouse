@@ -43,10 +43,15 @@ export interface UpsertMeResult {
   me: Me;
 }
 
+/** Un municipio en blanco es un municipio borrado: se guarda como ausente, no como cadena vacía. */
+function municipalityOf(municipality: string): string | null {
+  return municipality === '' ? null : municipality;
+}
+
 /** Solo los campos que el cliente envió: lo omitido no se toca. */
 function profileChanges(input: UpsertMeInput): ProfileChanges {
   const changes: ProfileChanges = { displayName: input.displayName };
-  if (input.municipality !== undefined) changes.municipality = input.municipality;
+  if (input.municipality !== undefined) changes.municipality = municipalityOf(input.municipality);
   if (input.phone !== undefined) changes.phone = input.phone;
   if (input.meetsVppRequirements !== undefined) {
     changes.meetsVppRequirements = input.meetsVppRequirements;
@@ -63,7 +68,7 @@ function newUser(deps: UpsertMeDeps, command: UpsertMeCommand, email: string): U
     email: email.trim().toLowerCase(),
     displayName: input.displayName,
     phone: input.phone ?? null,
-    municipality: input.municipality ?? null,
+    municipality: municipalityOf(input.municipality ?? ''),
     meetsVppRequirements: input.meetsVppRequirements ?? false,
     isOver65: input.isOver65 ?? false,
     assignedRole: null,
