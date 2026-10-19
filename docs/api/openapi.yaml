@@ -29,6 +29,10 @@ info:
       existencia (viviendas no publicadas ajenas, matches de otros).
     - Errores en `application/problem+json` (RFC 9457) con `correlationId`.
       Nunca trazas, consultas SQL ni nombres de tabla.
+    - Correlación: toda petición admite la cabecera `X-Correlation-Id` (letras,
+      cifras, `.`, `_` y `-`, hasta 128 caracteres). Si falta o no es válida, la
+      API genera un UUID v7. Toda respuesta devuelve el identificador final en la
+      misma cabecera y, en los errores, en `correlationId`.
 servers:
   - url: https://api.des.changehouse.app/v1
     description: DES (⚠️ dominio changehouse.app pendiente de compra)
@@ -995,13 +999,18 @@ paths:
         existía, para no revelar quién está apuntado.
       security: []
       x-roles: [visitor]
+      parameters:
+        - $ref: '#/components/parameters/CorrelationIdHeader'
       requestBody:
         required: true
         content:
           application/json:
             schema: { $ref: '#/components/schemas/WaitlistInput' }
       responses:
-        '202': { description: Alta aceptada }
+        '202':
+          description: Alta aceptada
+          headers:
+            X-Correlation-Id: { $ref: '#/components/headers/CorrelationId' }
         '400': { $ref: '#/components/responses/BadRequest' }
         '429': { $ref: '#/components/responses/TooManyRequests' }
 
@@ -1013,7 +1022,18 @@ components:
       bearerFormat: JWT
       description: ID token de Firebase Authentication, verificado en cada petición.
 
+  headers:
+    CorrelationId:
+      description: Identificador de correlación de la petición (el recibido o uno generado)
+      schema: { type: string, maxLength: 128 }
+
   parameters:
+    CorrelationIdHeader:
+      name: X-Correlation-Id
+      in: header
+      required: false
+      description: Identificador de correlación; si falta o no es válido, la API genera un UUID v7
+      schema: { type: string, pattern: '^[A-Za-z0-9._-]{1,128}$' }
     HomeId:
       name: homeId
       in: path

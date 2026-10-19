@@ -14,3 +14,5 @@ docs
 *.md
 LICENSE
 .coderabbit.yaml
+**/test-results
+**/playwright-report

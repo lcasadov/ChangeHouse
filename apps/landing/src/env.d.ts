@@ -8,3 +8,8 @@ declare module '*.astro' {
   const Component: AstroComponentFactory;
   export default Component;
 }
+
+interface ImportMetaEnv {
+  /** URL base de la API (sin barra final). Por defecto, la API local. */
+  readonly PUBLIC_API_URL?: string;
+}

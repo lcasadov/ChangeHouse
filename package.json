@@ -18,7 +18,8 @@
     "format:check": "prettier --check .",
     "infra:up": "docker compose up -d --wait",
     "infra:down": "docker compose down",
-    "emulators": "firebase emulators:start --project demo-changehouse"
+    "emulators": "firebase emulators:start --project demo-changehouse",
+    "db:migrate": "pnpm --filter @changehouse/api db:migrate"
   },
   "devDependencies": {
     "@eslint/js": "9.39.5",
