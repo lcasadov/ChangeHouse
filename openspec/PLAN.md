@@ -36,13 +36,13 @@ personas; la zona generada la reescribe `plan-sync` en cada operación.
 
 | change | estado | % | completadas/total | fase |
 |---|---|---|---|---|
-| add-landing | ❌ SIN EMPEZAR | 0 % | 0/12 | ❌ SIN EMPEZAR |
+| add-landing | 🟢 COMPLETO — sin archivar | 100 % | 12/12 | 🔄 EN PROGRESO |
 
-**Progreso global de los changes activos**: 0/12 (0 %)
+**Progreso global de los changes activos**: 12/12 (100 %)
 
 | estado | changes |
 |---|---|
-| ❌ SIN EMPEZAR | 1 |
+| 🟢 COMPLETO — sin archivar | 1 |
 | ✅ ARCHIVADO | 0 |
 
 ### Changes archivados

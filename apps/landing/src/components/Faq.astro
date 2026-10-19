@@ -1,0 +1,111 @@
+---
+import { es } from '../i18n/es';
+
+const { faq } = es;
+---
+
+<section id="preguntas" class="section" aria-labelledby="faq-title">
+  <div class="container narrow">
+    <h2 id="faq-title" class="section-title">
+      {faq.title}
+    </h2>
+
+    <div class="items">
+      {faq.items.map((item, index) => (
+        <div class="item" data-faq-item>
+          <h3 class="question">
+            <button
+              type="button"
+              class="toggle"
+              aria-expanded="false"
+              aria-controls={`faq-answer-${index}`}
+            >
+              {item.question}
+            </button>
+          </h3>
+          <div id={`faq-answer-${index}`} class="answer" hidden>
+            {item.answer}
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>
+
+<script>
+  // Patrón de divulgación de WAI-ARIA: el botón anuncia su estado con aria-expanded
+  for (const toggle of document.querySelectorAll<HTMLButtonElement>('#preguntas .toggle')) {
+    const answer = document.getElementById(toggle.getAttribute('aria-controls') ?? '');
+    toggle.addEventListener('click', () => {
+      const expanded = toggle.getAttribute('aria-expanded') === 'true';
+      toggle.setAttribute('aria-expanded', String(!expanded));
+      if (answer) answer.hidden = expanded;
+    });
+  }
+</script>
+
+<style>
+  .narrow {
+    max-width: calc(var(--content-max-reading) + var(--space-8));
+  }
+
+  .items {
+    display: grid;
+    gap: var(--space-3);
+    margin-top: var(--space-6);
+  }
+
+  .item {
+    border-radius: var(--radius-lg);
+    background: var(--color-surface-muted);
+  }
+
+  .question {
+    margin: 0;
+  }
+
+  .toggle {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font-family: inherit;
+    text-align: start;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    min-height: var(--touch-target);
+    padding: var(--space-4) var(--space-5);
+    border-radius: var(--radius-lg);
+    font-size: var(--font-heading-size);
+    font-weight: var(--font-heading-weight);
+    line-height: var(--font-heading-line-height);
+    cursor: pointer;
+  }
+
+  .toggle:focus-visible {
+    outline: var(--border-thick) solid var(--color-focus);
+    outline-offset: var(--space-1);
+  }
+
+  /* El signo no es el único indicador: el estado también lo anuncia aria-expanded */
+  .toggle::after {
+    content: '+';
+    flex: none;
+    color: var(--color-primary);
+    font-size: var(--font-title-size);
+    font-weight: var(--weight-black);
+    line-height: 1;
+    transition: transform var(--motion-base);
+  }
+
+  .toggle[aria-expanded='true']::after {
+    content: '−';
+  }
+
+  .answer {
+    padding: 0 var(--space-5) var(--space-5);
+    color: var(--color-text-muted);
+  }
+</style>

@@ -1,0 +1,85 @@
+---
+import { es } from '../i18n/es';
+import BaseLayout from './BaseLayout.astro';
+
+interface Props {
+  page: {
+    title: string;
+    description: string;
+    intro: string;
+    sections: ReadonlyArray<{ title: string; text: string }>;
+  };
+}
+
+const { page } = Astro.props;
+---
+
+<BaseLayout title={page.title} description={page.description}>
+  <main id="contenido" class="container legal">
+    <a class="back" href="/">
+      {es.legal.backHome}
+    </a>
+    <h1>{page.title}</h1>
+    <p class="draft" role="note">
+      {es.legal.draftNotice}
+    </p>
+    <p class="intro">{page.intro}</p>
+
+    {page.sections.map((section) => (
+      <section>
+        <h2>{section.title}</h2>
+        <p>{section.text}</p>
+      </section>
+    ))}
+  </main>
+</BaseLayout>
+
+<style>
+  .legal {
+    max-width: calc(var(--content-max-reading) + var(--space-8));
+    padding-block: var(--space-6) var(--space-7);
+  }
+
+  .back {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--touch-target);
+    font-weight: var(--font-label-weight);
+  }
+
+  h1 {
+    margin-top: var(--space-4);
+    font-size: clamp(calc(var(--font-title-size) * 1.4), 9vw, calc(var(--font-display-size) * 1.6));
+    line-height: 1.05;
+  }
+
+  .draft {
+    display: inline-block;
+    margin-top: var(--space-5);
+    padding: var(--space-2) var(--space-4);
+    border: var(--border-thick) solid var(--color-warning);
+    border-radius: var(--radius-md);
+    color: var(--color-warning);
+    font-weight: var(--font-label-weight);
+  }
+
+  .intro {
+    margin-top: var(--space-5);
+    color: var(--color-text-muted);
+    font-size: calc(var(--font-body-size) * 1.125);
+  }
+
+  section {
+    margin-top: var(--space-7);
+  }
+
+  h2 {
+    font-size: var(--font-title-size);
+    line-height: var(--font-title-line-height);
+  }
+
+  section p {
+    margin-top: var(--space-2);
+    color: var(--color-text-muted);
+  }
+</style>

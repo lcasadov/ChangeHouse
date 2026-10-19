@@ -1,0 +1,24 @@
+---
+import { es } from '../i18n/es';
+
+const { waitlist } = es;
+---
+
+<section id="lista-de-espera" class="section waitlist" aria-labelledby="waitlist-title">
+  <div class="container">
+    <div class="card">
+      <h2 id="waitlist-title" class="section-title">
+        {waitlist.title}
+      </h2>
+      <p class="section-lead">{waitlist.placeholder}</p>
+    </div>
+  </div>
+</section>
+
+<style>
+  .card {
+    padding: var(--space-7) var(--space-5);
+    border: var(--border-thick) solid var(--color-brand);
+    border-radius: calc(var(--radius-lg) * 2);
+  }
+</style>

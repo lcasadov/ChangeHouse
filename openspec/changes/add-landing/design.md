@@ -25,9 +25,14 @@ variables CSS alineadas con `packages/ui` y los textos en `src/i18n/es.ts`
   se verifica recorriendo todos los textos. Alternativa descartada: MDX por
   sección — más cómodo para redactar, pero dispersa el contenido y dificulta la
   comprobación automática.
-- **Preguntas frecuentes con `<details>`/`<summary>`**: accesibles con teclado
-  y lector de pantalla sin JavaScript. Se pierde la animación fina; se compensa
-  con CSS respetando `prefers-reduced-motion`.
+- **Preguntas frecuentes con el patrón de divulgación de WAI-ARIA** (botón con
+  `aria-expanded` y `aria-controls` sobre un panel `hidden`). Se partió de
+  `<details>`/`<summary>`, pero Chromium no expone el estado expandido de
+  `<summary>` a los productos de apoyo y la prueba E2E del escenario lo
+  detectó; el botón lo anuncia en todos los navegadores. Coste: unas líneas de
+  JavaScript.
+- **Inter autoalojada** (`@fontsource/inter`) en lugar de Google Fonts: ninguna
+  petición a terceros antes del consentimiento.
 - **Consentimiento en un módulo TypeScript puro** (`src/lib/consent.ts`) que
   guarda la decisión en `localStorage` solo **después** de decidir (guardar la
   propia decisión es esencial); expone `getConsent`, `setConsent` y

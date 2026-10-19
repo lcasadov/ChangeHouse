@@ -1,6 +1,8 @@
-import { defineConfig } from 'vitest/config';
+/// <reference types="vitest/config" />
+import { getViteConfig } from 'astro/config';
 
-export default defineConfig({
+// getViteConfig carga el plugin de Astro: permite renderizar .astro con la API de contenedor
+export default getViteConfig({
   test: {
     include: ['src/**/*.test.ts'],
     coverage: {

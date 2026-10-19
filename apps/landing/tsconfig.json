@@ -4,6 +4,6 @@
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true
   },
-  "include": [".astro/types.d.ts", "src", "*.ts", "*.mjs"],
+  "include": [".astro/types.d.ts", "src", "e2e", "*.ts", "*.mjs"],
   "exclude": ["dist"]
 }

@@ -1,6 +1,14 @@
 ---
+import '@fontsource/inter/latin-400.css';
+import '@fontsource/inter/latin-600.css';
+import '@fontsource/inter/latin-700.css';
+import '@fontsource/inter/latin-800.css';
+
+import CookieBanner from '../components/CookieBanner.astro';
+import Footer from '../components/Footer.astro';
+import Header from '../components/Header.astro';
+import Seo from '../components/Seo.astro';
 import { es } from '../i18n/es';
-import { pageTitle } from '../lib/page-title';
 import { buildThemeStylesheet, themeColors } from '../lib/theme-css';
 
 interface Props {
@@ -21,40 +29,68 @@ const themeStylesheet = buildThemeStylesheet();
     <meta name="color-scheme" content="light dark" />
     <meta name="theme-color" content={colors.light} media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content={colors.dark} media="(prefers-color-scheme: dark)" />
-    <meta name="description" content={description} />
+    <Seo title={title} description={description} />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap"
-    />
-    <title>{pageTitle(title)}</title>
     <style is:inline set:html={themeStylesheet}></style>
   </head>
   <body>
     <a class="skip-link" href="#contenido">
       {es.a11y.skipToContent}
     </a>
+    <CookieBanner />
+    <Header />
     <slot />
+    <Footer />
   </body>
 </html>
 
 <style is:global>
+  :root {
+    --weight-black: 800;
+    --width-wide: calc(var(--content-max-reading) * 1.6);
+    --section-gap: calc(var(--space-8) * 1.5);
+  }
+
   *,
   *::before,
   *::after {
     box-sizing: border-box;
   }
 
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: var(--space-6);
+    scroll-padding-bottom: var(--cookie-banner-height, 0);
+  }
+
   body {
     margin: 0;
+    padding-bottom: var(--cookie-banner-height, 0);
     background: var(--color-bg);
     color: var(--color-text);
     font-family: var(--font-family);
     font-size: var(--font-body-size);
     line-height: var(--font-body-line-height);
     font-weight: var(--font-body-weight);
+    overflow-wrap: break-word;
+  }
+
+  h1,
+  h2,
+  h3 {
+    margin: 0;
+    color: var(--color-text);
+    font-weight: var(--weight-black);
+    letter-spacing: -0.02em;
+    overflow-wrap: anywhere;
+  }
+
+  p {
+    margin: 0;
+  }
+
+  a {
+    color: var(--color-primary);
   }
 
   :focus-visible {
@@ -62,8 +98,86 @@ const themeStylesheet = buildThemeStylesheet();
     outline-offset: var(--border-thick);
   }
 
+  .container {
+    width: 100%;
+    max-width: var(--width-wide);
+    margin-inline: auto;
+    padding-inline: var(--space-4);
+  }
+
+  .section {
+    padding-block: var(--section-gap);
+  }
+
+  .section-title {
+    font-size: clamp(
+      calc(var(--font-title-size) * 1.25),
+      7vw,
+      calc(var(--font-display-size) * 1.5)
+    );
+    line-height: 1.05;
+  }
+
+  .section-lead {
+    margin-top: var(--space-4);
+    max-width: var(--content-max-reading);
+    color: var(--color-text-muted);
+    font-size: calc(var(--font-body-size) * 1.125);
+    line-height: calc(var(--font-body-line-height) * 1.1);
+  }
+
+  .button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: var(--touch-target);
+    padding: var(--space-3) var(--space-5);
+    border: var(--border-thick) solid var(--color-primary);
+    border-radius: var(--radius-full);
+    background: transparent;
+    color: var(--color-primary);
+    font: inherit;
+    font-size: var(--font-label-size);
+    font-weight: var(--font-label-weight);
+    line-height: var(--font-label-line-height);
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+    transition:
+      background-color var(--motion-base),
+      color var(--motion-base);
+  }
+
+  .button:hover {
+    border-color: var(--color-primary-pressed);
+    color: var(--color-primary-pressed);
+  }
+
+  .button-primary {
+    background: var(--color-primary);
+    color: var(--color-text-on-primary);
+  }
+
+  .button-primary:hover {
+    background: var(--color-primary-pressed);
+    color: var(--color-text-on-primary);
+  }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+
   .skip-link {
     position: absolute;
+    z-index: 20;
     left: var(--space-2);
     top: var(--space-2);
     padding: var(--space-2) var(--space-4);
@@ -79,6 +193,10 @@ const themeStylesheet = buildThemeStylesheet();
   }
 
   @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+
     * {
       transition-duration: 0.01ms !important;
       animation-duration: 0.01ms !important;

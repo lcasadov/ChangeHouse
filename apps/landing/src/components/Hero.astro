@@ -1,0 +1,109 @@
+---
+import { es } from '../i18n/es';
+import SwapIllustration from './SwapIllustration.astro';
+
+const { hero } = es;
+---
+
+<section id="inicio" class="hero" aria-labelledby="hero-title">
+  <div class="container grid">
+    <div class="copy">
+      <span class="eyebrow">{hero.eyebrow}</span>
+      <h1 id="hero-title">{hero.title}</h1>
+      <p class="subtitle">{hero.subtitle}</p>
+      <div class="actions">
+        <a class="button button-primary" href="#lista-de-espera">
+          {hero.cta}
+        </a>
+        <a class="button" href="#como-funciona">
+          {hero.secondary}
+        </a>
+      </div>
+    </div>
+    <div class="plate">
+      <SwapIllustration variant="pair" id="hero" />
+    </div>
+  </div>
+</section>
+
+<style>
+  .hero {
+    padding-block: var(--space-6) var(--section-gap);
+    overflow: clip;
+  }
+
+  .grid {
+    display: grid;
+    gap: var(--space-7);
+    align-items: center;
+  }
+
+  .copy {
+    display: grid;
+    gap: var(--space-5);
+    justify-items: start;
+  }
+
+  .eyebrow {
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-full);
+    background: var(--color-surface-muted);
+    color: var(--color-secondary);
+    font-size: var(--font-label-size);
+    font-weight: var(--font-label-weight);
+  }
+
+  h1 {
+    font-size: clamp(
+      calc(var(--font-display-size) * 0.9),
+      11.5vw,
+      calc(var(--font-display-size) * 2)
+    );
+    line-height: 1;
+    letter-spacing: -0.035em;
+  }
+
+  .subtitle {
+    max-width: var(--content-max-reading);
+    color: var(--color-text-muted);
+    font-size: calc(var(--font-body-size) * 1.25);
+    line-height: calc(var(--font-body-line-height) * 1.15);
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+  }
+
+  .plate {
+    position: relative;
+    padding: var(--space-6) var(--space-4);
+    border-radius: calc(var(--radius-lg) * 2);
+    background: var(--color-surface-muted);
+    isolation: isolate;
+  }
+
+  /* Momento destacado: el degradado de marca solo asoma como resplandor tras la ilustración */
+  .plate::before {
+    content: '';
+    position: absolute;
+    inset: calc(var(--space-4) * -1);
+    z-index: -1;
+    border-radius: calc(var(--radius-lg) * 2.5);
+    background: linear-gradient(
+      135deg,
+      var(--color-match-gradient-start),
+      var(--color-match-gradient-end)
+    );
+    opacity: 0.35;
+    filter: blur(var(--space-6));
+  }
+
+  @media (min-width: 1024px) {
+    .grid {
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: var(--space-8);
+    }
+  }
+</style>

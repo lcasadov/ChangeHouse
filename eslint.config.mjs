@@ -75,7 +75,8 @@ export default tseslint.config(
       'vitest/no-disabled-tests': 'error',
       'vitest/expect-expect': 'error',
       'vitest/no-identical-title': 'error',
-      'vitest/valid-expect': 'error',
+      // Vitest admite un mensaje como segundo argumento de expect
+      'vitest/valid-expect': ['error', { maxArgs: 2 }],
     },
   },
   // Fronteras hexagonales de la API (docs/architecture.md, I-1 a I-4)

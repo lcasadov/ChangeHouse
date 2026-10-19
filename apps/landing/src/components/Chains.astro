@@ -1,0 +1,80 @@
+---
+import { es } from '../i18n/es';
+import SwapIllustration from './SwapIllustration.astro';
+
+const { chains } = es;
+---
+
+<section id="cadenas" class="section" aria-labelledby="chains-title">
+  <div class="container">
+    <div class="card">
+      <div class="copy">
+        <h2 id="chains-title" class="section-title">
+          {chains.title}
+        </h2>
+        <p class="lead">{chains.lead}</p>
+        {chains.paragraphs.map((paragraph) => (
+          <p class="text">{paragraph}</p>
+        ))}
+      </div>
+      <div class="art">
+        <SwapIllustration variant="chain" id="chains" />
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .card {
+    position: relative;
+    display: grid;
+    gap: var(--space-7);
+    align-items: center;
+    padding: var(--space-6) var(--space-5);
+    border-radius: calc(var(--radius-lg) * 2);
+    background: var(--color-surface-muted);
+    overflow: hidden;
+  }
+
+  /* Momento destacado: franja del degradado de marca sobre la tarjeta */
+  .card::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto;
+    height: var(--space-2);
+    background: linear-gradient(
+      to right,
+      var(--color-match-gradient-start),
+      var(--color-match-gradient-end)
+    );
+  }
+
+  .copy {
+    display: grid;
+    gap: var(--space-4);
+  }
+
+  .lead {
+    color: var(--color-text);
+    font-size: var(--font-title-size);
+    font-weight: var(--font-title-weight);
+    line-height: var(--font-title-line-height);
+  }
+
+  .text {
+    color: var(--color-text-muted);
+  }
+
+  .art {
+    max-width: var(--content-max-card);
+    margin-inline: auto;
+    width: 100%;
+  }
+
+  @media (min-width: 1024px) {
+    .card {
+      grid-template-columns: 1.1fr 0.9fr;
+      padding: var(--space-8);
+    }
+  }
+</style>
