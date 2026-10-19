@@ -1,0 +1,78 @@
+{
+  "tracker": "github-issues",
+  "change": "add-home-moderation",
+  "sprint": {
+    "path": "Sprint en curso",
+    "created": false
+  },
+  "epic": {
+    "capability": "moderation",
+    "id": 125,
+    "reused": false
+  },
+  "related_epics": [],
+  "feature": {
+    "id": 126,
+    "reused": false
+  },
+  "stories": [
+    {
+      "key": "Cola de moderación de viviendas",
+      "id": 127,
+      "reused": false,
+      "prio": "P1"
+    },
+    {
+      "key": "Aprobación y rechazo con motivo",
+      "id": 128,
+      "reused": false,
+      "prio": "P1"
+    },
+    {
+      "key": "Registro de auditoría de la moderación",
+      "id": 129,
+      "reused": false,
+      "prio": "P1"
+    }
+  ],
+  "tasks": [
+    {
+      "key": "B1",
+      "id": 130,
+      "parent": 129,
+      "state": "open"
+    },
+    {
+      "key": "T1",
+      "id": 131,
+      "parent": 128,
+      "state": "open"
+    },
+    {
+      "key": "B2",
+      "id": 132,
+      "parent": 127,
+      "state": "open"
+    },
+    {
+      "key": "T2",
+      "id": 133,
+      "parent": 128,
+      "state": "open"
+    },
+    {
+      "key": "F1",
+      "id": 134,
+      "parent": 127,
+      "state": "open"
+    },
+    {
+      "key": "V1",
+      "id": 135,
+      "parent": 127,
+      "state": "open"
+    }
+  ],
+  "bugs": [],
+  "pending": []
+}
