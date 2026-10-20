@@ -24,7 +24,9 @@ dirección. El contrato declara `getMatch`, `confirmMatch`, `withdrawFromMatch` 
 - **Teléfono**: `phone` = teléfono del perfil del participante si
   `shares_phone` es verdadero en ese match y tiene teléfono; si no, `null`.
   `setPhoneSharing` cambia solo la fila del propio participante; vale en
-  `open` y `confirmed`.
+  `open` y `confirmed`. Cada participante lleva además `sharesPhone` (booleano,
+  solo en `getMatch` y solo para participantes) para mostrar el interruptor
+  propio y quién comparte.
 - **Dominio** (`domain/matching/match.ts`): participante `pending →
   confirmed`; match `open → confirmed` cuando todos los participantes están
   `confirmed`; retirada desde `open` o `confirmed`: participante `withdrawn` y

@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { InMemoryMatchReader } from '../../../test/fakes.js';
+import { matchEnv } from '../../../test/match-env.js';
 import { decodeCursor, encodeCursor } from '../moderation/cursor.js';
-import { matchOperations } from './match-operations.js';
 import type { MatchRecord } from './matching-repository.js';
 
 const ME = 'user-me';
@@ -37,10 +36,7 @@ function record(id: string, createdAt: string, overrides: Partial<MatchRecord> =
   };
 }
 
-function setup(records: MatchRecord[]) {
-  const reader = new InMemoryMatchReader(records);
-  return { reader, operations: matchOperations({ matches: reader }) };
-}
+const setup = matchEnv;
 
 describe('listMyMatches', () => {
   it('Scenario: Ver mis matches - ve los dos, el más reciente primero, cada uno con su compensación', async () => {

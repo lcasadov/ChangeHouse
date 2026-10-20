@@ -54,6 +54,7 @@ describe('createApi', () => {
       'adminListHomes',
       'adminModerateHome',
       'completeHomePhotoUpload',
+      'confirmMatch',
       'createHome',
       'createHomePhotoUpload',
       'deleteHomePhoto',
@@ -62,6 +63,7 @@ describe('createApi', () => {
       'dismissHome',
       'getHome',
       'getHomeSearchPreferences',
+      'getMatch',
       'getMe',
       'getMySearchPreferences',
       'joinWaitlist',
@@ -71,10 +73,12 @@ describe('createApi', () => {
       'listMyMatches',
       'putHomeSearchPreferences',
       'putMySearchPreferences',
+      'setPhoneSharing',
       'submitHome',
       'undoLastAction',
       'updateHome',
       'upsertMe',
+      'withdrawFromMatch',
     ]);
     await close();
   });

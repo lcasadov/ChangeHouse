@@ -208,10 +208,15 @@ operación de la API sin filas en ese fichero hace fallar la prueba.
 | `dismissHome` | 401 | ✅ | ✅ | 403 | `owner`: `fromHomeId` propia y publicada (sin ella, 400); `seeker`: desde su cuenta |
 | `undoLastAction` | 401 | ✅ | ✅ | 403 | `homeId` propia (ajena → 404); sin acción → 404; like en un match → 409 |
 | `listMyMatches` | 401 | ✅ (vacío) | ✅ | 403 | solo los propios |
-| `getMatch` | 401 | 404 | `participant` | ✅ | no participante → 404 |
-| `confirmMatch` | 401 | 404 | `participant` | 403 | estado → 409 |
-| `withdrawFromMatch` | 401 | 404 | `participant` | 403 | estado → 409 |
-| `setPhoneSharing` | 401 | 404 | `participant` | 403 | — |
+| `getMatch` | 401 | `participant` / 404 | `participant` / 404 | ✅ sin teléfono ni dirección exacta | no participante → 404 sin descifrar nada; `phone` solo si el titular lo autorizó (RC-11) |
+| `confirmMatch` | 401 | `participant` / 404 | `participant` / 404 | 403 | no participante → 404; estado → 409 (`MATCH_NOT_OPEN`); confirmar de nuevo es idempotente |
+| `withdrawFromMatch` | 401 | `participant` / 404 | `participant` / 404 | 403 | no participante → 404; estado → 409 (`MATCH_NOT_OPEN`); queda en `audit_log` |
+| `setPhoneSharing` | 401 | `participant` / 404 | `participant` / 404 | 403 | solo la fila propia; match `closed` → 409 |
+
+Un `seeker` puede ser participante (por ejemplo, con su vivienda pausada); en la
+matriz como datos, que no crea matches, los actores `seeker` y `owner` obtienen
+404 en estas cuatro operaciones y la pertenencia se prueba con matches reales en
+`matches.int.test.ts`.
 | `createReport` | 401 | ✅ | ✅ | 403 | límite de peticiones |
 | `blockUser` | 401 | ✅ | ✅ | 403 | — |
 | `adminListHomes` | 401 | 403 | 403 | ✅ | cola `in_review` por envío; sin dirección exacta |

@@ -2,6 +2,7 @@ import { and, asc, desc, eq, inArray, ne, type SQL, sql } from 'drizzle-orm';
 
 import type { MatchLookup } from '../../../application/decision/decision-repository.js';
 import type {
+  MatchDecisionStore,
   MatchListQuery,
   MatchParticipantRecord,
   MatchReader,
@@ -10,7 +11,11 @@ import type {
   NewMatch,
 } from '../../../application/matching/matching-repository.js';
 import type { CycleType } from '../../../domain/matching/cycle.js';
-import { NEW_MATCH_STATUS, NEW_PARTICIPANT_STATUS } from '../../../domain/matching/match.js';
+import {
+  type MatchState,
+  NEW_MATCH_STATUS,
+  NEW_PARTICIPANT_STATUS,
+} from '../../../domain/matching/match.js';
 import type { Executor } from './database.js';
 import { matches, matchParticipants, users } from './schema.js';
 
@@ -20,7 +25,9 @@ type MatchRow = typeof matches.$inferSelect;
  * Matches en PostgreSQL. Funciona igual dentro de la transacción del me gusta (crear y leer el
  * match recién creado) que fuera de ella (listar y consultar si un me gusta forma parte de uno).
  */
-export class DrizzleMatchRepository implements MatchWriter, MatchReader, MatchLookup {
+export class DrizzleMatchRepository
+  implements MatchWriter, MatchReader, MatchLookup, MatchDecisionStore
+{
   constructor(private readonly db: Executor) {}
 
   async saveMatch(match: NewMatch): Promise<string> {
@@ -62,6 +69,57 @@ export class DrizzleMatchRepository implements MatchWriter, MatchReader, MatchLo
     const rows = await this.db.select().from(matches).where(eq(matches.id, id));
     const [record] = await this.withParticipants(rows);
     return record ?? null;
+  }
+
+  findById(id: string): Promise<MatchRecord | null> {
+    return this.findMatch(id);
+  }
+
+  async findForUpdate(id: string): Promise<MatchRecord | null> {
+    // Serializa confirmaciones, retiradas y cambios de teléfono sobre el mismo match
+    const rows = await this.db.select().from(matches).where(eq(matches.id, id)).for('update');
+    const [record] = await this.withParticipants(rows);
+    return record ?? null;
+  }
+
+  async saveState(id: string, state: MatchState): Promise<void> {
+    await this.db.update(matches).set({ status: state.status }).where(eq(matches.id, id));
+    for (const participant of state.participants) {
+      await this.db
+        .update(matchParticipants)
+        .set({ status: participant.status })
+        .where(
+          and(eq(matchParticipants.matchId, id), eq(matchParticipants.homeId, participant.homeId)),
+        );
+    }
+  }
+
+  async setPhoneSharing(matchId: string, userId: string, share: boolean): Promise<void> {
+    await this.db
+      .update(matchParticipants)
+      .set({ sharesPhone: share })
+      .where(and(eq(matchParticipants.matchId, matchId), eq(matchParticipants.userId, userId)));
+  }
+
+  async phoneSharing(matchId: string): Promise<ReadonlySet<string>> {
+    const rows = await this.db
+      .select({ userId: matchParticipants.userId })
+      .from(matchParticipants)
+      .where(and(eq(matchParticipants.matchId, matchId), eq(matchParticipants.sharesPhone, true)));
+    return new Set(rows.map((row) => row.userId));
+  }
+
+  async sharedPhones(matchId: string): Promise<ReadonlyMap<string, string>> {
+    const rows = await this.db
+      .select({ userId: users.id, phone: users.phone })
+      .from(matchParticipants)
+      .innerJoin(users, eq(users.id, matchParticipants.userId))
+      .where(and(eq(matchParticipants.matchId, matchId), eq(matchParticipants.sharesPhone, true)));
+    const phones = new Map<string, string>();
+    for (const { userId, phone } of rows) {
+      if (phone !== null) phones.set(userId, phone);
+    }
+    return phones;
   }
 
   async listForUser(query: MatchListQuery): Promise<MatchRecord[]> {

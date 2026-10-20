@@ -109,6 +109,12 @@ describe('política de autorización', () => {
       undoLastAction: { kind: 'roles', roles: ['seeker', 'owner'] },
       // Matches: los propios; un seeker (p. ej. con su vivienda pausada) también los consulta
       listMyMatches: { kind: 'roles', roles: ['seeker', 'owner'] },
+      // El detalle también lo consulta el admin (sin teléfonos ni direcciones); confirmar, retirarse y
+      // compartir el teléfono son de participantes. La pertenencia al match la resuelve el caso de uso
+      getMatch: { kind: 'roles', roles: ['seeker', 'owner', 'admin'] },
+      confirmMatch: { kind: 'roles', roles: ['seeker', 'owner'] },
+      withdrawFromMatch: { kind: 'roles', roles: ['seeker', 'owner'] },
+      setPhoneSharing: { kind: 'roles', roles: ['seeker', 'owner'] },
       // Moderación: solo el admin (RF-18, RF-93)
       adminListHomes: { kind: 'roles', roles: ['admin'] },
       adminModerateHome: { kind: 'roles', roles: ['admin'] },
