@@ -31,6 +31,8 @@ gcloud services enable \
 
 echo "== Firebase"
 firebase projects:addfirebase "$PROJECT" >/dev/null 2>&1 || true
+# Dos sitios de Hosting: la landing (sitio por defecto) y la app web
+firebase hosting:sites:create "${PROJECT}-app" --project "$PROJECT" >/dev/null 2>&1 || true
 gcloud firestore databases describe --database='(default)' >/dev/null 2>&1 || \
   gcloud firestore databases create --location="$REGION" --type=firestore-native
 
