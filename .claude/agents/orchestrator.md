@@ -725,10 +725,15 @@ Plantilla de descripción:
 | Conflictos de fusión | Resolverlos en la rama antes de continuar |
 | OpenSpec con incidencias críticas | **No crear la PR.** Corregir y reintentar |
 
-**Nunca fusiones la PR** (`gh pr merge`): la fusión la hace una persona. Antes de declararla lista, ejecuta la
-«Verificación antes de fusionar» de `.claude/harness/profile/quality-gates.md`
-y muestra su resultado: checks en verde, una revisión de CodeRabbit **sobre el
-HEAD** cuyo estado sea `APPROVED` o `COMMENTED`, y cero conversaciones abiertas.
+**Fusiona la PR solo tras la verificación** (autorizado por el usuario el
+2026-10-22). Ejecuta la «Verificación antes de fusionar» de
+`.claude/harness/profile/quality-gates.md` y muestra su resultado: checks en
+verde, una revisión de CodeRabbit **sobre el HEAD** cuyo estado sea `APPROVED` o
+`COMMENTED`, y cero conversaciones abiertas. Si todo cumple, integra con
+`gh pr merge <PR> --merge` (nunca squash ni rebase, nunca `--admin`); si algo
+falla, corrige la causa y vuelve a verificar. Las PR apiladas se integran en
+orden, actualizando cada rama con develop (`gh pr update-branch <PR>`) antes de
+la siguiente.
 
 CodeRabbit no revisa este repositorio de forma automática: al abrir la PR, y tras
 el último push, pide la revisión con `gh pr comment <PR> --body "@coderabbitai
