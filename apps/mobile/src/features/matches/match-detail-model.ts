@@ -1,4 +1,5 @@
 import type { PublicHome } from '../discovery/discovery-api';
+import { cycleOf } from './match-model';
 import type { MatchDetail, MatchParticipant } from './matches-api';
 
 /** Los estados en los que el match sigue vivo y sus participantes pueden decidir. */
@@ -9,6 +10,10 @@ export interface MatchDetailView {
   /** Mi participación, reconocida por mis viviendas; `undefined` si no se sabe cuál es (p. ej. un admin). */
   mine: MatchParticipant | undefined;
   others: MatchParticipant[];
+  /** Es un match en cadena de tres viviendas. */
+  isChain: boolean;
+  /** Las viviendas en el orden en que se muestran: las ajenas y la mía al final; en cadena, el ciclo desde la mía. */
+  sections: MatchParticipant[];
   /** Quien se ha retirado, si alguien lo ha hecho. */
   withdrawn: MatchParticipant | undefined;
   confirmedCount: number;
@@ -33,9 +38,16 @@ export function detailViewOf(
   const mine = detail.participants.find((participant) => ownHomeIds.has(participant.homeId));
   const active = ACTIVE.has(detail.status);
   const decides = mine !== undefined && active;
+  const others = detail.participants.filter((participant) => participant !== mine);
+  const isChain = detail.type === 3 && detail.participants.length === 3;
+  const cycle = isChain ? cycleOf(detail.participants, ownHomeIds) : [];
+  const direct = mine ? [...others, mine] : detail.participants;
+  const sections = isChain ? cycle : direct;
   return {
     mine,
-    others: detail.participants.filter((participant) => participant !== mine),
+    others: isChain ? cycle.filter((participant) => participant !== mine) : others,
+    isChain,
+    sections,
     withdrawn: detail.participants.find((participant) => participant.status === 'withdrawn'),
     confirmedCount: detail.participants.filter((participant) => participant.status === 'confirmed')
       .length,

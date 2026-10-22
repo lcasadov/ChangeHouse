@@ -15,7 +15,7 @@ import { homeTitleOf } from '../homes/home-title';
 import { useMyHomes } from '../homes/use-homes';
 import { LoadingView } from '../session/LoadingView';
 import { detailViewOf, type MatchDetailView } from './match-detail-model';
-import { compensationOf, kindOf } from './match-model';
+import { compensationOf, kindOf, linksOf } from './match-model';
 import { matchRoutes } from './match-routes';
 import { PARTICIPANT_PRESENTATION, STATUS_PRESENTATION } from './match-status';
 import { type MatchDetail, MatchesApiError, type MatchParticipant } from './matches-api';
@@ -93,6 +93,46 @@ function OtherPhone({ participant }: Readonly<{ participant: MatchParticipant }>
   );
 }
 
+/** Qué variante del texto corresponde a un lado del ciclo: el propio, el que me toca a mí o el de un tercero. */
+type FlowSide = 'mine' | 'touchesMe' | 'other';
+
+function flowSide(isMine: boolean, touchesMe: boolean): FlowSide {
+  if (isMine) return 'mine';
+  return touchesMe ? 'touchesMe' : 'other';
+}
+
+const GIVES_KEYS = {
+  mine: 'matches.detail.chain.gives.mine',
+  touchesMe: 'matches.detail.chain.gives.toYou',
+  other: 'matches.detail.chain.gives.other',
+} as const;
+
+const RECEIVES_KEYS = {
+  mine: 'matches.detail.chain.receives.mine',
+  touchesMe: 'matches.detail.chain.receives.fromYou',
+  other: 'matches.detail.chain.receives.other',
+} as const;
+
+/** En una cadena, a quién va la casa de este participante y de quién recibe la que le llega. */
+function ChainFlow({
+  participant,
+  view,
+}: Readonly<{ participant: MatchParticipant; view: MatchDetailView }>) {
+  const { t } = useTranslation();
+  const { from, to } = linksOf(view.sections, participant);
+  const isMine = participant === view.mine;
+  return (
+    <View>
+      <Text>
+        {t(GIVES_KEYS[flowSide(isMine, to === view.mine)], { name: to?.displayName ?? '' })}
+      </Text>
+      <Text>
+        {t(RECEIVES_KEYS[flowSide(isMine, from === view.mine)], { name: from?.displayName ?? '' })}
+      </Text>
+    </View>
+  );
+}
+
 interface ParticipantProps {
   participant: MatchParticipant;
   mine: boolean;
@@ -138,6 +178,7 @@ function ParticipantSection({ participant, mine, view }: Readonly<ParticipantPro
       {home ? <DetailGallery home={home} title={homeTitle} /> : null}
       <View style={[padding, { gap: theme.space[2] }]}>
         {home ? <Text variant="bodyStrong">{homeTitle}</Text> : null}
+        {view.isChain ? <ChainFlow participant={participant} view={view} /> : null}
         {view.showContact && participant.exactAddress ? (
           <Text>{t('matches.detail.home.address', { address: participant.exactAddress })}</Text>
         ) : null}
@@ -242,7 +283,7 @@ function StatusHeader({ detail, view }: Readonly<{ detail: MatchDetail; view: Ma
   const { t } = useTranslation();
   const theme = useTheme();
   const status = STATUS_PRESENTATION[detail.status];
-  const names = (view.mine ? view.others : detail.participants)
+  const names = (view.mine ? view.others : view.sections)
     .map((participant) => participant.displayName)
     .join(', ');
   const closedBy = detail.status === 'closed' ? view.withdrawn : undefined;
@@ -255,7 +296,7 @@ function StatusHeader({ detail, view }: Readonly<{ detail: MatchDetail; view: Ma
       <View style={[styles.row, { gap: theme.space[2] }]}>
         <Badge tone={status.tone} icon={status.icon} label={t(`matches.status.${detail.status}`)} />
         <Text variant="caption" tone="textMuted">
-          {t(`matches.kind.${kindOf(detail.type)}`)}
+          {view.isChain ? t('matches.chain.label') : t(`matches.kind.${kindOf(detail.type)}`)}
         </Text>
       </View>
       {view.showContact ? (
@@ -284,7 +325,6 @@ function Detail({ detail, view }: Readonly<{ detail: MatchDetail; view: MatchDet
   const actions = useMatchActions(detail.id, view.mine?.homeId);
   const [asking, setAsking] = useState(false);
   const [pulling, setPulling] = useState(false);
-  const sections = view.mine ? [...view.others, view.mine] : detail.participants;
 
   const refresh = async () => {
     setPulling(true);
@@ -318,7 +358,7 @@ function Detail({ detail, view }: Readonly<{ detail: MatchDetail; view: MatchDet
             <StatusHeader detail={detail} view={view} />
           </View>
 
-          {sections.map((participant) => (
+          {view.sections.map((participant) => (
             <ParticipantSection
               key={participant.homeId}
               participant={participant}
