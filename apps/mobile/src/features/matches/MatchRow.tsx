@@ -1,28 +1,20 @@
-import { borderWidth, useTheme } from '@changehouse/ui';
+import { borderWidth, touchTarget, useTheme } from '@changehouse/ui';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import type { ComponentProps } from 'react';
+import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
-import { Badge, type BadgeTone, Text } from '../../ui';
+import { Badge, Text } from '../../ui';
+import { useFocusRing } from '../../ui/useFocusRing';
 import { CompensationPill, compensationText } from '../discovery/CompensationPill';
 import { photosOf } from '../homes/home-photos';
 import { homeTitleOf } from '../homes/home-title';
 import { kindOf, matchViewOf } from './match-model';
+import { matchRoutes } from './match-routes';
+import { STATUS_PRESENTATION } from './match-status';
 import type { Match } from './matches-api';
 import { useOtherHome } from './use-matches';
-
-type IconName = ComponentProps<typeof Ionicons>['name'];
-
-/** Tono e icono de cada estado: el texto lo dice, el icono y el color lo acompañan (`MatchStatus`). */
-const STATUS_PRESENTATION: Record<Match['status'], { tone: BadgeTone; icon: IconName }> = {
-  open: { tone: 'info', icon: 'hourglass-outline' },
-  confirmed: { tone: 'success', icon: 'checkmark-circle-outline' },
-  in_operation: { tone: 'info', icon: 'swap-horizontal' },
-  closed: { tone: 'neutral', icon: 'lock-closed-outline' },
-  expired: { tone: 'warning', icon: 'time-outline' },
-};
 
 export interface MatchRowProps {
   match: Match;
@@ -33,12 +25,14 @@ export interface MatchRowProps {
 /**
  * Un match en la lista (`MatchCard` de `docs/style-guide.md` §3): la portada y el título de la otra
  * casa, el tipo de match, lo que paga o recibe quien mira y el estado, con texto además de color.
- * Para un lector de pantalla es una sola frase. Si la otra casa ya no se puede consultar (su dueño la
+ * Para un lector de pantalla es una sola frase y un botón que abre el detalle del match. Si la otra casa ya no se puede consultar (su dueño la
  * retiró), la fila lo dice en lugar de desaparecer.
  */
 export function MatchRow({ match, ownHomeIds }: Readonly<MatchRowProps>) {
   const { t } = useTranslation();
   const theme = useTheme();
+  const router = useRouter();
+  const focusRing = useFocusRing();
   const { otherHomeId, compensation } = matchViewOf(match, ownHomeIds);
   const other = useOtherHome(otherHomeId);
   const cover = photosOf(other.data)[0];
@@ -60,10 +54,17 @@ export function MatchRow({ match, ownHomeIds }: Readonly<MatchRowProps>) {
     : t('matches.row.summaryNoCompensation', { title, kind, status: statusLabel });
 
   return (
-    <View
+    <Pressable
       testID="match-row"
       accessible
+      accessibilityRole="button"
       accessibilityLabel={summary}
+      accessibilityHint={t('matches.row.open')}
+      onPress={() => {
+        router.push(matchRoutes.detail(match.id));
+      }}
+      onFocus={focusRing.onFocus}
+      onBlur={focusRing.onBlur}
       style={[
         styles.row,
         {
@@ -72,8 +73,10 @@ export function MatchRow({ match, ownHomeIds }: Readonly<MatchRowProps>) {
           borderRadius: theme.radius.lg,
           borderWidth: borderWidth.thin,
           gap: theme.space[3],
+          minHeight: touchTarget,
           padding: theme.space[3],
         },
+        focusRing.style,
       ]}
     >
       <View
@@ -121,7 +124,7 @@ export function MatchRow({ match, ownHomeIds }: Readonly<MatchRowProps>) {
         {compensation ? <CompensationPill compensation={compensation} /> : null}
         <Badge tone={tone} icon={icon} label={statusLabel} />
       </View>
-    </View>
+    </Pressable>
   );
 }
 

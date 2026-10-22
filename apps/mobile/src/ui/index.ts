@@ -23,6 +23,8 @@ export { Notice } from './Notice';
 export type { ProgressBarProps } from './ProgressBar';
 export { ProgressBar } from './ProgressBar';
 export { Screen } from './Screen';
+export type { SwitchProps } from './Switch';
+export { Switch } from './Switch';
 export type { TextProps } from './Text';
 export { Text } from './Text';
 export type { TextFieldProps } from './TextField';

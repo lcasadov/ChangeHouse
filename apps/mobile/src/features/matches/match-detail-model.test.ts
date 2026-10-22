@@ -1,0 +1,114 @@
+import { fakeMatchDetail } from '../../test-support/fake-matches';
+import { detailViewOf } from './match-detail-model';
+
+const MINE = 'home-mine';
+const THEIRS = 'home-theirs';
+const own = new Set([MINE]);
+
+describe('detailViewOf', () => {
+  it('reconoce la participación propia por sus viviendas y deja al resto en otros', () => {
+    const view = detailViewOf(fakeMatchDetail({ mineHomeId: MINE, theirHomeId: THEIRS }), own);
+
+    expect(view.mine?.homeId).toBe(MINE);
+    expect(view.others.map((participant) => participant.homeId)).toEqual([THEIRS]);
+  });
+
+  it('un match open con mi estado pendiente permite confirmar, retirarse y compartir el teléfono', () => {
+    const view = detailViewOf(fakeMatchDetail({ mineHomeId: MINE, theirHomeId: THEIRS }), own);
+
+    expect(view).toMatchObject({
+      canConfirm: true,
+      hasConfirmed: false,
+      canWithdraw: true,
+      canSharePhone: true,
+      showContact: true,
+      confirmedCount: 0,
+      total: 2,
+    });
+  });
+
+  it('tras confirmar ya no se puede confirmar, pero sí retirarse', () => {
+    const view = detailViewOf(
+      fakeMatchDetail({ mineHomeId: MINE, theirHomeId: THEIRS, mineStatus: 'confirmed' }),
+      own,
+    );
+
+    expect(view).toMatchObject({
+      canConfirm: false,
+      hasConfirmed: true,
+      canWithdraw: true,
+      confirmedCount: 1,
+    });
+  });
+
+  it('un match confirmed solo admite retirarse y compartir el teléfono', () => {
+    const view = detailViewOf(
+      fakeMatchDetail({
+        mineHomeId: MINE,
+        theirHomeId: THEIRS,
+        status: 'confirmed',
+        mineStatus: 'confirmed',
+        theirStatus: 'confirmed',
+      }),
+      own,
+    );
+
+    expect(view).toMatchObject({
+      canConfirm: false,
+      canWithdraw: true,
+      canSharePhone: true,
+      showContact: true,
+      confirmedCount: 2,
+    });
+  });
+
+  it.each(['closed', 'expired', 'in_operation'] as const)(
+    'un match %s no admite ninguna acción ni enseña el contacto',
+    (status) => {
+      const view = detailViewOf(
+        fakeMatchDetail({ mineHomeId: MINE, theirHomeId: THEIRS, status }),
+        own,
+      );
+
+      expect(view).toMatchObject({
+        canConfirm: false,
+        canWithdraw: false,
+        canSharePhone: false,
+        showContact: false,
+      });
+    },
+  );
+
+  it('indica quién se ha retirado', () => {
+    const view = detailViewOf(
+      fakeMatchDetail({
+        mineHomeId: MINE,
+        theirHomeId: THEIRS,
+        status: 'closed',
+        theirStatus: 'withdrawn',
+      }),
+      own,
+    );
+
+    expect(view.withdrawn?.homeId).toBe(THEIRS);
+  });
+
+  it('sin saber cuál es mi vivienda no hay acciones y todos son otros', () => {
+    const view = detailViewOf(
+      fakeMatchDetail({ mineHomeId: MINE, theirHomeId: THEIRS }),
+      new Set(['otra']),
+    );
+
+    expect(view.mine).toBeUndefined();
+    expect(view.others).toHaveLength(2);
+    expect(view).toMatchObject({ canConfirm: false, canWithdraw: false, canSharePhone: false });
+  });
+
+  it('une cada participante con la vivienda que entrega', () => {
+    const detail = fakeMatchDetail({ mineHomeId: MINE, theirHomeId: THEIRS });
+    const view = detailViewOf(detail, own);
+
+    expect(view.homeOf(THEIRS)?.id).toBe(THEIRS);
+    expect(view.homeOf('desconocida')).toBeUndefined();
+  });
+});

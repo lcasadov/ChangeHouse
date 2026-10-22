@@ -108,7 +108,11 @@ export class FakeBackend {
     this.homes = new FakeHomes(homes);
     this.searchPreferences = new FakeSearchPreferences(this.homes, searchPreferences);
     this.moderation = new FakeModeration(this.homes);
-    this.matches = new FakeMatches(matches, () => this.profile.roles);
+    this.matches = new FakeMatches(matches, () => this.profile.roles, {
+      profile: () => this.profile,
+      ownHomes: () => this.homes.all(),
+      otherHome: (homeId) => this.discovery.publicCard(homeId),
+    });
     this.decisions = new FakeDecisions(
       () => this.profile.roles,
       () => this.homes.all(),
@@ -202,6 +206,7 @@ export class FakeBackend {
     if (decision) return decision;
     if (path === '/discover') return this.discovery.respond(search);
     if (path === '/matches') return this.matches.respond(search);
+    if (path.startsWith('/matches/')) return this.matches.respondToMatch(method, path, body);
     if (method === 'GET') {
       const others = this.discovery.publicHome(path);
       if (others) return others;
