@@ -36,17 +36,17 @@ personas; la zona generada la reescribe `plan-sync` en cada operación.
 
 | change | estado | % | completadas/total | fase |
 |---|---|---|---|---|
-| add-account-deletion-and-export | ❌ SIN EMPEZAR | 0 % | 0/6 | D · MVP |
-| add-admin-panel | ❌ SIN EMPEZAR | 0 % | 0/5 | D · MVP |
-| add-chain-match | ❌ SIN EMPEZAR | 0 % | 0/7 | D · MVP |
-| add-home-pause-resume | ❌ SIN EMPEZAR | 0 % | 0/5 | D · MVP |
-| add-home-vpp-regime | ❌ SIN EMPEZAR | 0 % | 0/5 | D · MVP |
-| add-landing-blog | ❌ SIN EMPEZAR | 0 % | 0/5 | D · MVP |
-| add-match-chat | ❌ SIN EMPEZAR | 0 % | 0/8 | D · MVP |
+| add-account-deletion-and-export | ❌ SIN EMPEZAR | 0 % | 0/6 | ❌ SIN EMPEZAR |
+| add-admin-panel | ❌ SIN EMPEZAR | 0 % | 0/5 | ❌ SIN EMPEZAR |
+| add-chain-match | ❌ SIN EMPEZAR | 0 % | 0/7 | ❌ SIN EMPEZAR |
+| add-home-pause-resume | ❌ SIN EMPEZAR | 0 % | 0/5 | ❌ SIN EMPEZAR |
+| add-home-vpp-regime | ❌ SIN EMPEZAR | 0 % | 0/5 | ❌ SIN EMPEZAR |
+| add-landing-blog | ❌ SIN EMPEZAR | 0 % | 0/5 | ❌ SIN EMPEZAR |
+| add-match-chat | ❌ SIN EMPEZAR | 0 % | 0/8 | ❌ SIN EMPEZAR |
 | add-match-details-and-decisions | 🔄 EN PROGRESO | 57 % | 4/7 | 🔄 EN PROGRESO |
-| add-notifications | ❌ SIN EMPEZAR | 0 % | 0/7 | D · MVP |
-| add-reports-and-blocking | ❌ SIN EMPEZAR | 0 % | 0/6 | D · MVP |
-| add-user-suspension | ❌ SIN EMPEZAR | 0 % | 0/5 | D · MVP |
+| add-notifications | ❌ SIN EMPEZAR | 0 % | 0/7 | ❌ SIN EMPEZAR |
+| add-reports-and-blocking | ❌ SIN EMPEZAR | 0 % | 0/6 | ❌ SIN EMPEZAR |
+| add-user-suspension | ❌ SIN EMPEZAR | 0 % | 0/5 | ❌ SIN EMPEZAR |
 
 **Progreso global de los changes activos**: 4/66 (6 %)
 
