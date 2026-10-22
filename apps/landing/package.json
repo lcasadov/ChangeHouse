@@ -12,6 +12,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@changehouse/ui": "workspace:*",
     "astro": "7.4.0",
     "cookie": "2.0.1"
   },

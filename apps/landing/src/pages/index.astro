@@ -1,16 +1,139 @@
 ---
-import { pageTitle } from '../lib/page-title';
-
-const title = pageTitle();
+import { es } from '../i18n/es';
+import BaseLayout from '../layouts/BaseLayout.astro';
 ---
 
-<html lang="es">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width" />
-    <title>{title}</title>
-  </head>
-  <body>
-    <h1>{title}</h1>
-  </body>
-</html>
+<BaseLayout>
+  <header class="site-header">
+    <p class="brand">{es.header.brand}</p>
+  </header>
+
+  <main id="contenido">
+    <section class="hero" aria-labelledby="hero-title">
+      <h1 id="hero-title">{es.hero.title}</h1>
+      <p class="subtitle">{es.hero.subtitle}</p>
+      <a class="cta" href="#lista-de-espera">
+        {es.hero.cta}
+      </a>
+      <div class="swap" aria-hidden="true"></div>
+    </section>
+
+    <section id="lista-de-espera" class="waitlist" aria-labelledby="waitlist-title">
+      <h2 id="waitlist-title">{es.waitlist.title}</h2>
+      <p>{es.waitlist.placeholder}</p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>{es.footer.note}</p>
+  </footer>
+</BaseLayout>
+
+<style>
+  .site-header,
+  main,
+  .site-footer {
+    width: 100%;
+    max-width: var(--content-max-reading);
+    margin-inline: auto;
+    padding-inline: var(--space-4);
+  }
+
+  .site-header {
+    padding-block: var(--space-4);
+  }
+
+  .brand {
+    margin: 0;
+    color: var(--color-secondary);
+    font-size: var(--font-heading-size);
+    line-height: var(--font-heading-line-height);
+    font-weight: var(--font-title-weight);
+  }
+
+  .hero {
+    display: grid;
+    gap: var(--space-5);
+    padding-block: var(--space-7);
+  }
+
+  h1 {
+    margin: 0;
+    font-size: var(--font-display-size);
+    line-height: var(--font-display-line-height);
+    font-weight: var(--font-display-weight);
+    color: var(--color-text);
+  }
+
+  .subtitle {
+    margin: 0;
+    color: var(--color-text-muted);
+  }
+
+  .cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    justify-self: start;
+    min-height: var(--touch-target);
+    min-width: var(--touch-target);
+    padding: var(--space-2) var(--space-5);
+    border-radius: var(--radius-md);
+    background: var(--color-primary);
+    color: var(--color-text-on-primary);
+    font-size: var(--font-label-size);
+    line-height: var(--font-label-line-height);
+    font-weight: var(--font-label-weight);
+    text-decoration: none;
+    transition: background-color var(--motion-base);
+  }
+
+  .cta:hover {
+    background: var(--color-primary-pressed);
+  }
+
+  .swap {
+    height: var(--space-8);
+    border-radius: var(--radius-lg);
+    background: linear-gradient(
+      to right,
+      var(--color-match-gradient-start),
+      var(--color-match-gradient-end)
+    );
+  }
+
+  .waitlist {
+    margin-block: var(--space-7);
+    padding: var(--space-5);
+    border-radius: var(--radius-lg);
+    background: var(--color-surface-muted);
+  }
+
+  .waitlist h2 {
+    margin: 0 0 var(--space-2);
+    font-size: var(--font-heading-size);
+    line-height: var(--font-heading-line-height);
+    font-weight: var(--font-heading-weight);
+  }
+
+  .waitlist p {
+    margin: 0;
+    color: var(--color-text-muted);
+  }
+
+  .site-footer {
+    padding-block: var(--space-5);
+    color: var(--color-text-muted);
+    font-size: var(--font-caption-size);
+    line-height: var(--font-caption-line-height);
+  }
+
+  .site-footer p {
+    margin: 0;
+  }
+
+  /* El ancla no queda oculta bajo el borde al saltar */
+  #lista-de-espera {
+    scroll-margin-top: var(--space-4);
+  }
+</style>

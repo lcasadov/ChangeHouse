@@ -1,0 +1,87 @@
+---
+import { es } from '../i18n/es';
+import { pageTitle } from '../lib/page-title';
+import { buildThemeStylesheet, themeColors } from '../lib/theme-css';
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const { title, description = es.meta.description } = Astro.props;
+const colors = themeColors();
+const themeStylesheet = buildThemeStylesheet();
+---
+
+<!doctype html>
+<html lang={es.lang}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content={colors.light} media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content={colors.dark} media="(prefers-color-scheme: dark)" />
+    <meta name="description" content={description} />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap"
+    />
+    <title>{pageTitle(title)}</title>
+    <style is:inline set:html={themeStylesheet}></style>
+  </head>
+  <body>
+    <a class="skip-link" href="#contenido">
+      {es.a11y.skipToContent}
+    </a>
+    <slot />
+  </body>
+</html>
+
+<style is:global>
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-family);
+    font-size: var(--font-body-size);
+    line-height: var(--font-body-line-height);
+    font-weight: var(--font-body-weight);
+  }
+
+  :focus-visible {
+    outline: var(--border-thick) solid var(--color-focus);
+    outline-offset: var(--border-thick);
+  }
+
+  .skip-link {
+    position: absolute;
+    left: var(--space-2);
+    top: var(--space-2);
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    color: var(--color-primary);
+    font-weight: var(--font-label-weight);
+    transform: translateY(-200%);
+  }
+
+  .skip-link:focus {
+    transform: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      transition-duration: 0.01ms !important;
+      animation-duration: 0.01ms !important;
+    }
+  }
+</style>

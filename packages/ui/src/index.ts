@@ -1,2 +1,3 @@
-export type { Tokens } from './tokens.js';
-export { tokens } from './tokens.js';
+export * from './core.js';
+export type { ThemeProviderProps } from './theme-provider.js';
+export { ThemeProvider, useTheme } from './theme-provider.js';
