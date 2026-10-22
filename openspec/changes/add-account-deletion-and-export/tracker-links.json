@@ -1,0 +1,72 @@
+{
+  "tracker": "github-issues",
+  "change": "add-account-deletion-and-export",
+  "sprint": {
+    "path": "Sprint en curso",
+    "created": false
+  },
+  "epic": {
+    "capability": "accounts",
+    "id": 59,
+    "reused": true
+  },
+  "related_epics": [],
+  "feature": {
+    "id": 277,
+    "reused": false
+  },
+  "stories": [
+    {
+      "key": "Eliminar la cuenta",
+      "id": 278,
+      "reused": false,
+      "prio": "P1"
+    },
+    {
+      "key": "Exportar mis datos",
+      "id": 279,
+      "reused": false,
+      "prio": "P1"
+    }
+  ],
+  "tasks": [
+    {
+      "key": "T1",
+      "id": 280,
+      "parent": 278,
+      "state": "open"
+    },
+    {
+      "key": "B1",
+      "id": 281,
+      "parent": 278,
+      "state": "open"
+    },
+    {
+      "key": "B2",
+      "id": 282,
+      "parent": 279,
+      "state": "open"
+    },
+    {
+      "key": "T2",
+      "id": 283,
+      "parent": 278,
+      "state": "open"
+    },
+    {
+      "key": "F1",
+      "id": 284,
+      "parent": 279,
+      "state": "open"
+    },
+    {
+      "key": "V1",
+      "id": 285,
+      "parent": 278,
+      "state": "open"
+    }
+  ],
+  "bugs": [],
+  "pending": []
+}
