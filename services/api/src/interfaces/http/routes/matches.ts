@@ -1,12 +1,26 @@
 import type { FastifyPluginCallback } from 'fastify';
 
-import type { MatchPage, MyMatchesQuery } from '../../../application/matching/match-operations.js';
+import type {
+  MatchPage,
+  MatchViewer,
+  MyMatchesQuery,
+} from '../../../application/matching/match-operations.js';
+import type { MatchDetailView, MatchView } from '../../../application/matching/match-views.js';
+import { MatchNotFoundError } from '../../../domain/matching/errors.js';
 import { MATCH_STATUSES, type MatchStatus } from '../../../domain/matching/match.js';
 import { type FieldError, ValidationFailedError } from '../problem.js';
-import { accountId, type PageParams, parsePage } from './request-helpers.js';
+import { accountId, type PageParams, parsePage, uuidOr404 } from './request-helpers.js';
 
 export interface MatchRouteOptions {
   listMyMatches: (userId: string, query: MyMatchesQuery) => Promise<MatchPage>;
+  getMatch: (viewer: MatchViewer, matchId: string) => Promise<MatchDetailView>;
+  confirmMatch: (userId: string, matchId: string) => Promise<MatchView>;
+  withdrawFromMatch: (userId: string, matchId: string) => Promise<MatchView>;
+  setPhoneSharing: (userId: string, matchId: string, share: boolean) => Promise<void>;
+}
+
+interface MatchParams {
+  matchId: string;
 }
 
 interface ListQuery extends PageParams {
@@ -33,9 +47,28 @@ function parseListQuery(query: ListQuery): MyMatchesQuery {
   };
 }
 
+/** Un identificador que no es un UUID responde igual que un match inexistente. */
+function matchIdOf(request: { params: MatchParams }): string {
+  return uuidOr404(request.params.matchId, () => new MatchNotFoundError());
+}
+
+/** `{ share: boolean }` y nada más (`additionalProperties: false`). */
+function parseShare(body: unknown): boolean {
+  const object = typeof body === 'object' && body !== null && !Array.isArray(body);
+  const fields: Record<string, unknown> = object ? { ...(body as Record<string, unknown>) } : {};
+  const errors: FieldError[] = Object.keys(fields)
+    .filter((key) => key !== 'share')
+    .map((field) => ({ field, message: 'unknown' }));
+  const { share } = fields;
+  if (typeof share !== 'boolean') errors.push({ field: 'share', message: 'invalid' });
+  if (errors.length > 0 || typeof share !== 'boolean') throw new ValidationFailedError(errors);
+  return share;
+}
+
 /**
- * `listMyMatches` del contrato (RF-50). Solo transporte: la política central restringe a `owner` y
- * `seeker`, y el caso de uso devuelve solo los matches en los que participa el usuario.
+ * `listMyMatches`, `getMatch`, `confirmMatch`, `withdrawFromMatch` y `setPhoneSharing` del contrato
+ * (RF-50, RF-53, RF-54). Solo transporte: la política central decide el acceso por rol y los casos de
+ * uso, la pertenencia al match (quien no participa recibe 404) y el estado (409).
  */
 export function matchRoutes(options: MatchRouteOptions): FastifyPluginCallback {
   return (app, _options, done) => {
@@ -43,6 +76,35 @@ export function matchRoutes(options: MatchRouteOptions): FastifyPluginCallback {
       '/matches',
       { config: { operationId: 'listMyMatches' } },
       (request) => options.listMyMatches(accountId(request), parseListQuery(request.query)),
+    );
+    app.get<{ Params: MatchParams }>(
+      '/matches/:matchId',
+      { config: { operationId: 'getMatch' } },
+      (request) => {
+        const account = request.principal?.account;
+        if (!account) throw new Error('La operación exige una cuenta y la política no lo comprobó');
+        return options.getMatch({ userId: account.userId, role: account.role }, matchIdOf(request));
+      },
+    );
+    app.post<{ Params: MatchParams }>(
+      '/matches/:matchId/confirm',
+      { config: { operationId: 'confirmMatch' } },
+      (request) => options.confirmMatch(accountId(request), matchIdOf(request)),
+    );
+    app.post<{ Params: MatchParams }>(
+      '/matches/:matchId/withdraw',
+      { config: { operationId: 'withdrawFromMatch' } },
+      (request) => options.withdrawFromMatch(accountId(request), matchIdOf(request)),
+    );
+    app.put<{ Params: MatchParams }>(
+      '/matches/:matchId/phone-sharing',
+      { config: { operationId: 'setPhoneSharing' } },
+      async (request, reply) => {
+        const matchId = matchIdOf(request);
+        const share = parseShare(request.body);
+        await options.setPhoneSharing(accountId(request), matchId, share);
+        return reply.code(204).send();
+      },
     );
     done();
   };

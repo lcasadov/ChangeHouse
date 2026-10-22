@@ -376,6 +376,24 @@ vivienda o un usuario no se borran mientras figuren en un match). Checks
 `(user_id, match_id)` para «Mis matches» y `(gives_home_id, receives_home_id)`
 para saber si un «Me gusta» forma parte de un match no cerrado (no se deshace).
 
+Implementada en `add-match-details-and-decisions` (sin migración: `shares_phone`
+ya existe desde `0009_matches`):
+
+- `shares_phone` solo lo cambia el propio participante (`setPhoneSharing`) mientras
+  el match está `open` o `confirmed`; el teléfono se lee de `users.phone` y solo se
+  devuelve en `getMatch` a los participantes si `shares_phone` es verdadero.
+- Confirmar y retirarse leen el match con `SELECT … FOR UPDATE` dentro de una
+  transacción. Participante `pending → confirmed`; el match pasa `open →
+  confirmed` cuando todos están `confirmed`. Retirarse (desde `open` o
+  `confirmed`) deja al participante `withdrawn` y el match `closed`; en la misma
+  transacción se inserta en `audit_log` una fila (`action = 'match.withdraw'`,
+  `entity = 'match'`, `entity_id` = el match, `actor_id` = el participante).
+- Un match `closed` deja de contar en `isLikeInMatch`: el «Me gusta» que lo formó
+  se puede deshacer.
+- La dirección exacta (`homes.exact_address`) solo se descifra en `getMatch` y
+  solo para participantes; la lectura de las viviendas para el admin y para la
+  forma pública no selecciona esa columna.
+
 ### `operations` — permuta en tramitación (fase 2)
 
 `match_id` único, `agency_id`, `status` `proposed`, `documentation`,

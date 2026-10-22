@@ -514,7 +514,15 @@ export interface paths {
       };
       cookie?: never;
     };
-    /** Detalle de un match, con dirección exacta y compensaciones (RF-53, RF-56) */
+    /**
+     * Detalle de un match, con dirección exacta y compensaciones (RF-53, RF-56)
+     * @description Los participantes ven las viviendas del ciclo con todas sus fotos y, en cada
+     *     participante, la dirección exacta de la vivienda que entrega (`exactAddress`,
+     *     RN-08) y su teléfono (`phone`) solo si ese participante lo ha autorizado en
+     *     este match y tiene uno en su perfil; si no, `phone` es `null`. El `admin`
+     *     ve el detalle sin `phone` ni `exactAddress`. Quien no participa (y no es
+     *     `admin`) recibe 404, igual que ante un match inexistente.
+     */
     get: operations['getMatch'];
     put?: never;
     post?: never;
@@ -539,7 +547,9 @@ export interface paths {
      * El participante confirma interés (RF-54)
      * @description Cuando todos confirman, el match pasa a `confirmed`. En el MVP no se
      *     pausan los demás matches de esas viviendas; el paso a operación con
-     *     gestoría (`in_operation`) llega en la fase 2.
+     *     gestoría (`in_operation`) llega en la fase 2. Confirmar de nuevo es
+     *     idempotente (200). Si el match no está `open` (por ejemplo, `closed`),
+     *     409 con `code: MATCH_NOT_OPEN`.
      */
     post: operations['confirmMatch'];
     delete?: never;
@@ -559,7 +569,12 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** El participante se retira; el match se cierra para todos (RF-54, RN-10) */
+    /**
+     * El participante se retira; el match se cierra para todos (RF-54, RN-10)
+     * @description Desde `open` o `confirmed`: el participante queda `withdrawn`, el match
+     *     pasa a `closed` y la retirada queda registrada en la auditoría. En
+     *     cualquier otro estado, 409 con `code: MATCH_NOT_OPEN`.
+     */
     post: operations['withdrawFromMatch'];
     delete?: never;
     options?: never;
@@ -577,7 +592,12 @@ export interface paths {
       cookie?: never;
     };
     get?: never;
-    /** Autoriza o revoca mostrar el teléfono a los participantes (RF-53) */
+    /**
+     * Autoriza o revoca mostrar el teléfono a los participantes (RF-53)
+     * @description Cambia solo la preferencia del propio participante en este match. Vale
+     *     mientras el match está `open` o `confirmed`; en otro estado, 409 con
+     *     `code: MATCH_NOT_OPEN`.
+     */
     put: operations['setPhoneSharing'];
     post?: never;
     delete?: never;
@@ -1116,13 +1136,34 @@ export interface components {
       createdAt: string;
       participants: components['schemas']['MatchParticipant'][];
     };
+    /**
+     * @description `Match` más las viviendas del ciclo con todas sus fotos. Solo `getMatch` lo
+     *     devuelve, y solo en él se rellenan `phone` y `exactAddress` de los
+     *     participantes (a los participantes del match; no al `admin`).
+     */
+    MatchDetail: components['schemas']['Match'] & {
+      homes: components['schemas']['HomePublic'][];
+    };
     MatchParticipant: {
       /** Format: uuid */
       homeId: string;
       displayName: string;
-      /** @description Solo si el participante lo autoriza */
+      /**
+       * @description Solo en `getMatch` y solo para participantes: el teléfono del perfil si el
+       *     participante lo ha autorizado en este match; `null` si no lo ha autorizado
+       *     o no tiene teléfono. Ausente en la lista y para el `admin`.
+       */
       phone?: string | null;
-      /** @description Dirección exacta de la vivienda que entrega (RN-08) */
+      /**
+       * @description Solo en `getMatch` y solo para participantes: si ese participante ha autorizado
+       *     mostrar su teléfono en este match (con o sin teléfono en su perfil). Permite
+       *     mostrar el interruptor propio y quién comparte. Ausente en la lista y para el `admin`.
+       */
+      sharesPhone?: boolean;
+      /**
+       * @description Dirección exacta de la vivienda que entrega (RN-08). Solo en `getMatch` y solo
+       *     para participantes; ausente en la lista y para el `admin`.
+       */
       exactAddress?: string;
       /** Format: uuid */
       givesHomeId: string;
@@ -2138,16 +2179,17 @@ export interface operations {
     };
     requestBody?: never;
     responses: {
-      /** @description Match */
+      /** @description Detalle del match */
       200: {
         headers: {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['Match'];
+          'application/json': components['schemas']['MatchDetail'];
         };
       };
       401: components['responses']['Unauthorized'];
+      403: components['responses']['Forbidden'];
       404: components['responses']['NotFound'];
     };
   };
@@ -2172,6 +2214,7 @@ export interface operations {
         };
       };
       401: components['responses']['Unauthorized'];
+      403: components['responses']['Forbidden'];
       404: components['responses']['NotFound'];
       409: components['responses']['Conflict'];
     };
@@ -2197,6 +2240,7 @@ export interface operations {
         };
       };
       401: components['responses']['Unauthorized'];
+      403: components['responses']['Forbidden'];
       404: components['responses']['NotFound'];
       409: components['responses']['Conflict'];
     };
@@ -2227,7 +2271,9 @@ export interface operations {
       };
       400: components['responses']['BadRequest'];
       401: components['responses']['Unauthorized'];
+      403: components['responses']['Forbidden'];
       404: components['responses']['NotFound'];
+      409: components['responses']['Conflict'];
     };
   };
   createReport: {

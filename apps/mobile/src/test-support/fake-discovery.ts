@@ -103,6 +103,18 @@ export class FakeDiscovery {
     return [...this.cards, ...[...this.byHome.values()].flat()].some((card) => card.id === homeId);
   }
 
+  /** La vivienda ofrecida con ese identificador, sin la compensación (la forma de `HomePublic`). */
+  publicCard(homeId: string): components['schemas']['HomePublic'] | undefined {
+    const all = [...this.cards, ...[...this.byHome.values()].flat()];
+    const card: Partial<DiscoveryCard> | undefined = all.find(
+      (candidate) => candidate.id === homeId,
+    );
+    if (!card) return undefined;
+    const home = { ...card };
+    delete home.compensation;
+    return home as components['schemas']['HomePublic'];
+  }
+
   /** La forma pública de una vivienda ofrecida (`getHome` de una vivienda ajena), o `null`. */
   publicHome(path: string): Response | null {
     const id = HOME_PATH.exec(path)?.[1];

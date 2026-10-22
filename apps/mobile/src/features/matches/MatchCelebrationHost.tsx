@@ -44,7 +44,9 @@ function OpenCelebration({
       compensation={matchViewOf(match, new Set([ownHomeId])).compensation}
       onView={() => {
         onClose();
-        router.push(matchRoutes.detail());
+        // «Matches» queda debajo del detalle: al volver, la persona ve el match nuevo en su lista
+        router.navigate(matchRoutes.list);
+        router.push(matchRoutes.detail(match.id));
       }}
       onContinue={onClose}
     />

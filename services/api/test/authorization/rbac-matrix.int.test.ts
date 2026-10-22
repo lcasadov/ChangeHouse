@@ -143,6 +143,16 @@ const REQUESTS: Record<string, RequestTemplate> = {
   },
   // Sin matches: la lista vacía (200) prueba que se llegó; solo ve los propios
   listMyMatches: { method: 'GET', url: '/v1/matches' },
+  // Sin match al que pertenecer: el 404 de quien tiene acceso a la operación prueba que se llegó al
+  // caso de uso (la pertenencia se prueba con matches reales en `matches.int.test.ts`)
+  getMatch: { method: 'GET', url: `/v1/matches/${MISSING_HOME}` },
+  confirmMatch: { method: 'POST', url: `/v1/matches/${MISSING_HOME}/confirm` },
+  withdrawFromMatch: { method: 'POST', url: `/v1/matches/${MISSING_HOME}/withdraw` },
+  setPhoneSharing: {
+    method: 'PUT',
+    url: `/v1/matches/${MISSING_HOME}/phone-sharing`,
+    payload: () => ({ share: true }),
+  },
   adminListHomes: { method: 'GET', url: '/v1/admin/homes?status=in_review' },
   adminModerateHome: {
     method: 'POST',

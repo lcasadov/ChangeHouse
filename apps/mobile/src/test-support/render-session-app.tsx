@@ -19,6 +19,7 @@ import MatchesRoute from '../../app/(tabs)/matches';
 import ProfileRoute from '../../app/(tabs)/profile';
 import NotFoundRoute from '../../app/+not-found';
 import DiscoverDetailRoute from '../../app/discover/[homeId]';
+import MatchDetailRoute from '../../app/match/[matchId]';
 import OnboardingRoute from '../../app/onboarding';
 import { createApiClient } from '../api/client';
 import { createHttpAccountApi } from '../features/account/http-account-api';
@@ -74,7 +75,13 @@ export function fakeServices(overrides: Partial<AppServices> = {}): AppServices 
     },
     photoPicker: { pick: () => Promise.resolve([]) },
     photoUploader: { upload: () => Promise.resolve() },
-    matchesApi: { list: () => Promise.resolve({ items: [], nextCursor: null }) },
+    matchesApi: {
+      list: () => Promise.resolve({ items: [], nextCursor: null }),
+      get: () => Promise.reject(new Error('Sin matches en este doble')),
+      confirm: () => Promise.reject(new Error('Sin matches en este doble')),
+      withdraw: () => Promise.reject(new Error('Sin matches en este doble')),
+      setPhoneSharing: () => Promise.reject(new Error('Sin matches en este doble')),
+    },
     searchPreferencesApi: {
       getMine: () => Promise.resolve(DEFAULT_SEARCH_PREFERENCES),
       putMine: () => Promise.reject(new Error('Sin preferencias en este doble')),
@@ -157,6 +164,7 @@ export function renderSessionApp({
       '(auth)/forgot-password': ForgotPasswordRoute,
       onboarding: OnboardingRoute,
       'discover/[homeId]': DiscoverDetailRoute,
+      'match/[matchId]': MatchDetailRoute,
       '+not-found': NotFoundRoute,
       '(tabs)/_layout': TabsLayout,
       '(tabs)/index': ExploreRoute,

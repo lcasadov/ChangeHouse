@@ -1,5 +1,6 @@
 import type { AcceptedCycle, CycleHome, CycleType } from '../../domain/matching/cycle.js';
-import type { MatchStatus, ParticipantStatus } from '../../domain/matching/match.js';
+import type { MatchState, MatchStatus, ParticipantStatus } from '../../domain/matching/match.js';
+import type { PublicHome } from '../home/home-views.js';
 import type { ModerationCursor } from '../moderation/cursor.js';
 
 /**
@@ -64,7 +65,36 @@ export interface MatchListQuery {
   readonly limit: number;
 }
 
-/** Puerto de salida: lectura de los matches de un usuario. */
+/** Puerto de salida: lectura de matches. */
 export interface MatchReader {
+  /** Los matches del usuario, del más reciente al más antiguo. */
   listForUser(query: MatchListQuery): Promise<MatchRecord[]>;
+  findById(id: string): Promise<MatchRecord | null>;
+  /** Usuarios que han autorizado mostrar su teléfono en ese match, tengan o no uno en su perfil. */
+  phoneSharing(matchId: string): Promise<ReadonlySet<string>>;
+  /**
+   * Teléfono por usuario de los participantes que lo han autorizado en ese match y tienen uno en
+   * su perfil; los demás no figuran.
+   */
+  sharedPhones(matchId: string): Promise<ReadonlyMap<string, string>>;
+}
+
+/**
+ * Puerto de salida: las viviendas de un match. La forma pública no lleva la dirección y su lectura
+ * no la descifra; la dirección exacta solo se obtiene con `exactAddresses`.
+ */
+export interface MatchHomeReader {
+  findPublicHomes(homeIds: readonly string[]): Promise<PublicHome[]>;
+  /** Dirección postal exacta (descifrada) por vivienda. */
+  exactAddresses(homeIds: readonly string[]): Promise<ReadonlyMap<string, string>>;
+}
+
+/** Puerto de salida: escritura de las decisiones de un match, dentro de su transacción. */
+export interface MatchDecisionStore {
+  /** Lee el match bloqueando su fila hasta el final de la transacción; `null` si no existe. */
+  findForUpdate(id: string): Promise<MatchRecord | null>;
+  /** Guarda el estado del match y el de sus participantes. */
+  saveState(id: string, state: MatchState): Promise<void>;
+  /** Autoriza o revoca mostrar el teléfono del usuario a los demás participantes. */
+  setPhoneSharing(matchId: string, userId: string, share: boolean): Promise<void>;
 }

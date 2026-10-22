@@ -8,7 +8,9 @@ import { DrizzleAuditLog } from './drizzle-audit-log.js';
 import { DrizzleCycleCandidates } from './drizzle-cycle-candidates.js';
 import { DrizzleDecisionStore } from './drizzle-decision-store.js';
 import { DrizzleDecisionUnitOfWork } from './drizzle-decision-unit-of-work.js';
+import { DrizzleMatchHomes } from './drizzle-match-homes.js';
 import { DrizzleMatchRepository } from './drizzle-match-repository.js';
+import { DrizzleMatchUnitOfWork } from './drizzle-match-unit-of-work.js';
 import { DrizzleUnitOfWork } from './drizzle-unit-of-work.js';
 
 /**
@@ -391,5 +393,165 @@ describe('DrizzleMatchRepository', () => {
       true,
     );
     expect(await new DrizzleMatchRepository(fakeDb([]).db).isLikeInMatch('a', 'b')).toBe(false);
+  });
+});
+
+describe('DrizzleMatchRepository: decisiones y detalle', () => {
+  it('findById lee el match con sus participantes y findForUpdate lo hace bloqueando la fila', async () => {
+    const row = { id: 'm-1', type: 2, status: 'open', createdAt: new Date() };
+    const { db, calls } = sequenceDb([[row], [], [row], []]);
+    const repository = new DrizzleMatchRepository(db);
+
+    await repository.findById('m-1');
+    expect(calls.map((call) => call.method)).not.toContain('for');
+    const locked = await repository.findForUpdate('m-1');
+
+    expect(calls.some((call) => call.method === 'for' && call.args[0] === 'update')).toBe(true);
+    expect(locked).toMatchObject({ id: 'm-1', participants: [] });
+  });
+
+  it('findForUpdate de un match inexistente devuelve null', async () => {
+    const { db } = sequenceDb([[]]);
+
+    expect(await new DrizzleMatchRepository(db).findForUpdate('no-existe')).toBeNull();
+  });
+
+  it('saveState actualiza el match y cada participante por su vivienda', async () => {
+    const { db, calls } = fakeDb(undefined);
+
+    await new DrizzleMatchRepository(db).saveState('m-1', {
+      status: 'closed',
+      participants: [
+        { homeId: 'a', userId: 'u-a', status: 'withdrawn' },
+        { homeId: 'b', userId: 'u-b', status: 'confirmed' },
+      ],
+    });
+
+    expect(calls.filter((call) => call.method === 'update')).toHaveLength(3);
+    expect(calls.filter((call) => call.method === 'set').map((call) => call.args[0])).toEqual([
+      { status: 'closed' },
+      { status: 'withdrawn' },
+      { status: 'confirmed' },
+    ]);
+  });
+
+  it('setPhoneSharing cambia solo shares_phone', async () => {
+    const { db, calls } = fakeDb(undefined);
+
+    await new DrizzleMatchRepository(db).setPhoneSharing('m-1', 'u-a', true);
+
+    expect(calls.find((call) => call.method === 'set')?.args).toEqual([{ sharesPhone: true }]);
+  });
+
+  it('phoneSharing devuelve los usuarios que han autorizado, tengan o no teléfono', async () => {
+    const { db } = fakeDb([{ userId: 'u-a' }, { userId: 'u-b' }]);
+
+    const sharing = await new DrizzleMatchRepository(db).phoneSharing('m-1');
+
+    expect([...sharing]).toEqual(['u-a', 'u-b']);
+  });
+
+  it('sharedPhones devuelve el teléfono por usuario y omite a quien no tiene uno', async () => {
+    const { db } = fakeDb([
+      { userId: 'u-a', phone: '+34600000001' },
+      { userId: 'u-b', phone: null },
+    ]);
+
+    const phones = await new DrizzleMatchRepository(db).sharedPhones('m-1');
+
+    expect([...phones]).toEqual([['u-a', '+34600000001']]);
+  });
+});
+
+describe('DrizzleMatchUnitOfWork', () => {
+  it('ejecuta el trabajo en una transacción con las decisiones y la auditoría sobre ella', async () => {
+    const { db: tx } = fakeDb(undefined);
+    const transactions: unknown[] = [];
+    const database = {
+      transaction: (work: (tx: Executor) => Promise<unknown>) => {
+        transactions.push(tx);
+        return work(tx);
+      },
+    } as unknown as Database;
+
+    const result = await new DrizzleMatchUnitOfWork(database).run((scope) =>
+      Promise.resolve(Object.keys(scope).sort()),
+    );
+
+    expect(result).toEqual(['audit', 'matches']);
+    expect(transactions).toHaveLength(1);
+  });
+});
+
+/** Cifrador que anota cada descifrado: prueba que no se descifra nada de más. */
+class SpyCipher extends AddressCipher {
+  readonly decrypted: Buffer[] = [];
+
+  constructor() {
+    super(new Map([[1, Buffer.alloc(32, 1)]]), 1);
+  }
+
+  override decrypt(stored: Buffer): string {
+    this.decrypted.push(stored);
+    return super.decrypt(stored);
+  }
+}
+
+describe('DrizzleMatchHomes', () => {
+  const homeRow = {
+    id: 'h-1',
+    type: 'piso',
+    regime: 'libre',
+    usefulM2: 80,
+    builtM2: 95,
+    bedrooms: 3,
+    bathrooms: 2,
+    floor: null,
+    hasLift: true,
+    garage: false,
+    storageRoom: false,
+    features: {},
+    energyRating: null,
+    yearBuilt: null,
+    valueMinCents: 1,
+    valueMaxCents: 2,
+    locationVisibility: 'area',
+    exactLocation: { lat: 1, lng: 2 },
+    approxLocation: { lat: 3, lng: 4 },
+    areaName: 'Getafe Centro',
+  };
+
+  it('la forma pública se lee sin descifrar ninguna dirección y sin la columna de la dirección', async () => {
+    const cipher = new SpyCipher();
+    const { db, calls } = fakeDb([
+      { ...homeRow, municipality: 'Getafe' },
+      { ...homeRow, id: 'h-2', municipality: null },
+    ]);
+
+    const found = await new DrizzleMatchHomes(db, cipher).findPublicHomes(['h-1', 'h-2']);
+
+    expect(cipher.decrypted).toEqual([]);
+    const selected = calls.find((call) => call.method === 'select')?.args[0] as object;
+    expect(Object.keys(selected)).not.toContain('exactAddress');
+    expect(found[0]).toMatchObject({
+      id: 'h-1',
+      location: {
+        exact: { lat: 1, lng: 2 },
+        areaCenter: { lat: 3, lng: 4 },
+        areaName: 'Getafe Centro',
+        municipality: 'Getafe',
+      },
+    });
+    expect(found[1]?.location).not.toHaveProperty('municipality');
+  });
+
+  it('exactAddresses descifra la dirección de cada vivienda pedida y solo esas', async () => {
+    const cipher = new SpyCipher();
+    const { db } = fakeDb([{ id: 'h-1', exactAddress: cipher.encrypt('Calle Real, 9, Leganés') }]);
+
+    const addresses = await new DrizzleMatchHomes(db, cipher).exactAddresses(['h-1']);
+
+    expect([...addresses]).toEqual([['h-1', 'Calle Real, 9, Leganés']]);
+    expect(cipher.decrypted).toHaveLength(1);
   });
 });

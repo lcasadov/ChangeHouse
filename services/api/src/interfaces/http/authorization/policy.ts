@@ -65,6 +65,13 @@ export const policy: Policy = {
   // Matches (RF-50): los propios. También un `seeker`, que puede tenerlos si pausó su vivienda; sin
   // matches ve la lista vacía. Que solo vea los suyos lo resuelve el caso de uso
   listMyMatches: { kind: 'roles', roles: HOME_OWNER_ROLES },
+  // Detalle, confirmación, retirada y teléfono (RF-53, RF-54): el detalle también lo consulta el admin
+  // (sin teléfonos ni direcciones exactas); el resto son de participantes. La pertenencia al match
+  // (`participant`) la resuelve el caso de uso con un 404, sin revelar que existe
+  getMatch: { kind: 'roles', roles: [...HOME_OWNER_ROLES, 'admin'] },
+  confirmMatch: { kind: 'roles', roles: HOME_OWNER_ROLES },
+  withdrawFromMatch: { kind: 'roles', roles: HOME_OWNER_ROLES },
+  setPhoneSharing: { kind: 'roles', roles: HOME_OWNER_ROLES },
   // Moderación (RF-18, RF-93): solo el admin; la decisión queda auditada
   adminListHomes: { kind: 'roles', roles: ['admin'] },
   adminModerateHome: { kind: 'roles', roles: ['admin'] },

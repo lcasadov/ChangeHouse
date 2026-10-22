@@ -17,12 +17,19 @@ import type {
   DiscoveryRepository,
 } from '../src/application/discovery/discovery-repository.js';
 import type { HomeRepository, ModerationListing } from '../src/application/home/home-repository.js';
+import type { PublicHome } from '../src/application/home/home-views.js';
 import type { ImageProcessor, ProcessedImage } from '../src/application/home/image-processor.js';
 import type { PhotoRepository } from '../src/application/home/photo-repository.js';
 import type { OriginalFile, PhotoStorage } from '../src/application/home/photo-storage.js';
 import type { PlaceResolver } from '../src/application/home/place-resolver.js';
 import type {
+  MatchScope,
+  MatchUnitOfWork,
+} from '../src/application/matching/match-unit-of-work.js';
+import type {
   CycleCandidates,
+  MatchDecisionStore,
+  MatchHomeReader,
   MatchingTransaction,
   MatchListQuery,
   MatchReader,
@@ -42,6 +49,7 @@ import { InvalidImageError } from '../src/domain/home/errors.js';
 import type { Home, HomeLocation } from '../src/domain/home/home.js';
 import { firstFreePosition, type HomePhoto, MAX_PHOTOS } from '../src/domain/home/photo.js';
 import type { CompensationTerms, CycleHome } from '../src/domain/matching/cycle.js';
+import type { MatchState } from '../src/domain/matching/match.js';
 import type { SearchPreferences } from '../src/domain/search-preferences/search-preferences.js';
 
 const DEFAULT_CREATED_AT = new Date('2026-10-01T09:00:00.000Z');
@@ -598,8 +606,12 @@ export class InMemoryMatchStore implements CycleCandidates, MatchWriter {
 /** Lectura de matches en memoria: los del usuario, del más reciente al más antiguo, tras el cursor. */
 export class InMemoryMatchReader implements MatchReader {
   readonly queries: MatchListQuery[] = [];
+  /** Teléfono del perfil de cada usuario. */
+  readonly phones = new Map<string, string>();
+  /** Autorizaciones de teléfono, como `matchId|userId`. */
+  readonly sharing = new Set<string>();
 
-  constructor(private readonly records: readonly MatchRecord[]) {}
+  constructor(readonly records: MatchRecord[] = []) {}
 
   listForUser(query: MatchListQuery): Promise<MatchRecord[]> {
     this.queries.push(query);
@@ -612,6 +624,116 @@ export class InMemoryMatchReader implements MatchReader {
       .sort((a, b) => position(b).localeCompare(position(a)))
       .slice(0, query.limit);
     return Promise.resolve(found);
+  }
+
+  findById(id: string): Promise<MatchRecord | null> {
+    return Promise.resolve(this.records.find((record) => record.id === id) ?? null);
+  }
+
+  phoneSharing(matchId: string): Promise<ReadonlySet<string>> {
+    const prefix = `${matchId}|`;
+    return Promise.resolve(
+      new Set(
+        [...this.sharing]
+          .filter((key) => key.startsWith(prefix))
+          .map((k) => k.slice(prefix.length)),
+      ),
+    );
+  }
+
+  sharedPhones(matchId: string): Promise<ReadonlyMap<string, string>> {
+    const shared = new Map<string, string>();
+    for (const [userId, phone] of this.phones) {
+      if (this.sharing.has(`${matchId}|${userId}`)) shared.set(userId, phone);
+    }
+    return Promise.resolve(shared);
+  }
+}
+
+/** Viviendas de un match en memoria; `decrypted` anota cada dirección exacta pedida (el «descifrado»). */
+export class InMemoryMatchHomes implements MatchHomeReader {
+  readonly decrypted: string[] = [];
+  publicReads = 0;
+
+  constructor(private readonly homes: InMemoryHomeRepository) {}
+
+  findPublicHomes(homeIds: readonly string[]): Promise<PublicHome[]> {
+    this.publicReads += 1;
+    return Promise.resolve(
+      homeIds.flatMap((id) => {
+        const home = this.homes.homes.get(id);
+        return home ? [home] : [];
+      }),
+    );
+  }
+
+  exactAddresses(homeIds: readonly string[]): Promise<ReadonlyMap<string, string>> {
+    this.decrypted.push(...homeIds);
+    const addresses = new Map<string, string>();
+    for (const id of homeIds) {
+      const home = this.homes.homes.get(id);
+      if (home) addresses.set(id, home.address);
+    }
+    return Promise.resolve(addresses);
+  }
+}
+
+/**
+ * Transacción de matches en memoria sobre el lector: si el trabajo falla, vuelve al estado anterior
+ * (como un `ROLLBACK`). `locked` anota los matches leídos con bloqueo.
+ */
+export class InMemoryMatchUnitOfWork implements MatchUnitOfWork, MatchDecisionStore {
+  readonly locked: string[] = [];
+  readonly saved: { id: string; state: MatchState }[] = [];
+
+  constructor(
+    private readonly reader: InMemoryMatchReader,
+    readonly audit: InMemoryAuditLog,
+  ) {}
+
+  async run<T>(work: (scope: MatchScope) => Promise<T>): Promise<T> {
+    const records = [...this.reader.records];
+    const sharing = new Set(this.reader.sharing);
+    const entries = [...this.audit.entries];
+    try {
+      return await work({ matches: this, audit: this.audit });
+    } catch (error) {
+      this.reader.records.splice(0, this.reader.records.length, ...records);
+      this.reader.sharing.clear();
+      for (const key of sharing) this.reader.sharing.add(key);
+      this.audit.entries = entries;
+      throw error;
+    }
+  }
+
+  findForUpdate(id: string): Promise<MatchRecord | null> {
+    this.locked.push(id);
+    return this.reader.findById(id);
+  }
+
+  saveState(id: string, state: MatchState): Promise<void> {
+    this.saved.push({ id, state });
+    const index = this.reader.records.findIndex((record) => record.id === id);
+    const current = this.reader.records[index];
+    if (!current) return Promise.reject(new Error(`Match inexistente: ${id}`));
+    this.reader.records[index] = {
+      ...current,
+      status: state.status,
+      participants: current.participants.map((participant) => ({
+        ...participant,
+        status:
+          state.participants.find((p) => p.homeId === participant.homeId)?.status ??
+          participant.status,
+      })),
+    };
+    return Promise.resolve();
+  }
+
+  setPhoneSharing(matchId: string, userId: string, share: boolean): Promise<void> {
+    const key = `${matchId}|${userId}`;
+    if (share) this.reader.sharing.add(key);
+    else this.reader.sharing.delete(key);
+    return Promise.resolve();
   }
 }
 

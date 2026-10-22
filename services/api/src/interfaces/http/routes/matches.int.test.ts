@@ -385,4 +385,261 @@ describe.skipIf(!emulatorAvailable())('match directo con tokens reales y Postgre
       expect(response.statusCode).toBe(204);
     });
   });
+
+  describe('detalle y decisiones de un match', () => {
+    const BETO_PHONE = '+34600111222';
+
+    interface DetailBody extends MatchBody {
+      homes: { id: string; photos: { id: string; url: string; position: number }[] }[];
+      participants: (Participant & {
+        exactAddress?: string;
+        phone?: string | null;
+        sharesPhone?: boolean;
+      })[];
+    }
+
+    /** Ana y Beto con un match abierto y tres fotos por vivienda; Beto tiene teléfono en su perfil. */
+    async function pair() {
+      const mine = await ana();
+      const other = await leganesOwner('Beto');
+      await like(other.person, other.home, mine.home);
+      const created = await like(mine.person, mine.home, other.home);
+      const matchId = created.json<{ match: MatchBody }>().match.id;
+      await sql`UPDATE users SET phone = ${BETO_PHONE} WHERE id = ${other.person.id}`;
+      for (const homeId of [mine.home, other.home]) {
+        for (const position of [1, 2, 3]) {
+          const id = crypto.randomUUID();
+          await sql`INSERT INTO home_photos (id, home_id, status, storage_path, position)
+                    VALUES (${id}, ${homeId}, 'ready', ${`homes/${homeId}/${id}.webp`}, ${position})`;
+        }
+      }
+      return { mine, other, matchId };
+    }
+
+    const detail = (user: EmulatorUser, matchId: string) =>
+      call(user, 'GET', `/v1/matches/${matchId}`);
+    const participant = (body: DetailBody, homeId: string) =>
+      body.participants.find((p) => p.homeId === homeId);
+    const statusOf = async (matchId: string) =>
+      (await sql<{ status: string }[]>`SELECT status FROM matches WHERE id = ${matchId}`)[0]
+        ?.status;
+
+    it('Scenario: Participante ve el detalle - dirección exacta descifrada de la otra vivienda, galería completa, nombre y compensación', async () => {
+      const { mine, other, matchId } = await pair();
+      const theirAddress = (await homes.findById(other.home))?.address;
+
+      const response = await detail(mine.person, matchId);
+
+      expect(response.statusCode, response.body).toBe(200);
+      const body = response.json<DetailBody>();
+      expect(theirAddress).toContain('Calle Mayor');
+      expect(participant(body, other.home)).toMatchObject({
+        displayName: 'Beto',
+        exactAddress: theirAddress,
+        compensationCents: -euros(12_000),
+        phone: null,
+        sharesPhone: false,
+      });
+      expect(participant(body, mine.home)).toMatchObject({ compensationCents: euros(12_000) });
+      expect(body.homes.map((h) => h.id).sort()).toEqual([mine.home, other.home].sort());
+      for (const h of body.homes) expect(h.photos.map((p) => p.position)).toEqual([1, 2, 3]);
+      // La dirección exacta nunca viaja dentro de la vivienda
+      expect(JSON.stringify(body.homes)).not.toContain('Calle Mayor');
+    });
+
+    it('Scenario: Usuario ajeno - un tercero recibe un 404 idéntico al de un match inexistente', async () => {
+      const { matchId } = await pair();
+      const stranger = await ana();
+
+      const foreign = await detail(stranger.person, matchId);
+      const missing = await detail(stranger.person, crypto.randomUUID());
+      const malformed = await detail(stranger.person, 'no-es-un-uuid');
+
+      expect([foreign.statusCode, missing.statusCode, malformed.statusCode]).toEqual([
+        404, 404, 404,
+      ]);
+      const shape = (r: typeof foreign) => {
+        const { type, title, status } = r.json<Record<string, unknown>>();
+        return { type, title, status };
+      };
+      expect(shape(foreign)).toEqual(shape(missing));
+      expect(foreign.body).not.toContain('Calle Mayor');
+    });
+
+    it('un admin ve el detalle sin teléfonos ni direcciones exactas', async () => {
+      const { other, matchId } = await pair();
+      await call(other.person, 'PUT', `/v1/matches/${matchId}/phone-sharing`, { share: true });
+      const admin = await registered('Admin');
+      await sql`UPDATE users SET assigned_role = 'admin' WHERE id = ${admin.id}`;
+
+      const response = await detail(admin, matchId);
+
+      expect(response.statusCode, response.body).toBe(200);
+      const body = response.json<DetailBody>();
+      expect(body.participants).toHaveLength(2);
+      expect(body.homes).toHaveLength(2);
+      expect(response.body).not.toContain(BETO_PHONE);
+      expect(response.body).not.toContain('Calle Mayor');
+      for (const p of body.participants) {
+        expect(p).not.toHaveProperty('phone');
+        expect(p).not.toHaveProperty('exactAddress');
+        expect(p).not.toHaveProperty('sharesPhone');
+      }
+    });
+
+    it('Scenario: Sin autorización - el otro participante no ve el teléfono mientras no lo autorice', async () => {
+      const { mine, matchId } = await pair();
+
+      const response = await detail(mine.person, matchId);
+
+      expect(response.body).not.toContain(BETO_PHONE);
+    });
+
+    it('Scenario: Autorizar y revocar - se ve tras autorizar, deja de verse tras revocar y solo cambia la fila propia', async () => {
+      const { mine, other, matchId } = await pair();
+
+      const authorized = await call(other.person, 'PUT', `/v1/matches/${matchId}/phone-sharing`, {
+        share: true,
+      });
+      const shared = (await detail(mine.person, matchId)).json<DetailBody>();
+      const rows = await sql<{ user_id: string; shares_phone: boolean }[]>`
+        SELECT user_id, shares_phone FROM match_participants WHERE match_id = ${matchId}`;
+      const revoked = await call(other.person, 'PUT', `/v1/matches/${matchId}/phone-sharing`, {
+        share: false,
+      });
+      const after = await detail(mine.person, matchId);
+
+      expect([authorized.statusCode, revoked.statusCode]).toEqual([204, 204]);
+      expect(participant(shared, other.home)?.phone).toBe(BETO_PHONE);
+      expect(participant(shared, other.home)?.sharesPhone).toBe(true);
+      expect(participant(shared, mine.home)?.sharesPhone).toBe(false);
+      expect(rows.filter((row) => row.shares_phone).map((row) => row.user_id)).toEqual([
+        other.person.id,
+      ]);
+      expect(after.body).not.toContain(BETO_PHONE);
+      expect(participant(after.json<DetailBody>(), other.home)?.sharesPhone).toBe(false);
+    });
+
+    it('compartir el teléfono: un cuerpo inválido es 400, un ajeno 404 y un match cerrado 409', async () => {
+      const { mine, other, matchId } = await pair();
+      const stranger = await ana();
+      const url = `/v1/matches/${matchId}/phone-sharing`;
+
+      const invalid = await call(mine.person, 'PUT', url, { share: 'si' });
+      const foreign = await call(stranger.person, 'PUT', url, { share: true });
+      await call(other.person, 'POST', `/v1/matches/${matchId}/withdraw`);
+      const closed = await call(mine.person, 'PUT', url, { share: true });
+
+      expect([invalid.statusCode, foreign.statusCode, closed.statusCode]).toEqual([400, 404, 409]);
+      expect(await sql`SELECT 1 FROM match_participants WHERE shares_phone`).toHaveLength(0);
+    });
+
+    it('Scenario: Primera confirmación - su estado pasa a confirmed y el match sigue open', async () => {
+      const { mine, matchId } = await pair();
+
+      const response = await call(mine.person, 'POST', `/v1/matches/${matchId}/confirm`);
+
+      expect(response.statusCode, response.body).toBe(200);
+      const body = response.json<MatchBody>();
+      expect(body.status).toBe('open');
+      expect(body.participants.map((p) => p.status).sort()).toEqual(['confirmed', 'pending']);
+      expect(response.body).not.toContain('Calle Mayor');
+    });
+
+    it('Scenario: Todos confirman - el match pasa a confirmed, y confirmar otra vez es idempotente', async () => {
+      const { mine, other, matchId } = await pair();
+      await call(other.person, 'POST', `/v1/matches/${matchId}/confirm`);
+
+      const last = await call(mine.person, 'POST', `/v1/matches/${matchId}/confirm`);
+      const again = await call(mine.person, 'POST', `/v1/matches/${matchId}/confirm`);
+
+      expect(last.json<MatchBody>().status).toBe('confirmed');
+      expect(again.statusCode).toBe(200);
+      expect(again.json<MatchBody>().status).toBe('confirmed');
+      expect(await statusOf(matchId)).toBe('confirmed');
+    });
+
+    it(`Scenario: Todos confirman - ${String(SIMULTANEOUS_ROUNDS)} veces con dos confirmaciones simultáneas: las dos responden 200 y el match queda confirmed`, async () => {
+      for (let round = 0; round < SIMULTANEOUS_ROUNDS; round += 1) {
+        const { mine, other, matchId } = await pair();
+
+        const responses = await Promise.all([
+          call(mine.person, 'POST', `/v1/matches/${matchId}/confirm`),
+          call(other.person, 'POST', `/v1/matches/${matchId}/confirm`),
+        ]);
+
+        const label = `ronda ${String(round)}`;
+        expect(
+          responses.map((r) => r.statusCode),
+          label,
+        ).toEqual([200, 200]);
+        expect(await statusOf(matchId), label).toBe('confirmed');
+        const states = await sql`SELECT 1 FROM match_participants
+                                 WHERE match_id = ${matchId} AND status = 'confirmed'`;
+        expect(states, label).toHaveLength(2);
+      }
+    });
+
+    it('Scenario: Retirarse - el match pasa a closed para todos, queda en audit_log y el me gusta se puede deshacer', async () => {
+      const { mine, other, matchId } = await pair();
+
+      const response = await call(mine.person, 'POST', `/v1/matches/${matchId}/withdraw`);
+
+      expect(response.statusCode, response.body).toBe(200);
+      const body = response.json<MatchBody>();
+      expect(body.status).toBe('closed');
+      expect(body.participants.find((p) => p.homeId === mine.home)?.status).toBe('withdrawn');
+      const theirs = (await detail(other.person, matchId)).json<DetailBody>();
+      expect(theirs.status).toBe('closed');
+      const audit = await sql<{ actor_id: string; action: string; entity: string }[]>`
+        SELECT actor_id, action, entity FROM audit_log WHERE entity_id = ${matchId}`;
+      expect(audit).toEqual([
+        { actor_id: mine.person.id, action: 'match.withdraw', entity: 'match' },
+      ]);
+      const undo = await call(mine.person, 'DELETE', `/v1/me/last-action?homeId=${mine.home}`);
+      expect(undo.statusCode).toBe(204);
+    });
+
+    it('Scenario: Match cerrado - confirmar o retirarse otra vez responden 409 MATCH_NOT_OPEN', async () => {
+      const { mine, other, matchId } = await pair();
+      await call(other.person, 'POST', `/v1/matches/${matchId}/withdraw`);
+
+      const confirm = await call(mine.person, 'POST', `/v1/matches/${matchId}/confirm`);
+      const withdraw = await call(mine.person, 'POST', `/v1/matches/${matchId}/withdraw`);
+
+      expect([confirm.statusCode, withdraw.statusCode]).toEqual([409, 409]);
+      expect(confirm.json()).toMatchObject({ code: 'MATCH_NOT_OPEN' });
+      expect(await sql`SELECT 1 FROM audit_log WHERE entity = 'match'`).toHaveLength(1);
+    });
+
+    it('un ajeno no puede confirmar ni retirarse: 404 y el match no cambia', async () => {
+      const { matchId } = await pair();
+      const stranger = await ana();
+
+      const confirm = await call(stranger.person, 'POST', `/v1/matches/${matchId}/confirm`);
+      const withdraw = await call(stranger.person, 'POST', `/v1/matches/${matchId}/withdraw`);
+
+      expect([confirm.statusCode, withdraw.statusCode]).toEqual([404, 404]);
+      expect(await statusOf(matchId)).toBe('open');
+      expect(await sql`SELECT 1 FROM audit_log WHERE entity = 'match'`).toHaveLength(0);
+    });
+
+    it('una retirada y una confirmación simultáneas dejan siempre el match closed', async () => {
+      for (let round = 0; round < SIMULTANEOUS_ROUNDS; round += 1) {
+        const { mine, other, matchId } = await pair();
+        await call(other.person, 'POST', `/v1/matches/${matchId}/confirm`);
+
+        const [confirm, withdraw] = await Promise.all([
+          call(mine.person, 'POST', `/v1/matches/${matchId}/confirm`),
+          call(other.person, 'POST', `/v1/matches/${matchId}/withdraw`),
+        ]);
+
+        const label = `ronda ${String(round)}`;
+        expect(withdraw.statusCode, label).toBe(200);
+        // Si la confirmación ganó, la retirada la cierra después; si no, se rechazó con 409
+        expect([200, 409], label).toContain(confirm.statusCode);
+        expect(await statusOf(matchId), label).toBe('closed');
+      }
+    });
+  });
 });

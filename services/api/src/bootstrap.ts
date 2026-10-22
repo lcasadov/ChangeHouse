@@ -25,7 +25,9 @@ import { DrizzleDecisionUnitOfWork } from './infrastructure/persistence/drizzle/
 import { DrizzleDiscoveryRepository } from './infrastructure/persistence/drizzle/drizzle-discovery-repository.js';
 import { DrizzleHomeOwnership } from './infrastructure/persistence/drizzle/drizzle-home-ownership.js';
 import { DrizzleHomeRepository } from './infrastructure/persistence/drizzle/drizzle-home-repository.js';
+import { DrizzleMatchHomes } from './infrastructure/persistence/drizzle/drizzle-match-homes.js';
 import { DrizzleMatchRepository } from './infrastructure/persistence/drizzle/drizzle-match-repository.js';
+import { DrizzleMatchUnitOfWork } from './infrastructure/persistence/drizzle/drizzle-match-unit-of-work.js';
 import { DrizzlePhotoRepository } from './infrastructure/persistence/drizzle/drizzle-photo-repository.js';
 import { DrizzleSearchPreferencesRepository } from './infrastructure/persistence/drizzle/drizzle-search-preferences-repository.js';
 import { DrizzleUnitOfWork } from './infrastructure/persistence/drizzle/drizzle-unit-of-work.js';
@@ -131,7 +133,14 @@ export function createApi(config: ApiConfig, adapters: ApiAdapters = {}) {
     ids: uuidV7Generator,
     likesPerDay: config.likesPerDay,
   });
-  const matches = matchOperations({ matches: matchRepository });
+  const matches = matchOperations({
+    matches: matchRepository,
+    homes: new DrizzleMatchHomes(database.db, cipher),
+    photos: photoRepository,
+    storage: photoStorage,
+    units: new DrizzleMatchUnitOfWork(database.db),
+    clock: adapters.clock ?? systemClock,
+  });
   const app = buildApp({
     logger: config.logger,
     landingOrigin: config.landingOrigin,
