@@ -38,7 +38,6 @@ personas; la zona generada la reescribe `plan-sync` en cada operación.
 |---|---|---|---|---|
 | add-account-deletion-and-export | ❌ SIN EMPEZAR | 0 % | 0/6 | ❌ SIN EMPEZAR |
 | add-admin-panel | ❌ SIN EMPEZAR | 0 % | 0/5 | ❌ SIN EMPEZAR |
-| add-chain-match | 🔄 EN PROGRESO | 86 % | 6/7 | 🔄 EN PROGRESO |
 | add-home-pause-resume | ❌ SIN EMPEZAR | 0 % | 0/5 | ❌ SIN EMPEZAR |
 | add-home-vpp-regime | ❌ SIN EMPEZAR | 0 % | 0/5 | ❌ SIN EMPEZAR |
 | add-landing-blog | ❌ SIN EMPEZAR | 0 % | 0/5 | ❌ SIN EMPEZAR |
@@ -47,13 +46,12 @@ personas; la zona generada la reescribe `plan-sync` en cada operación.
 | add-reports-and-blocking | ❌ SIN EMPEZAR | 0 % | 0/6 | ❌ SIN EMPEZAR |
 | add-user-suspension | ❌ SIN EMPEZAR | 0 % | 0/5 | ❌ SIN EMPEZAR |
 
-**Progreso global de los changes activos**: 6/59 (10 %)
+**Progreso global de los changes activos**: 0/52 (0 %)
 
 | estado | changes |
 |---|---|
 | ❌ SIN EMPEZAR | 9 |
-| 🔄 EN PROGRESO | 1 |
-| ✅ ARCHIVADO | 12 |
+| ✅ ARCHIVADO | 13 |
 
 ### Changes archivados
 
@@ -68,6 +66,7 @@ personas; la zona generada la reescribe `plan-sync` en cada operación.
 | 2026-10-19-add-search-preferences | 7/7 | 2026-10-19 |
 | 2026-10-19-add-user-profile | 6/6 | 2026-10-19 |
 | 2026-10-19-add-waitlist | 12/12 | 2026-10-19 |
+| 2026-10-22-add-chain-match | 7/7 | 2026-10-22 |
 | 2026-10-22-add-direct-match | 8/8 | 2026-10-22 |
 | 2026-10-22-add-like-dismiss-undo | 7/7 | 2026-10-22 |
 | 2026-10-22-add-match-details-and-decisions | 7/7 | 2026-10-22 |
