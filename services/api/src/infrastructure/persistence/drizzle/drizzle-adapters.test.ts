@@ -302,6 +302,21 @@ describe('DrizzleCycleCandidates', () => {
 
     expect(await new DrizzleCycleCandidates(db).findCycles('a', 'b')).toEqual([]);
   });
+  it('el directo primero y después las cadenas, leyendo cada vivienda una sola vez', async () => {
+    const { db, calls } = sequenceDb([
+      [{ third_id: null }, { third_id: 'c' }, { third_id: 'd' }],
+      [member('a', true), member('b', true), member('c', true)],
+    ]);
+
+    const found = await new DrizzleCycleCandidates(db).findCycles('a', 'b');
+
+    // La vivienda `d` desapareció entre las dos lecturas: su cadena no es candidata
+    expect(found.map((cycle) => cycle.map((home) => home.homeId))).toEqual([
+      ['a', 'b'],
+      ['a', 'b', 'c'],
+    ]);
+    expect(calls.filter((call) => call.method === 'execute')).toHaveLength(2);
+  });
 });
 
 describe('DrizzleMatchRepository', () => {

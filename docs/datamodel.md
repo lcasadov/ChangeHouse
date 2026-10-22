@@ -358,8 +358,16 @@ Implementada en `add-direct-match` (migración `0009_matches`): `type` con
 match se crea en la misma transacción que el «Me gusta» que cierra el ciclo,
 con `INSERT … ON CONFLICT (cycle_key) DO NOTHING RETURNING`; si no devuelve
 fila, se lee el existente. Antes de insertar la arista se toma
-`pg_advisory_xact_lock` sobre la clave del par `{from, to}`, de modo que dos
-«Me gusta» cruzados simultáneos se serializan y forman un único match.
+`pg_advisory_xact_lock` sobre cada vivienda del par `{from, to}`, en el orden
+de su clave de bloqueo (también al deshacer un «Me gusta»). Dos aristas de un
+mismo ciclo de 2 o 3 siempre comparten una vivienda, así que los «Me gusta»
+simultáneos que cierran el mismo ciclo se serializan y forman un único match, y
+un deshacer no rompe el ciclo de un match que se está creando.
+
+Las cadenas de 3 (`type` 3) llegan con `add-chain-match` sin cambios de
+esquema: un «Me gusta» crea como mucho un match, el directo si es aceptable y,
+si no, la primera cadena aceptable por antigüedad del «Me gusta» más reciente
+de la cadena (se leen como mucho 100 candidatas por «Me gusta»).
 
 ### `match_participants` — cada vivienda de un match
 
@@ -502,7 +510,7 @@ transacción que crea el match, y se cubren con pruebas de propiedades.
 | Acceso | Consulta | Índice que la sostiene |
 |---|---|---|
 | Detección de ciclo de 2 | `likes WHERE from_home_id = :y AND to_home_id = :x` | PK `(from_home_id, to_home_id)` |
-| Detección de ciclo de 3 | join `likes l1` (from = :y) con `likes l2` (from = l1.to, to = :x) | PK + índice `likes(to_home_id, from_home_id)` |
+| Detección de ciclo de 3 | join `likes l1` (from = :y) con `likes l2` (from = l1.to, to = :x), Z publicada y de un tercer propietario | PK + índice `likes(to_home_id, from_home_id)`; PK de `homes`. Medido con 50.000 viviendas y 500.000 likes (`chain-detection-volume.int.test.ts`): el «Me gusta» completo, muy por debajo de 1 s |
 | Tarjetas de descubrimiento | viviendas `published` dentro de la zona, filtros, no descartadas, no propias, compatibilidad económica en ambos sentidos | GIST en `homes(approx_location)`; parcial `homes(status) WHERE status = 'published'`; PK de `dismissals` |
 | Matches de un usuario | `match_participants WHERE user_id = :u` | índice `match_participants(user_id)` |
 | Matches abiertos de una vivienda (para pausar al entrar en operación) | `match_participants WHERE home_id = :h` | PK `(match_id, home_id)` + índice `(home_id)` |

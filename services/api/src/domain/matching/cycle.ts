@@ -69,12 +69,20 @@ export function cycleKey(homeIds: readonly string[]): string {
   return [...homeIds].sort().join(KEY_SEPARATOR);
 }
 
+/** Las viviendas de una clave canónica, en su orden (el inverso de `cycleKey`). */
+export function homeIdsOfKey(key: string): string[] {
+  return key.split(KEY_SEPARATOR);
+}
+
+/** Entre 2 y 3 viviendas distintas, cada una de un propietario distinto: nadie ocupa dos eslabones. */
 function isWellFormed(cycle: readonly CycleHome[]): boolean {
   const ids = new Set(cycle.map((home) => home.homeId));
+  const owners = new Set(cycle.map((home) => home.ownerId));
   return (
     cycle.length >= MIN_CYCLE_LENGTH &&
     cycle.length <= MAX_CYCLE_LENGTH &&
-    ids.size === cycle.length
+    ids.size === cycle.length &&
+    owners.size === cycle.length
   );
 }
 

@@ -131,7 +131,11 @@
       "closed": "Cerrado",
       "expired": "Caducado"
     },
+    "chain": {
+      "label": "Cadena de 3"
+    },
     "row": {
+      "chainTitle": "{{first}} y {{second}}",
       "summary": "{{title}}. {{kind}}. {{compensation}}. {{status}}.",
       "summaryNoCompensation": "{{title}}. {{kind}}. {{status}}.",
       "unavailable": "Casa no disponible",
@@ -144,6 +148,11 @@
       "subtitle": "A los dos os gusta la casa del otro. Esta es la diferencia estimada.",
       "myHome": "Tu casa",
       "swap": "{{mine}} por {{theirs}}",
+      "chain": {
+        "subtitle": "A las tres personas os gusta la casa que recibiríais. Esta es la diferencia estimada.",
+        "swap": "A tu casa le llega la de {{from}}, la tuya va a {{to}}",
+        "thirdHome": "Otra casa"
+      },
       "view": "Ver match",
       "continue": "Seguir explorando"
     },
@@ -188,6 +197,18 @@
         "theirs": "La casa de {{name}}",
         "address": "Dirección: {{address}}",
         "photos": "Fotos de {{title}}"
+      },
+      "chain": {
+        "gives": {
+          "mine": "Tu casa va a {{name}}",
+          "toYou": "Su casa te llega a ti",
+          "other": "Su casa va a {{name}}"
+        },
+        "receives": {
+          "mine": "Recibes la casa de {{name}}",
+          "fromYou": "Recibe tu casa",
+          "other": "Recibe la casa de {{name}}"
+        }
       },
       "compensation": {
         "pay": "{{name}} paga {{amount}}",
