@@ -5,8 +5,11 @@ import { EmptyState, Screen } from '../../ui';
 
 export type Section = 'explore' | 'matches' | 'homes' | 'profile';
 
+/** Las secciones que aún no tienen feature propia: el perfil ya no es provisional. */
+export type PlaceholderSection = Exclude<Section, 'profile'>;
+
 export interface SectionPlaceholderProps {
-  section: Section;
+  section: PlaceholderSection;
   icon: ComponentProps<typeof EmptyState>['icon'];
 }
 

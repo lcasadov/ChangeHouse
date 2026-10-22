@@ -44,7 +44,7 @@ const TAB_CASES = [
   [es.tabs.explore, '/', es.explore.empty.title],
   [es.tabs.matches, '/matches', es.matches.empty.title],
   [es.tabs.homes, '/homes', es.homes.empty.title],
-  [es.tabs.profile, '/profile', es.profile.empty.title],
+  [es.tabs.profile, '/profile', es.profile.title],
 ] as const;
 
 describe('navegación principal', () => {
@@ -63,7 +63,7 @@ describe('navegación principal', () => {
   });
 
   it.each(TAB_CASES)(
-    'al pulsar «%s» navega a %s y muestra su estado vacío',
+    'al pulsar «%s» navega a %s y muestra su pantalla',
     async (label, path, title) => {
       const view = await renderRouter(ROUTES);
 

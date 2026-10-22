@@ -5,8 +5,14 @@ export {
   type ConsentType,
   type MeInput,
   meInputSchema,
+  type ProfileFormData,
+  profileFormSchema,
+  type ProfileFormValues,
+  type ProfileInput,
+  profileSchema,
   validateConsentInput,
   validateMeInput,
+  validateProfileForm,
 } from './account.js';
 export { assertNever } from './assert-never.js';
 export { HOME_TYPES, type HomeType } from './home-type.js';

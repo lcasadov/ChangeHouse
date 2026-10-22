@@ -2,6 +2,8 @@ export type { ButtonProps, ButtonVariant } from './Button';
 export { Button } from './Button';
 export type { CheckboxProps } from './Checkbox';
 export { Checkbox } from './Checkbox';
+export type { DialogProps } from './Dialog';
+export { Dialog } from './Dialog';
 export type { EmptyStateProps } from './EmptyState';
 export { EmptyState } from './EmptyState';
 export { FieldError } from './FieldError';

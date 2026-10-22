@@ -37,6 +37,22 @@ const problem = (status: number, extra: Record<string, unknown> = {}) =>
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 
+type UpsertBody = { displayName: string } & Record<string, unknown>;
+
+/** Como la API: lo omitido no se toca y un municipio en blanco se borra. */
+function profileChangesOf(body: UpsertBody): Partial<Me> {
+  const changes: Partial<Me> = { displayName: body.displayName };
+  if (typeof body['municipality'] === 'string') {
+    changes.municipality = body['municipality'] === '' ? null : body['municipality'];
+  }
+  if (typeof body['phone'] === 'string') changes.phone = body['phone'];
+  if (typeof body['meetsVppRequirements'] === 'boolean') {
+    changes.meetsVppRequirements = body['meetsVppRequirements'];
+  }
+  if (typeof body['isOver65'] === 'boolean') changes.isOver65 = body['isOver65'];
+  return changes;
+}
+
 export type Failure = 'network' | 'server' | 'legal-outdated' | 'unauthorized' | 'invalid';
 
 /**
@@ -92,17 +108,17 @@ export class FakeBackend {
     }
     if (path !== '/me') return problem(404);
     if (method === 'GET') return this.registered ? json(200, this.profile) : problem(404);
-    return this.upsert(body as { displayName: string } & Record<string, unknown>);
+    return this.upsert(body as UpsertBody);
   }
 
-  private upsert(body: { displayName: string } & Record<string, unknown>): Response {
+  private upsert(body: UpsertBody): Response {
     const legalOk =
       body['acceptedTermsVersion'] === TERMS_VERSION &&
       body['acceptedPrivacyVersion'] === PRIVACY_VERSION;
     if (!this.registered && !legalOk) return problem(422, { code: 'LEGAL_ACCEPTANCE_REQUIRED' });
     const created = !this.registered;
     this.registered = true;
-    this.profile = { ...this.profile, displayName: body.displayName };
+    this.profile = { ...this.profile, ...profileChangesOf(body) };
     return json(created ? 201 : 200, this.profile);
   }
 

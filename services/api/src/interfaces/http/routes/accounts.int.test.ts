@@ -214,6 +214,102 @@ describe.skipIf(!emulatorAvailable())('cuenta y consentimientos con tokens reale
     });
   });
 
+  describe('PUT /me - edición del perfil', () => {
+    const profile = {
+      displayName: 'Ana García',
+      municipality: 'Getafe',
+      phone: '+34612345678',
+      meetsVppRequirements: true,
+      isOver65: true,
+    };
+
+    async function storedProfile() {
+      const [row] = await sql<
+        {
+          display_name: string;
+          municipality: string | null;
+          phone: string | null;
+          meets_vpp_requirements: boolean;
+          is_over_65: boolean;
+        }[]
+      >`SELECT display_name, municipality, phone, meets_vpp_requirements, is_over_65 FROM users`;
+      return row;
+    }
+
+    it('Scenario: Guardar cambios del perfil - GET /me devuelve los nuevos valores', async () => {
+      const user = await registered('Ana');
+
+      const response = await put(user, profile);
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toMatchObject(profile);
+      expect((await get(user, '/v1/me')).json()).toMatchObject(profile);
+    });
+
+    it('Scenario: Guardar cambios del perfil - un campo omitido no se toca', async () => {
+      const user = await registered('Ana');
+      await put(user, profile);
+
+      await put(user, { displayName: 'Ana García', isOver65: false });
+
+      expect((await get(user, '/v1/me')).json()).toMatchObject({
+        ...profile,
+        isOver65: false,
+      });
+    });
+
+    it('Scenario: Guardar cambios del perfil - un municipio en blanco lo borra', async () => {
+      const user = await registered('Ana');
+      await put(user, profile);
+
+      const response = await put(user, { displayName: 'Ana García', municipality: '   ' });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toMatchObject({ municipality: null });
+      expect((await storedProfile())?.municipality).toBeNull();
+    });
+
+    it.each([
+      ['vacío', '', 'required'],
+      ['solo espacios', '   ', 'required'],
+      ['de más de 60 caracteres', 'x'.repeat(61), 'too_long'],
+    ])(
+      'Scenario: Nombre visible vacío - un nombre %s da 400 con displayName señalado y no se guarda nada',
+      async (_label, displayName, message) => {
+        const user = await registered('Ana');
+
+        const response = await put(user, { ...profile, displayName });
+
+        expect(response.statusCode).toBe(400);
+        expect(response.json<{ errors: unknown[] }>().errors).toEqual([
+          { field: 'displayName', message },
+        ]);
+        expect(await storedProfile()).toMatchObject({
+          display_name: 'Ana',
+          municipality: null,
+          phone: null,
+          meets_vpp_requirements: false,
+          is_over_65: false,
+        });
+      },
+    );
+
+    it.each(['612345678', '+34 612 345 678', '+0612345678', '+34612'])(
+      'Scenario: Teléfono con formato no válido - %s da 400 con phone señalado y no se guarda nada',
+      async (phone) => {
+        const user = await registered('Ana');
+
+        const response = await put(user, { ...profile, phone });
+
+        expect(response.statusCode).toBe(400);
+        expect(response.json<{ errors: unknown[] }>().errors).toEqual([
+          { field: 'phone', message: 'invalid' },
+        ]);
+        expect(await storedProfile()).toMatchObject({ phone: null, municipality: null });
+      },
+    );
+  });
+
   describe('GET /me', () => {
     it('Scenario: Consultar la propia cuenta - un usuario sin viviendas recibe su nombre, su email, el rol seeker y hasPublishedHome en falso', async () => {
       const user = await registered('Ana');
