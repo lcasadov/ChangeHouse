@@ -1,8 +1,12 @@
 import { madridDay, secondsUntil } from '../../domain/decision/madrid-day.js';
 import type { Home } from '../../domain/home/home.js';
+import { cycleKey, evaluateCycle } from '../../domain/matching/cycle.js';
 import type { Clock } from '../clock.js';
 import { HomeNotFoundError } from '../home/errors.js';
 import type { HomeRepository } from '../home/home-repository.js';
+import type { IdGenerator } from '../id-generator.js';
+import { type MatchView, toMatchView } from '../matching/match-views.js';
+import type { MatchingTransaction } from '../matching/matching-repository.js';
 import type {
   DecisionOrigin,
   DecisionStore,
@@ -23,6 +27,8 @@ export interface DecisionDeps {
   units: DecisionUnitOfWork;
   matches: MatchLookup;
   clock: Clock;
+  /** Identificadores de los matches que se crean. */
+  ids: IdGenerator;
   /** Me gusta permitidos por usuario y día natural de Madrid (RF-45). */
   likesPerDay: number;
 }
@@ -38,10 +44,10 @@ export interface DismissCommand {
   targetHomeId: string;
 }
 
-/** `LikeResult` del contrato; el match llega con `add-direct-match`, así que aquí es siempre `null`. */
+/** `LikeResult` del contrato: el match que ha formado este me gusta, o `null`. */
 export interface LikeResult {
   liked: true;
-  match: null;
+  match: MatchView | null;
 }
 
 /** Una vivienda propia; la ajena y la inexistente son indistinguibles (404). */
@@ -71,8 +77,37 @@ async function accountOrRequireHome(
 }
 
 /**
- * Registra un me gusta (RF-41, RN-01, RN-02). Valida origen y destino antes de abrir la transacción;
- * dentro de ella, bajo el bloqueo del usuario, comprueba el duplicado y el límite diario.
+ * Busca los ciclos que cierra la arista recién insertada y crea el match del primero que el dominio
+ * acepta (publicación y RN-03 leídas dentro de la transacción). Si el ciclo ya tenía match, lo
+ * devuelve sin crear otro.
+ */
+async function closeCycle(
+  deps: DecisionDeps,
+  matching: MatchingTransaction,
+  command: LikeCommand,
+  now: Date,
+): Promise<MatchView | null> {
+  const candidates = await matching.cycles.findCycles(command.fromHomeId, command.targetHomeId);
+  for (const candidate of candidates) {
+    const evaluation = evaluateCycle(candidate);
+    if (!evaluation.accepted) continue;
+    const id = await matching.matches.saveMatch({
+      id: deps.ids.next(),
+      createdAt: now,
+      cycle: evaluation.match,
+    });
+    const saved = await matching.matches.findMatch(id);
+    if (!saved) throw new Error(`El match ${id} no se encuentra tras guardarlo`);
+    return toMatchView(saved);
+  }
+  return null;
+}
+
+/**
+ * Registra un me gusta (RF-41, RN-01, RN-02) y, si cierra un ciclo compatible, el match (RF-50,
+ * RN-03, RN-04). Valida origen y destino antes de abrir la transacción; dentro de ella, bajo el
+ * bloqueo del usuario (límite diario) y el del par de viviendas (me gusta cruzados simultáneos),
+ * comprueba el duplicado y el límite, inserta la arista y busca y crea el match.
  */
 async function likeHome(
   deps: DecisionDeps,
@@ -83,8 +118,9 @@ async function likeHome(
   if (origin.status !== 'published') throw new HomeNotPublishedError();
   await visibleTarget(deps, userId, command.targetHomeId);
 
-  await deps.units.run(async (store) => {
+  const match = await deps.units.run(async (store, matching) => {
     await store.lockUser(userId);
+    await store.lockPair(cycleKey([command.fromHomeId, command.targetHomeId]));
     if (await store.likeExists(command.fromHomeId, command.targetHomeId)) {
       throw new LikeExistsError();
     }
@@ -94,8 +130,9 @@ async function likeHome(
       throw new DailyLikeLimitError(secondsUntil(today.end, now));
     }
     await store.insertLike(command.fromHomeId, command.targetHomeId, now);
+    return closeCycle(deps, matching, command, now);
   });
-  return { liked: true, match: null };
+  return { liked: true, match };
 }
 
 /** Descarta una vivienda desde una vivienda propia publicada o, para un `seeker`, desde su cuenta. */
@@ -130,6 +167,8 @@ async function undoIn(
     return;
   }
   if (origin.kind !== 'home') throw new NothingToUndoError();
+  // Bajo el bloqueo del par, el match que pudiera usar este me gusta ya está confirmado o no existe
+  await store.lockPair(cycleKey([origin.homeId, last.targetHomeId]));
   if (await deps.matches.isLikeInMatch(origin.homeId, last.targetHomeId)) {
     throw new LikeInMatchError();
   }

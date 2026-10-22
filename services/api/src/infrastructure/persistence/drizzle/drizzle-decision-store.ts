@@ -8,6 +8,12 @@ import type {
 import type { Executor } from './database.js';
 import { accountDismissals, dismissals, homes, likes } from './schema.js';
 
+/**
+ * Espacio de los bloqueos asesores de pares de viviendas: la forma de dos enteros no se solapa con
+ * la de un `bigint` que usa `lockUser`, así que un par nunca choca con un usuario.
+ */
+const PAIR_LOCK_SPACE = 2;
+
 interface LastActionRow extends Record<string, unknown> {
   kind: 'like' | 'dismissal';
   target_home_id: string;
@@ -21,6 +27,12 @@ export class DrizzleDecisionStore implements DecisionStore {
   async lockUser(userId: string): Promise<void> {
     // Bloqueo asesor de la transacción: dos peticiones del mismo usuario no cuentan a la vez
     await this.db.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${userId}, 0))`);
+  }
+
+  async lockPair(pairKey: string): Promise<void> {
+    await this.db.execute(
+      sql`SELECT pg_advisory_xact_lock(${PAIR_LOCK_SPACE}::int, hashtext(${pairKey}))`,
+    );
   }
 
   async countLikes(userId: string, start: Date, end: Date): Promise<number> {

@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
 
 import { Notice } from '../../ui';
+import { MatchCelebrationHost } from '../matches/MatchCelebrationHost';
 import { CardStack } from './CardStack';
 import { DecisionActions } from './DecisionActions';
 import { DecisionBar } from './DecisionBar';
@@ -134,6 +135,10 @@ export function CardDeck({
         />
       ) : null}
       <PublishHomeSheet visible={decisions.needsHome} onClose={decisions.closeNeedsHome} />
+      <MatchCelebrationHost
+        celebration={decisions.celebration}
+        onClose={decisions.closeCelebration}
+      />
     </View>
   );
 }

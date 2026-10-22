@@ -1,0 +1,102 @@
+{
+  "tracker": "github-issues",
+  "change": "add-direct-match",
+  "sprint": {
+    "path": "Sprint en curso",
+    "created": false
+  },
+  "epic": {
+    "capability": "matching",
+    "id": 181,
+    "reused": false
+  },
+  "related_epics": [],
+  "feature": {
+    "id": 182,
+    "reused": false
+  },
+  "stories": [
+    {
+      "key": "Match directo",
+      "id": 183,
+      "reused": false,
+      "prio": "P1"
+    },
+    {
+      "key": "Un solo match por ciclo",
+      "id": 184,
+      "reused": false,
+      "prio": "P1"
+    },
+    {
+      "key": "Compensaciones del match",
+      "id": 185,
+      "reused": false,
+      "prio": "P1"
+    },
+    {
+      "key": "Lista de matches",
+      "id": 186,
+      "reused": false,
+      "prio": "P1"
+    },
+    {
+      "key": "Celebración del match",
+      "id": 187,
+      "reused": false,
+      "prio": "P2"
+    }
+  ],
+  "tasks": [
+    {
+      "key": "T1",
+      "id": 188,
+      "parent": 185,
+      "state": "done"
+    },
+    {
+      "key": "B1",
+      "id": 189,
+      "parent": 183,
+      "state": "done"
+    },
+    {
+      "key": "B2",
+      "id": 190,
+      "parent": 184,
+      "state": "done"
+    },
+    {
+      "key": "T2",
+      "id": 191,
+      "parent": 184,
+      "state": "done"
+    },
+    {
+      "key": "B3",
+      "id": 192,
+      "parent": 183,
+      "state": "done"
+    },
+    {
+      "key": "T3",
+      "id": 193,
+      "parent": 187,
+      "state": "done"
+    },
+    {
+      "key": "F1",
+      "id": 194,
+      "parent": 186,
+      "state": "done"
+    },
+    {
+      "key": "V1",
+      "id": 195,
+      "parent": 183,
+      "state": "done"
+    }
+  ],
+  "bugs": [],
+  "pending": []
+}

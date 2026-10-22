@@ -14,6 +14,7 @@ import {
 import { createHttpHomesApi } from '../homes/http-homes-api';
 import { createExpoPhotoPicker } from '../homes/photo-picker';
 import { createXhrPhotoUploader } from '../homes/xhr-photo-uploader';
+import { createHttpMatchesApi } from '../matches/http-matches-api';
 import { createFixtureZoneSuggestions } from '../search/fixture-zone-suggestions';
 import { createHttpSearchPreferencesApi } from '../search/http-search-preferences-api';
 import type { AppServices } from './services';
@@ -55,6 +56,7 @@ export function createAppServices(
     photoPicker: createExpoPhotoPicker(),
     photoUploader: createXhrPhotoUploader(),
     discoveryApi: createHttpDiscoveryApi(client),
+    matchesApi: createHttpMatchesApi(client),
     searchPreferencesApi: createHttpSearchPreferencesApi(client),
     // Sin servicio de zonas real todavía: las sugerencias de prueba (ver design.md de add-search-preferences)
     zoneSuggestions: createFixtureZoneSuggestions(),

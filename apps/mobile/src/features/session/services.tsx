@@ -8,6 +8,7 @@ import type { AddressSuggestions } from '../homes/address-suggestions';
 import type { HomesApi } from '../homes/homes-api';
 import type { PhotoPicker } from '../homes/photo-picker';
 import type { PhotoUploader } from '../homes/photo-uploader';
+import type { MatchesApi } from '../matches/matches-api';
 import type { SearchPreferencesApi } from '../search/search-preferences-api';
 import type { ZoneSuggestions } from '../search/zone-suggestions';
 
@@ -26,6 +27,8 @@ export interface AppServices {
   photoUploader: PhotoUploader;
   /** Las viviendas ajenas compatibles que ofrece «Explorar» y su detalle público. */
   discoveryApi: DiscoveryApi;
+  /** Los matches del usuario (`listMyMatches`). */
+  matchesApi: MatchesApi;
   /** Las preferencias de búsqueda del usuario y las propias de cada vivienda. */
   searchPreferencesApi: SearchPreferencesApi;
   /** Autocompletado de la zona de búsqueda: municipios y lugares (sugerencias de prueba sin clave). */

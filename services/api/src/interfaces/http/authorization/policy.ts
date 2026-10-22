@@ -62,6 +62,9 @@ export const policy: Policy = {
   likeHome: { kind: 'roles', roles: ['owner'] },
   dismissHome: { kind: 'roles', roles: HOME_OWNER_ROLES },
   undoLastAction: { kind: 'roles', roles: HOME_OWNER_ROLES },
+  // Matches (RF-50): los propios. También un `seeker`, que puede tenerlos si pausó su vivienda; sin
+  // matches ve la lista vacía. Que solo vea los suyos lo resuelve el caso de uso
+  listMyMatches: { kind: 'roles', roles: HOME_OWNER_ROLES },
   // Moderación (RF-18, RF-93): solo el admin; la decisión queda auditada
   adminListHomes: { kind: 'roles', roles: ['admin'] },
   adminModerateHome: { kind: 'roles', roles: ['admin'] },

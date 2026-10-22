@@ -29,6 +29,7 @@ import {
 } from 'drizzle-orm/pg-core';
 
 import { PHOTO_STATUSES } from '../../../domain/home/photo.js';
+import { MATCH_STATUSES, PARTICIPANT_STATUSES } from '../../../domain/matching/match.js';
 import { type GeoPoint, parsePoint, pointSql } from './geography.js';
 
 /** Texto sin distinción de mayúsculas (extensión `citext`): el email es único sea cual sea su capitalización. */
@@ -326,5 +327,65 @@ export const likes = pgTable(
     // Ciclos de 2 y 3 (`add-direct-match`) y borrado en cascada por destino
     index('likes_to_home_idx').on(table.toHomeId, table.fromHomeId),
     index('likes_created_at_idx').on(table.createdAt),
+  ],
+);
+
+export const matchStatusEnum = pgEnum('match_status', MATCH_STATUSES);
+export const participantStatusEnum = pgEnum('participant_status', PARTICIPANT_STATUSES);
+
+/**
+ * Ciclos de interés recíproco y compatible (`docs/datamodel.md`): de 2 viviendas (directo) o 3
+ * (cadena). `cycle_key` (identificadores de vivienda ordenados y unidos) es única: el mismo
+ * conjunto de viviendas nunca forma dos matches, tampoco con dos me gusta simultáneos.
+ */
+export const matches = pgTable(
+  'matches',
+  {
+    id: uuid('id').primaryKey(),
+    type: smallint('type').notNull(),
+    status: matchStatusEnum('status').notNull().default('open'),
+    cycleKey: text('cycle_key').notNull().unique(),
+    // Chat de grupo en Firestore: llega con `add-match-chat`
+    chatId: text('chat_id'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [check('matches_type_range', sql`${table.type} IN (2, 3)`)],
+);
+
+/**
+ * Cada vivienda de un match: la que entrega (`gives_home_id`, igual a `home_id`), la que recibe y la
+ * compensación estimada de su propietario (positiva, paga; negativa, recibe; suma 0 por match,
+ * RN-04). Las viviendas y los usuarios no se borran mientras figuren en un match.
+ */
+export const matchParticipants = pgTable(
+  'match_participants',
+  {
+    matchId: uuid('match_id')
+      .notNull()
+      .references(() => matches.id, { onDelete: 'cascade' }),
+    homeId: uuid('home_id')
+      .notNull()
+      .references(() => homes.id, { onDelete: 'restrict' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
+    givesHomeId: uuid('gives_home_id')
+      .notNull()
+      .references(() => homes.id, { onDelete: 'restrict' }),
+    receivesHomeId: uuid('receives_home_id')
+      .notNull()
+      .references(() => homes.id, { onDelete: 'restrict' }),
+    compensationCents: bigint('compensation_cents', { mode: 'number' }).notNull(),
+    status: participantStatusEnum('status').notNull().default('pending'),
+    // Autoriza mostrar su teléfono a los demás participantes (RF-53): llega con `setPhoneSharing`
+    sharesPhone: boolean('shares_phone').notNull().default(false),
+  },
+  (table) => [
+    primaryKey({ columns: [table.matchId, table.homeId] }),
+    check('match_participants_gives_own_home', sql`${table.givesHomeId} = ${table.homeId}`),
+    check('match_participants_not_self', sql`${table.receivesHomeId} <> ${table.givesHomeId}`),
+    // Mis matches (`listMyMatches`) y ¿este me gusta forma parte de un match? (deshacer)
+    index('match_participants_user_idx').on(table.userId, table.matchId),
+    index('match_participants_gives_receives_idx').on(table.givesHomeId, table.receivesHomeId),
   ],
 );

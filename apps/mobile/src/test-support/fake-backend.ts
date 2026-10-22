@@ -7,6 +7,7 @@ import type { SearchPreferences } from '../features/search/search-preferences-ap
 import { FakeDecisions } from './fake-decisions';
 import { FakeDiscovery } from './fake-discovery';
 import { FakeHomes } from './fake-homes';
+import { FakeMatches, type Match } from './fake-matches';
 import { FakeModeration } from './fake-moderation';
 import { FakeSearchPreferences } from './fake-search-preferences';
 import { json, problem } from './http-responses';
@@ -79,6 +80,8 @@ export class FakeBackend {
   readonly discovery: FakeDiscovery;
   /** Los me gusta, descartes y deshacer desde esas viviendas sobre las que ofrece el descubrimiento. */
   readonly decisions: FakeDecisions;
+  /** Los matches del usuario y los «Me gusta» que cierran uno. */
+  readonly matches: FakeMatches;
   /** La cola de moderación sobre esas mismas viviendas. */
   private readonly moderation: FakeModeration;
 
@@ -88,6 +91,7 @@ export class FakeBackend {
     homes = [],
     searchPreferences = DEFAULT_SEARCH_PREFERENCES,
     discoveryCards = [],
+    matches = [],
   }: {
     registered?: boolean;
     profile?: Me;
@@ -96,16 +100,20 @@ export class FakeBackend {
     searchPreferences?: SearchPreferences | null;
     /** Las viviendas ajenas que ofrece «Explorar»; por defecto, ninguna. */
     discoveryCards?: readonly DiscoveryCard[];
+    /** Los matches que ya tiene el usuario; por defecto, ninguno. */
+    matches?: readonly Match[];
   } = {}) {
     this.registered = registered;
     this.profile = profile;
     this.homes = new FakeHomes(homes);
     this.searchPreferences = new FakeSearchPreferences(this.homes, searchPreferences);
     this.moderation = new FakeModeration(this.homes);
+    this.matches = new FakeMatches(matches, () => this.profile.roles);
     this.decisions = new FakeDecisions(
       () => this.profile.roles,
       () => this.homes.all(),
       (homeId) => this.discovery.offers(homeId),
+      (fromHomeId, targetHomeId) => this.matches.formFor(fromHomeId, targetHomeId),
     );
     this.discovery = new FakeDiscovery(
       discoveryCards,
@@ -180,9 +188,20 @@ export class FakeBackend {
     if (path.endsWith('/search-preferences')) {
       return this.searchPreferences.respond(method, path, body);
     }
+    return this.respondToUserResource(method, path, search, body);
+  }
+
+  /** Lo que ve una persona con sesión: decisiones, descubrimiento, matches, viviendas y su cuenta. */
+  private respondToUserResource(
+    method: string,
+    path: string,
+    search: URLSearchParams,
+    body: unknown,
+  ): Response {
     const decision = this.decisions.respond(method, path, search, body);
     if (decision) return decision;
     if (path === '/discover') return this.discovery.respond(search);
+    if (path === '/matches') return this.matches.respond(search);
     if (method === 'GET') {
       const others = this.discovery.publicHome(path);
       if (others) return others;

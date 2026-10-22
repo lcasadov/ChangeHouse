@@ -141,6 +141,8 @@ const REQUESTS: Record<string, RequestTemplate> = {
     method: 'DELETE',
     url: (context) => `/v1/me/last-action?homeId=${context.ownPublishedHomeId}`,
   },
+  // Sin matches: la lista vacía (200) prueba que se llegó; solo ve los propios
+  listMyMatches: { method: 'GET', url: '/v1/matches' },
   adminListHomes: { method: 'GET', url: '/v1/admin/homes?status=in_review' },
   adminModerateHome: {
     method: 'POST',

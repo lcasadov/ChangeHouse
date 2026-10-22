@@ -448,6 +448,105 @@ describe('migraciones', () => {
     expect(accountLeft).toHaveLength(0);
   });
 
+  it('GIVEN la base migrada WHEN se inspecciona THEN existen matches (clave de ciclo única, tipo 2 o 3, estado open) y match_participants (compensación bigint, estado pending)', async () => {
+    const target = openSql(urlFor(EMPTY_DB));
+    const columns = await target<{ table_name: string; column_name: string; udt_name: string }[]>`
+      SELECT table_name, column_name, udt_name FROM information_schema.columns
+      WHERE table_name IN ('matches', 'match_participants')
+      ORDER BY table_name, column_name`;
+    const references = await target<{ constraint_name: string; delete_rule: string }[]>`
+      SELECT constraint_name, delete_rule FROM information_schema.referential_constraints
+      WHERE constraint_name LIKE 'match_participants_%'
+      ORDER BY constraint_name`;
+    const indexes = await target<{ indexname: string }[]>`
+      SELECT indexname FROM pg_indexes
+      WHERE tablename IN ('matches', 'match_participants')
+      ORDER BY indexname`;
+    const user = '0199c1a2-0000-7000-8000-0000000000b9';
+    const [first, second] = [
+      '0199c1a2-0000-7000-8000-0000000000b7',
+      '0199c1a2-0000-7000-8000-0000000000b8',
+    ];
+    const [match, duplicate] = [
+      '0199c1a2-0000-7000-8000-0000000000c1',
+      '0199c1a2-0000-7000-8000-0000000000c2',
+    ];
+    await target`INSERT INTO users (id, firebase_uid, email, display_name)
+                 VALUES (${user}, 'uid-matches', 'matches@example.com', 'Ana')`;
+    for (const id of [first, second]) {
+      await target`INSERT INTO homes (id, owner_id, type, exact_address, exact_location, approx_location, area_name)
+                   VALUES (${id}, ${user}, 'piso', ${Buffer.from('x')},
+                           ST_SetSRID(ST_MakePoint(-3.7, 40.4), 4326)::geography,
+                           ST_SetSRID(ST_MakePoint(-3.7, 40.4), 4326)::geography, 'Malasaña')`;
+    }
+    const key = `${first}:${second}`;
+    await target`INSERT INTO matches (id, type, cycle_key) VALUES (${match}, 2, ${key})`;
+    const [created] = await target<{ status: string; chat_id: string | null }[]>`
+      SELECT status, chat_id FROM matches WHERE id = ${match}`;
+    const sameCycle = target`INSERT INTO matches (id, type, cycle_key) VALUES (${duplicate}, 2, ${key})`;
+    await expect(sameCycle).rejects.toThrow(/matches_cycle_key_unique/);
+    const badType = target`INSERT INTO matches (id, type, cycle_key) VALUES (${duplicate}, 4, 'x')`;
+    await expect(badType).rejects.toThrow(/matches_type_range/);
+    await target`INSERT INTO match_participants
+                   (match_id, home_id, user_id, gives_home_id, receives_home_id, compensation_cents)
+                 VALUES (${match}, ${first}, ${user}, ${first}, ${second}, 1200000),
+                        (${match}, ${second}, ${user}, ${second}, ${first}, -1200000)`;
+    const participants = await target<{ status: string; shares_phone: boolean; total: string }[]>`
+      SELECT status, shares_phone, sum(compensation_cents) OVER () AS total
+      FROM match_participants WHERE match_id = ${match}`;
+    const givesOther = target`INSERT INTO match_participants
+                   (match_id, home_id, user_id, gives_home_id, receives_home_id, compensation_cents)
+                 VALUES (${match}, ${second}, ${user}, ${first}, ${second}, 0)`;
+    await expect(givesOther).rejects.toThrow(/match_participants_gives_own_home/);
+    const deletingHome = target`DELETE FROM homes WHERE id = ${first}`;
+    await expect(deletingHome).rejects.toThrow(/match_participants/);
+    await target`DELETE FROM matches WHERE id = ${match}`;
+    const participantsLeft = await target`SELECT 1 FROM match_participants`;
+    await target`DELETE FROM homes WHERE id IN (${first}, ${second})`;
+    await target`DELETE FROM users WHERE id = ${user}`;
+    await target.end();
+
+    expect(columns).toEqual([
+      { table_name: 'match_participants', column_name: 'compensation_cents', udt_name: 'int8' },
+      { table_name: 'match_participants', column_name: 'gives_home_id', udt_name: 'uuid' },
+      { table_name: 'match_participants', column_name: 'home_id', udt_name: 'uuid' },
+      { table_name: 'match_participants', column_name: 'match_id', udt_name: 'uuid' },
+      { table_name: 'match_participants', column_name: 'receives_home_id', udt_name: 'uuid' },
+      { table_name: 'match_participants', column_name: 'shares_phone', udt_name: 'bool' },
+      { table_name: 'match_participants', column_name: 'status', udt_name: 'participant_status' },
+      { table_name: 'match_participants', column_name: 'user_id', udt_name: 'uuid' },
+      { table_name: 'matches', column_name: 'chat_id', udt_name: 'text' },
+      { table_name: 'matches', column_name: 'created_at', udt_name: 'timestamptz' },
+      { table_name: 'matches', column_name: 'cycle_key', udt_name: 'text' },
+      { table_name: 'matches', column_name: 'id', udt_name: 'uuid' },
+      { table_name: 'matches', column_name: 'status', udt_name: 'match_status' },
+      { table_name: 'matches', column_name: 'type', udt_name: 'int2' },
+    ]);
+    expect(created).toEqual({ status: 'open', chat_id: null });
+    expect(participants).toEqual([
+      { status: 'pending', shares_phone: false, total: '0' },
+      { status: 'pending', shares_phone: false, total: '0' },
+    ]);
+    expect(references).toEqual([
+      { constraint_name: 'match_participants_gives_home_id_homes_id_fk', delete_rule: 'RESTRICT' },
+      { constraint_name: 'match_participants_home_id_homes_id_fk', delete_rule: 'RESTRICT' },
+      { constraint_name: 'match_participants_match_id_matches_id_fk', delete_rule: 'CASCADE' },
+      {
+        constraint_name: 'match_participants_receives_home_id_homes_id_fk',
+        delete_rule: 'RESTRICT',
+      },
+      { constraint_name: 'match_participants_user_id_users_id_fk', delete_rule: 'RESTRICT' },
+    ]);
+    expect(indexes.map((row) => row.indexname)).toEqual([
+      'match_participants_gives_receives_idx',
+      'match_participants_match_id_home_id_pk',
+      'match_participants_user_idx',
+      'matches_cycle_key_unique',
+      'matches_pkey',
+    ]);
+    expect(participantsLeft).toHaveLength(0);
+  });
+
   it('GIVEN viviendas ya publicadas antes de la migración WHEN se aplica THEN reciben su fecha de publicación y las demás no', async () => {
     // Las migraciones hasta la 0006 en una carpeta aparte: la base queda como antes de este cambio
     const before = await mkdtemp(join(tmpdir(), 'migrations-0006-'));

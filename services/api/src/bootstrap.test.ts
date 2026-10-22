@@ -68,6 +68,7 @@ describe('createApi', () => {
       'likeHome',
       'listMyConsents',
       'listMyHomes',
+      'listMyMatches',
       'putHomeSearchPreferences',
       'putMySearchPreferences',
       'submitHome',
