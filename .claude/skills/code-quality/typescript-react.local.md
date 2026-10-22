@@ -67,6 +67,10 @@ fc.assert(
 - **`callback?.(await accion())` no ejecuta `accion` si `callback` es `undefined`**: el optional call corta también los
   argumentos. Se espera antes (`const resultado = await accion(); callback?.(resultado);`).
 
+- **`react-hooks/refs`: un `useRef` no se pasa a un callback que se crea durante el render** (por ejemplo, dentro del
+  inicializador de `useState`). El valor que cambia entre llamadas se guarda en una variable local de esa clausura
+  (`let confirmed = saved;` dentro de `useState(() => { … })`), no en `ref.current`.
+
 ## Pruebas con React Native Testing Library
 
 - **`getByRole` solo ve elementos `accessible`**: un grupo `radiogroup` que no lo es (para no agrupar a sus opciones en
@@ -75,3 +79,5 @@ fc.assert(
   se comprueba el estilo del elemento concreto (`styleOf(screen.getByTestId(...))`).
 - **Un flujo completo de la app tarda más de 5 s en su primer test** (carga todos los módulos): el fichero declara
   `jest.setTimeout(30_000)`.
+- **`Dialog` no expone `alertdialog` a `getByRole`**: se consulta por su título con `getByLabelText(título)`.
+- **Un importe con `formatEuros` lleva espacio duro (U+00A0)**: en las pruebas se compara con `formatEuros(cents)`, no con un literal.

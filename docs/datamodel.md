@@ -105,14 +105,15 @@ erDiagram
         uuid id PK
         uuid user_id FK
         uuid home_id FK "nulo = por defecto del usuario"
-        geography areas
+        geography center "punto; con radius_km"
         text_array municipalities
+        text_array municipalities_normalized
         numeric radius_km
         jsonb filters
         bigint max_to_pay_cents
         bigint min_to_receive_cents
         smallint value_reference_pct "0-100, def. 50"
-        date move_date
+        date move_date "fase 2, aún sin columna"
     }
     users ||--o{ homes : ""
     homes ||--o{ home_photos : ""
@@ -296,14 +297,21 @@ está `pending`) y `created_at`. Solo las fotos `ready` se devuelven y cuentan p
 |---|---|---|
 | `user_id` | uuid FK | Usuario dueño de las preferencias |
 | `home_id` | uuid FK, nulo | **Nulo** = preferencias por defecto del usuario, que valen para todas sus viviendas. **Con valor** = preferencias propias de esa vivienda, que sustituyen por completo a las de por defecto al buscar y emparejar desde ella |
-| `areas` | geography | Zona de interés (punto o polígono) |
-| `municipalities` | text[] | Municipios de interés. Ver R-2 |
-| `radius_km` | numeric | Radio alrededor del punto |
-| `filters` | jsonb | Tipo, superficie mínima, dormitorios… (RF-31) |
+| `center` | geography(Point) | Centro de la zona de interés, siempre junto a `radius_km` (polígonos, fuera del MVP) |
+| `municipalities` | text[] | Municipios de interés tal y como los eligió el usuario (para mostrarlos), sin repetidos. Ver R-2 |
+| `municipalities_normalized` | text[] | Los mismos municipios sin tildes, en minúsculas y con espacios colapsados, para compararlos con `homes.municipality`; hasta que haya catálogo con código INE |
+| `radius_km` | numeric(6,2) | Radio alrededor del centro: 0 < r ≤ 200 |
+| `filters` | jsonb | Tipo, superficie mínima, dormitorios… (RF-31), con las claves cerradas de `SearchPreferences.filters` |
 | `max_to_pay_cents` | bigint | Máximo que paga como compensación (RF-32) |
 | `min_to_receive_cents` | bigint | Mínimo que acepta recibir (RF-32) |
 | `value_reference_pct` | smallint | Punto del rango de valor que se usa para la compensación, elegido por el usuario: 0 = mínimo, 100 = máximo, 50 = punto medio por defecto (RN-03) |
-| `move_date` | date | Fecha deseada orientativa (fase 2) |
+| `move_date` | date | Fecha deseada orientativa (fase 2). **Sin columna todavía**: no está en el contrato |
+
+Restricciones: un índice único parcial por ámbito (`user_id` donde `home_id IS NULL`, y `home_id` donde no es
+nulo), `home_id` con `ON DELETE CASCADE` (borrar la vivienda borra sus preferencias), `CHECK` de zona
+(`center` o algún municipio), de `center` y `radius_km` a la vez, de `radius_km` y de `value_reference_pct`.
+`PUT` reemplaza la fila entera. Las preferencias efectivas de una vivienda son las suyas si existen; si no,
+las de su propietario; si no hay ninguna, no hay búsqueda.
 
 ### `likes` — arista del grafo de interés
 

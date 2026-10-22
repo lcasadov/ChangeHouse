@@ -5,6 +5,7 @@ import {
   HOME_TYPES,
   type HomeFeatures,
   LOCATION_VISIBILITIES,
+  type SearchFilters,
 } from '@changehouse/shared';
 import { sql } from 'drizzle-orm';
 import {
@@ -23,6 +24,7 @@ import {
   text,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
 
@@ -183,4 +185,56 @@ export const auditLog = pgTable(
     at: timestamp('at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index('audit_log_entity_idx').on(table.entity, table.entityId)],
+);
+
+/**
+ * Preferencias de búsqueda (`docs/datamodel.md`). `home_id` nulo = las por defecto del usuario; con valor =
+ * las propias de esa vivienda, que las sustituyen por completo. Un índice único parcial por ámbito.
+ * `municipalities` guarda el texto elegido y `municipalities_normalized` su forma para comparar.
+ */
+export const searchPreferences = pgTable(
+  'search_preferences',
+  {
+    id: uuid('id').primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
+    homeId: uuid('home_id').references(() => homes.id, { onDelete: 'cascade' }),
+    center: geographyPoint('center'),
+    radiusKm: numeric('radius_km', { precision: 6, scale: 2, mode: 'number' }),
+    municipalities: text('municipalities').array().notNull(),
+    municipalitiesNormalized: text('municipalities_normalized').array().notNull(),
+    filters: jsonb('filters')
+      .$type<SearchFilters>()
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    maxToPayCents: bigint('max_to_pay_cents', { mode: 'number' }).notNull(),
+    minToReceiveCents: bigint('min_to_receive_cents', { mode: 'number' }).notNull(),
+    valueReferencePct: smallint('value_reference_pct').notNull().default(50),
+  },
+  (table) => [
+    uniqueIndex('search_preferences_user_default_key')
+      .on(table.userId)
+      .where(sql`${table.homeId} IS NULL`),
+    uniqueIndex('search_preferences_home_key')
+      .on(table.homeId)
+      .where(sql`${table.homeId} IS NOT NULL`),
+    check(
+      'search_preferences_has_zone',
+      sql`${table.center} IS NOT NULL OR cardinality(${table.municipalities}) > 0`,
+    ),
+    check(
+      'search_preferences_center_with_radius',
+      sql`(${table.center} IS NULL) = (${table.radiusKm} IS NULL)`,
+    ),
+    check(
+      'search_preferences_radius_range',
+      sql`${table.radiusKm} IS NULL OR (${table.radiusKm} > 0 AND ${table.radiusKm} <= 200)`,
+    ),
+    check('search_preferences_reference_range', sql`${table.valueReferencePct} BETWEEN 0 AND 100`),
+    check(
+      'search_preferences_amounts_non_negative',
+      sql`${table.maxToPayCents} >= 0 AND ${table.minToReceiveCents} >= 0`,
+    ),
+  ],
 );

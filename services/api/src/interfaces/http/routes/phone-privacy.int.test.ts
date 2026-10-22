@@ -78,6 +78,22 @@ const HOMES_REQUESTS: Record<string, RequestTemplate> = {
     url: `/v1/homes/${MISSING_ID}/photos/${MISSING_ID}/complete`,
   },
   deleteHomePhoto: { method: 'DELETE', url: `/v1/homes/${MISSING_ID}/photos/${MISSING_ID}` },
+  getMySearchPreferences: { method: 'GET', url: '/v1/me/search-preferences' },
+  putMySearchPreferences: {
+    method: 'PUT',
+    url: '/v1/me/search-preferences',
+    payload: () => ({ municipalities: ['Madrid'], maxToPayCents: 0, minToReceiveCents: 0 }),
+  },
+  getHomeSearchPreferences: { method: 'GET', url: `/v1/homes/${MISSING_ID}/search-preferences` },
+  putHomeSearchPreferences: {
+    method: 'PUT',
+    url: `/v1/homes/${MISSING_ID}/search-preferences`,
+    payload: () => ({ municipalities: ['Madrid'], maxToPayCents: 0, minToReceiveCents: 0 }),
+  },
+  deleteHomeSearchPreferences: {
+    method: 'DELETE',
+    url: `/v1/homes/${MISSING_ID}/search-preferences`,
+  },
   adminListHomes: { method: 'GET', url: '/v1/admin/homes?status=in_review' },
   adminModerateHome: {
     method: 'POST',

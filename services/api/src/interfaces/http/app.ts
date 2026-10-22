@@ -7,6 +7,10 @@ import { type AccountRouteOptions, accountRoutes } from './routes/accounts.js';
 import { type AdminHomeRouteOptions, adminHomeRoutes } from './routes/admin-homes.js';
 import { type HomeRouteOptions, homeRoutes } from './routes/homes.js';
 import { type PhotoRouteOptions, photoRoutes } from './routes/photos.js';
+import {
+  type SearchPreferencesRouteOptions,
+  searchPreferencesRoutes,
+} from './routes/search-preferences.js';
 import { type WaitlistRouteOptions, waitlistRoutes } from './routes/waitlist.js';
 
 export interface AppOptions {
@@ -24,6 +28,7 @@ export interface AppOptions {
   homes?: HomeRouteOptions;
   photos?: PhotoRouteOptions;
   adminHomes?: AdminHomeRouteOptions;
+  searchPreferences?: SearchPreferencesRouteOptions;
 }
 
 /** Confía solo en los `hops` saltos más cercanos: la IP real es la que añadió el último proxy. */
@@ -93,6 +98,9 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
       if (options.homes) await versioned.register(homeRoutes(options.homes));
       if (options.photos) await versioned.register(photoRoutes(options.photos));
       if (options.adminHomes) await versioned.register(adminHomeRoutes(options.adminHomes));
+      if (options.searchPreferences) {
+        await versioned.register(searchPreferencesRoutes(options.searchPreferences));
+      }
     },
     { prefix: API_PREFIX },
   );

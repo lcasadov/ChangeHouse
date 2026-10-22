@@ -316,7 +316,9 @@ export interface paths {
     get: operations['getMySearchPreferences'];
     /**
      * Define las preferencias de búsqueda por defecto del usuario (RF-30 a RF-33)
-     * @description Valen para todas sus viviendas salvo las que tengan preferencias propias.
+     * @description Valen para todas sus viviendas salvo las que tengan preferencias propias. Reemplaza el
+     *     documento entero. Un centro sin `radiusKm`, o un radio sin `center`, es 400; sin ningún
+     *     municipio ni centro con radio, 422 con `code: SEARCH_PREFERENCES_INCOMPLETE`.
      */
     put: operations['putMySearchPreferences'];
     post?: never;
@@ -337,7 +339,12 @@ export interface paths {
     };
     /** Preferencias propias de una vivienda, si las tiene */
     get: operations['getHomeSearchPreferences'];
-    /** Define preferencias propias de una vivienda, que sustituyen a las del usuario para ella */
+    /**
+     * Define preferencias propias de una vivienda, que sustituyen a las del usuario para ella
+     * @description Reemplaza el documento entero (no hereda campos de las del usuario). Mismas reglas de forma
+     *     y de zona que `putMySearchPreferences`: 400 por forma, 422 con `code:
+     *     SEARCH_PREFERENCES_INCOMPLETE` si no hay zona.
+     */
     put: operations['putHomeSearchPreferences'];
     post?: never;
     /** Elimina las preferencias propias de la vivienda; vuelve a usar las del usuario */
@@ -1832,7 +1839,15 @@ export interface operations {
         content?: never;
       };
       401: components['responses']['Unauthorized'];
-      404: components['responses']['NotFound'];
+      /** @description La vivienda no es del usuario, o no tiene preferencias propias que eliminar */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
     };
   };
   discoverHomes: {

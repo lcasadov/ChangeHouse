@@ -13,6 +13,8 @@ import {
 import { createHttpHomesApi } from '../homes/http-homes-api';
 import { createExpoPhotoPicker } from '../homes/photo-picker';
 import { createXhrPhotoUploader } from '../homes/xhr-photo-uploader';
+import { createFixtureZoneSuggestions } from '../search/fixture-zone-suggestions';
+import { createHttpSearchPreferencesApi } from '../search/http-search-preferences-api';
 import type { AppServices } from './services';
 
 export interface AppEnv extends FirebaseEnv, GoogleEnv, AddressSuggestionsEnv {
@@ -51,6 +53,9 @@ export function createAppServices(
     addressSuggestions: createAddressSuggestions(env),
     photoPicker: createExpoPhotoPicker(),
     photoUploader: createXhrPhotoUploader(),
+    searchPreferencesApi: createHttpSearchPreferencesApi(client),
+    // Sin servicio de zonas real todavía: las sugerencias de prueba (ver design.md de add-search-preferences)
+    zoneSuggestions: createFixtureZoneSuggestions(),
     social,
     legalUrls: { terms: `${legalBase}/terminos`, privacy: `${legalBase}/privacidad` },
   };

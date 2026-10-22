@@ -46,6 +46,13 @@ export const policy: Policy = {
   deleteHomePhoto: { kind: 'roles', roles: HOME_OWNER_ROLES },
   // El admin consulta viviendas ajenas en su forma pública; la ficha para moderar sale de adminListHomes
   getHome: { kind: 'roles', roles: [...HOME_OWNER_ROLES, 'admin'] },
+  // Preferencias de búsqueda (RF-30 a RF-33): mismos roles que las viviendas; el ámbito propio y la
+  // propiedad de la vivienda (`resourceOwner`) los resuelve el caso de uso con un 404
+  getMySearchPreferences: { kind: 'roles', roles: HOME_OWNER_ROLES },
+  putMySearchPreferences: { kind: 'roles', roles: HOME_OWNER_ROLES },
+  getHomeSearchPreferences: { kind: 'roles', roles: HOME_OWNER_ROLES },
+  putHomeSearchPreferences: { kind: 'roles', roles: HOME_OWNER_ROLES },
+  deleteHomeSearchPreferences: { kind: 'roles', roles: HOME_OWNER_ROLES },
   // Moderación (RF-18, RF-93): solo el admin; la decisión queda auditada
   adminListHomes: { kind: 'roles', roles: ['admin'] },
   adminModerateHome: { kind: 'roles', roles: ['admin'] },

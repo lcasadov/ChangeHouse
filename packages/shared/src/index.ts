@@ -51,6 +51,17 @@ export {
   photoUploadInputSchema,
   validatePhotoUploadInput,
 } from './photo.js';
+export {
+  DEFAULT_VALUE_REFERENCE_PCT,
+  MAX_MUNICIPALITIES,
+  MAX_MUNICIPALITY_LENGTH,
+  MAX_RADIUS_KM,
+  type SearchFilters,
+  searchFiltersSchema,
+  type SearchPreferencesInput,
+  searchPreferencesSchema,
+  validateSearchPreferences,
+} from './search-preferences.js';
 export type { FieldError, FieldErrorCode, Validation } from './validation.js';
 export {
   validateWaitlistInput,

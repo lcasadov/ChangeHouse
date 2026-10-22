@@ -42,7 +42,7 @@ personas; la zona generada la reescribe `plan-sync` en cada operación.
 
 | estado | changes |
 |---|---|
-| ✅ ARCHIVADO | 7 |
+| ✅ ARCHIVADO | 8 |
 
 ### Changes archivados
 
@@ -53,6 +53,7 @@ personas; la zona generada la reescribe `plan-sync` en cada operación.
 | 2026-10-19-add-home-moderation | 6/6 | 2026-10-19 |
 | 2026-10-19-add-home-photos | 8/8 | 2026-10-19 |
 | 2026-10-19-add-landing | 12/12 | 2026-10-19 |
+| 2026-10-19-add-search-preferences | 7/7 | 2026-10-19 |
 | 2026-10-19-add-user-profile | 6/6 | 2026-10-19 |
 | 2026-10-19-add-waitlist | 12/12 | 2026-10-19 |
 
