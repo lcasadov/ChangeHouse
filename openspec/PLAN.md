@@ -38,7 +38,7 @@ personas; la zona generada la reescribe `plan-sync` en cada operación.
 |---|---|---|---|---|
 | add-account-deletion-and-export | ❌ SIN EMPEZAR | 0 % | 0/6 | ❌ SIN EMPEZAR |
 | add-admin-panel | ❌ SIN EMPEZAR | 0 % | 0/5 | ❌ SIN EMPEZAR |
-| add-chain-match | ❌ SIN EMPEZAR | 0 % | 0/7 | ❌ SIN EMPEZAR |
+| add-chain-match | 🔄 EN PROGRESO | 57 % | 4/7 | ❌ SIN EMPEZAR |
 | add-home-pause-resume | ❌ SIN EMPEZAR | 0 % | 0/5 | ❌ SIN EMPEZAR |
 | add-home-vpp-regime | ❌ SIN EMPEZAR | 0 % | 0/5 | ❌ SIN EMPEZAR |
 | add-landing-blog | ❌ SIN EMPEZAR | 0 % | 0/5 | ❌ SIN EMPEZAR |
@@ -48,12 +48,12 @@ personas; la zona generada la reescribe `plan-sync` en cada operación.
 | add-reports-and-blocking | ❌ SIN EMPEZAR | 0 % | 0/6 | ❌ SIN EMPEZAR |
 | add-user-suspension | ❌ SIN EMPEZAR | 0 % | 0/5 | ❌ SIN EMPEZAR |
 
-**Progreso global de los changes activos**: 4/66 (6 %)
+**Progreso global de los changes activos**: 8/66 (12 %)
 
 | estado | changes |
 |---|---|
-| ❌ SIN EMPEZAR | 10 |
-| 🔄 EN PROGRESO | 1 |
+| ❌ SIN EMPEZAR | 9 |
+| 🔄 EN PROGRESO | 2 |
 | ✅ ARCHIVADO | 11 |
 
 ### Changes archivados
