@@ -1,0 +1,88 @@
+---
+import { es } from '../i18n/es';
+
+const { links } = es.footer;
+const { pages } = es.legal;
+const legalLinks = [
+  { href: pages.legalNotice.path, label: links.legalNotice },
+  { href: pages.privacy.path, label: links.privacy },
+  { href: pages.cookies.path, label: links.cookies },
+  { href: pages.terms.path, label: links.terms },
+];
+---
+
+<footer class="site-footer">
+  <div class="container inner">
+    <p class="note">{es.footer.note}</p>
+    <nav aria-label={es.footer.legalNavLabel}>
+      <ul>
+        {legalLinks.map((link) => (
+          <li>
+            <a href={link.href}>{link.label}</a>
+          </li>
+        ))}
+        <li>
+          <button type="button" data-cookie-settings>
+            {es.footer.configureCookies}
+          </button>
+        </li>
+      </ul>
+    </nav>
+  </div>
+</footer>
+
+<style>
+  .site-footer {
+    margin-top: var(--section-gap);
+    padding-block: var(--space-7);
+    border-top: var(--border-thin) solid var(--color-border);
+    background: var(--color-surface-muted);
+  }
+
+  .inner {
+    display: grid;
+    gap: var(--space-5);
+  }
+
+  .note {
+    color: var(--color-text-muted);
+    font-size: var(--font-caption-size);
+    line-height: var(--font-caption-line-height);
+  }
+
+  ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-5);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  a,
+  button {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--touch-target);
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--color-primary);
+    font: inherit;
+    font-weight: var(--font-label-weight);
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
+  a:hover,
+  button:hover {
+    color: var(--color-primary-pressed);
+  }
+
+  @media (min-width: 600px) {
+    .inner {
+      grid-template-columns: 1fr auto;
+      align-items: center;
+    }
+  }
+</style>

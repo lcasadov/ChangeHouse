@@ -1,0 +1,53 @@
+---
+import { es } from '../i18n/es';
+
+const { founder } = es;
+---
+
+<section id="fundador" class="section" aria-labelledby="founder-title">
+  <div class="container narrow">
+    <h2 id="founder-title" class="section-title">
+      {founder.title}
+    </h2>
+    <p class="draft" role="note">
+      {founder.draftNotice}
+    </p>
+    <div class="story">
+      {founder.paragraphs.map((paragraph) => (
+        <p>{paragraph}</p>
+      ))}
+    </div>
+    <p class="signature">{founder.signature}</p>
+  </div>
+</section>
+
+<style>
+  .narrow {
+    max-width: calc(var(--content-max-reading) + var(--space-8));
+  }
+
+  .draft {
+    display: inline-block;
+    margin-top: var(--space-4);
+    padding: var(--space-2) var(--space-4);
+    border: var(--border-thick) solid var(--color-warning);
+    border-radius: var(--radius-md);
+    color: var(--color-warning);
+    font-size: var(--font-label-size);
+    font-weight: var(--font-label-weight);
+  }
+
+  .story {
+    display: grid;
+    gap: var(--space-4);
+    margin-top: var(--space-6);
+    font-size: calc(var(--font-body-size) * 1.25);
+    line-height: calc(var(--font-body-line-height) * 1.2);
+  }
+
+  .signature {
+    margin-top: var(--space-5);
+    color: var(--color-text-muted);
+    font-weight: var(--font-body-strong-weight);
+  }
+</style>

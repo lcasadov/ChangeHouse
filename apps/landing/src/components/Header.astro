@@ -1,0 +1,65 @@
+---
+import { es } from '../i18n/es';
+---
+
+<header class="site-header">
+  <div class="container bar">
+    <a class="brand" href="/" aria-label={es.header.brandLabel}>
+      <svg class="mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+        <path class="roof" d="M2 16 16 3l14 13z"></path>
+        <rect class="body" x="6" y="15" width="20" height="14" rx="3"></rect>
+        <rect class="door" x="13" y="20" width="6" height="9" rx="2"></rect>
+      </svg>
+      <span>{es.header.brand}</span>
+    </a>
+    <a class="waitlist-link" href="/#lista-de-espera">
+      {es.header.waitlist}
+    </a>
+  </div>
+</header>
+
+<style>
+  .site-header {
+    padding-block: var(--space-4);
+  }
+
+  .bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+  }
+
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: var(--touch-target);
+    color: var(--color-secondary);
+    font-size: var(--font-heading-size);
+    font-weight: var(--weight-black);
+    letter-spacing: -0.02em;
+    text-decoration: none;
+  }
+
+  .mark {
+    width: var(--space-6);
+    height: var(--space-6);
+  }
+
+  .roof,
+  .body {
+    fill: var(--color-brand);
+  }
+
+  .door {
+    fill: var(--color-bg);
+  }
+
+  .waitlist-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--touch-target);
+    font-weight: var(--font-label-weight);
+  }
+</style>

@@ -1,0 +1,152 @@
+---
+import { es } from '../i18n/es';
+
+const { banner } = es.cookies;
+---
+
+<section
+  id="cookie-banner"
+  class="cookie-banner"
+  role="region"
+  aria-labelledby="cookie-banner-title"
+  hidden
+>
+  <div class="inner">
+    <h2 id="cookie-banner-title" tabindex="-1">
+      {banner.title}
+    </h2>
+    <p>
+      {banner.text}
+      <a href={es.legal.pages.cookies.path}>{banner.policyLink}</a>.
+    </p>
+
+    <div class="actions">
+      <button type="button" class="button" data-consent="accept">
+        {banner.accept}
+      </button>
+      <button type="button" class="button" data-consent="reject">
+        {banner.reject}
+      </button>
+      <button
+        type="button"
+        class="button"
+        data-consent="configure"
+        aria-expanded="false"
+        aria-controls="cookie-settings"
+      >
+        {banner.configure}
+      </button>
+    </div>
+
+    <div id="cookie-settings" class="settings" hidden>
+      <h3>{banner.settingsTitle}</h3>
+      <div class="option">
+        <input type="checkbox" id="cookie-essential" checked disabled />
+        <label for="cookie-essential">{banner.essentialLabel}</label>
+        <p class="hint">{banner.essentialHint}</p>
+      </div>
+      <div class="option">
+        <input type="checkbox" id="cookie-analytics" name="analytics" />
+        <label for="cookie-analytics">{banner.analyticsLabel}</label>
+        <p class="hint">{banner.analyticsHint}</p>
+      </div>
+      <button type="button" class="button button-primary" data-consent="save">
+        {banner.save}
+      </button>
+    </div>
+  </div>
+</section>
+<p id="cookie-status" class="visually-hidden" role="status"></p>
+
+<script>
+  import { bindAnalytics } from '../lib/analytics';
+  import { browserConsent } from '../lib/consent';
+  import { initCookieBanner } from '../lib/cookie-banner';
+
+  const consent = browserConsent();
+  bindAnalytics(consent, document);
+  initCookieBanner(document, consent);
+</script>
+
+<style>
+  .cookie-banner {
+    position: fixed;
+    z-index: 10;
+    inset-inline: var(--space-2);
+    bottom: var(--space-2);
+    max-height: calc(100dvh - var(--space-4));
+    overflow-y: auto;
+    margin-inline: auto;
+    max-width: calc(var(--content-max-reading) * 1.1);
+    padding: var(--space-5);
+    border: var(--border-thin) solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: var(--elevation-3-surface);
+    box-shadow: var(--elevation-3-shadow);
+  }
+
+  .cookie-banner[hidden],
+  .settings[hidden] {
+    display: none;
+  }
+
+  .inner {
+    display: grid;
+    gap: var(--space-3);
+  }
+
+  h2 {
+    font-size: var(--font-heading-size);
+    line-height: var(--font-heading-line-height);
+  }
+
+  h3 {
+    font-size: var(--font-body-strong-size);
+    font-weight: var(--font-body-strong-weight);
+  }
+
+  /* En oscuro la superficie elevada es más clara: el texto atenuado no llega a 4,5:1 sobre ella */
+  p {
+    color: var(--color-text);
+  }
+
+  .actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(calc(var(--touch-target) * 2), 1fr));
+    gap: var(--space-2);
+  }
+
+  .settings {
+    display: grid;
+    gap: var(--space-3);
+    padding-top: var(--space-4);
+    border-top: var(--border-thin) solid var(--color-border);
+  }
+
+  .option {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    column-gap: var(--space-3);
+  }
+
+  .option input {
+    width: var(--space-5);
+    height: var(--space-5);
+    margin: 0;
+    accent-color: var(--color-primary);
+  }
+
+  .option label {
+    display: flex;
+    align-items: center;
+    min-height: var(--touch-target);
+    font-weight: var(--font-label-weight);
+  }
+
+  .hint {
+    grid-column: 2;
+    font-size: var(--font-caption-size);
+    line-height: var(--font-caption-line-height);
+  }
+</style>

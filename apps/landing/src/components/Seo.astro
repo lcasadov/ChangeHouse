@@ -1,0 +1,35 @@
+---
+import { es } from '../i18n/es';
+import { pageTitle } from '../lib/page-title';
+
+interface Props {
+  title?: string;
+  description: string;
+  /** Ruta o URL de la imagen para compartir. */
+  image?: string;
+}
+
+const { title, description, image = '/og.png' } = Astro.props;
+
+const base = Astro.site ?? Astro.url;
+const path = Astro.url.pathname.replace(/(.)\/$/, '$1');
+const canonical = new URL(path, base).href;
+const imageUrl = new URL(image, base).href;
+const fullTitle = pageTitle(title);
+---
+
+<title>{fullTitle}</title>
+<meta name="description" content={description} />
+<link rel="canonical" href={canonical} />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="ChangeHouse" />
+<meta property="og:locale" content={es.locale} />
+<meta property="og:title" content={fullTitle} />
+<meta property="og:description" content={description} />
+<meta property="og:url" content={canonical} />
+<meta property="og:image" content={imageUrl} />
+<meta property="og:image:alt" content={es.meta.ogImageAlt} />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content={fullTitle} />
+<meta name="twitter:description" content={description} />
+<meta name="twitter:image" content={imageUrl} />

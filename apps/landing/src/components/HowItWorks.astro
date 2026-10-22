@@ -1,0 +1,78 @@
+---
+import { es } from '../i18n/es';
+
+const { howItWorks } = es;
+---
+
+<section id="como-funciona" class="section" aria-labelledby="how-title">
+  <div class="container">
+    <h2 id="how-title" class="section-title">
+      {howItWorks.title}
+    </h2>
+    <p class="section-lead">{howItWorks.intro}</p>
+
+    <ol class="steps">
+      {howItWorks.steps.map((step, index) => (
+        <li class="step">
+          <span class="number" aria-hidden="true">
+            {index + 1}
+          </span>
+          <h3>
+            <span class="visually-hidden">
+              {howItWorks.stepLabel} {index + 1}:{' '}
+            </span>
+            {step.title}
+          </h3>
+          <p>{step.text}</p>
+        </li>
+      ))}
+    </ol>
+  </div>
+</section>
+
+<style>
+  .steps {
+    display: grid;
+    gap: var(--space-4);
+    margin: var(--space-7) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .step {
+    display: grid;
+    gap: var(--space-3);
+    align-content: start;
+    padding: var(--space-6) var(--space-5);
+    border-radius: calc(var(--radius-lg) * 1.5);
+    background: var(--color-surface-muted);
+  }
+
+  .number {
+    display: grid;
+    place-items: center;
+    width: calc(var(--space-7) + var(--space-2));
+    height: calc(var(--space-7) + var(--space-2));
+    border-radius: var(--radius-full);
+    background: var(--color-primary);
+    color: var(--color-text-on-primary);
+    font-size: var(--font-title-size);
+    font-weight: var(--weight-black);
+    line-height: 1;
+  }
+
+  h3 {
+    font-size: var(--font-title-size);
+    line-height: var(--font-title-line-height);
+  }
+
+  .step p {
+    color: var(--color-text-muted);
+  }
+
+  @media (min-width: 1024px) {
+    .steps {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+</style>

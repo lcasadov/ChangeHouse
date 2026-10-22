@@ -1,0 +1,236 @@
+---
+/**
+ * Ilustración decorativa: dos casas que se intercambian (`pair`) o tres en círculo (`chain`).
+ * Solo color de tokens; la animación se desactiva con «reducir movimiento».
+ */
+interface Props {
+  variant: 'pair' | 'chain';
+  /** Prefijo único de los identificadores internos (la página usa varias ilustraciones). */
+  id: string;
+}
+
+const { variant, id } = Astro.props;
+const isChain = variant === 'chain';
+const viewBox = isChain ? '0 0 400 290' : '0 0 400 260';
+const houses = isChain ? ['a', 'b', 'c'] : ['a', 'b'];
+---
+
+<svg
+  class={`swap swap-${variant}`}
+  viewBox={viewBox}
+  aria-hidden="true"
+  focusable="false"
+  xmlns="http://www.w3.org/2000/svg"
+>
+  <defs>
+    <linearGradient id={`${id}-gradient`} x1="0" y1="0" x2="1" y2="1">
+      <stop class="stop-start" offset="0"></stop>
+      <stop class="stop-end" offset="1"></stop>
+    </linearGradient>
+    <marker
+      id={`${id}-arrow`}
+      viewBox="0 0 10 10"
+      refX="6"
+      refY="5"
+      markerWidth="5"
+      markerHeight="5"
+      orient="auto-start-reverse"
+    >
+      <path class="arrow-head" d="M0 0 10 5 0 10z"></path>
+    </marker>
+  </defs>
+
+  {isChain ? (
+    <g class="arrows">
+      <path class="arrow" d="M244 82Q316 104 312 168" marker-end={`url(#${id}-arrow)`} />
+      <path class="arrow" d="M268 262Q200 296 132 262" marker-end={`url(#${id}-arrow)`} />
+      <path class="arrow" d="M88 168Q84 104 156 82" marker-end={`url(#${id}-arrow)`} />
+    </g>
+  ) : (
+    <g class="arrows">
+      <path class="arrow" d="M116 64Q200 4 284 64" marker-end={`url(#${id}-arrow)`} />
+      <path class="arrow" d="M284 200Q200 260 116 200" marker-end={`url(#${id}-arrow)`} />
+    </g>
+  )}
+
+  {houses.map((house) => (
+    <g class={`house house-${house}`}>
+      <path
+        class="roof"
+        d="M-4 38 40 2l44 36z"
+        style={house === 'c' ? `fill: url(#${id}-gradient)` : undefined}
+      />
+      <rect
+        class="body"
+        x="6"
+        y="34"
+        width="68"
+        height="46"
+        rx="8"
+        style={house === 'c' ? `fill: url(#${id}-gradient)` : undefined}
+      />
+      <rect class="door" x="32" y="52" width="16" height="28" rx="4" />
+      <rect class="window" x="14" y="44" width="12" height="12" rx="3" />
+      <rect class="window" x="54" y="44" width="12" height="12" rx="3" />
+    </g>
+  ))}
+</svg>
+
+<style>
+  .swap {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+
+  .stop-start {
+    stop-color: var(--color-match-gradient-start);
+  }
+
+  .stop-end {
+    stop-color: var(--color-match-gradient-end);
+  }
+
+  .arrow {
+    fill: none;
+    stroke: var(--color-primary);
+    stroke-width: 6;
+    stroke-linecap: round;
+  }
+
+  .arrow-head {
+    fill: var(--color-primary);
+  }
+
+  .roof,
+  .body {
+    fill: var(--color-brand);
+  }
+
+  .house-b .roof,
+  .house-b .body {
+    fill: var(--color-secondary);
+  }
+
+  .door,
+  .window {
+    fill: var(--color-surface);
+  }
+
+  /* Posición de reposo (también la que se ve con «reducir movimiento») */
+  .swap-pair .house-a {
+    transform: translate(40px, 90px);
+  }
+
+  .swap-pair .house-b {
+    transform: translate(280px, 90px);
+  }
+
+  .swap-chain .house-a {
+    transform: translate(160px, 8px);
+  }
+
+  .swap-chain .house-b {
+    transform: translate(270px, 170px);
+  }
+
+  .swap-chain .house-c {
+    transform: translate(50px, 170px);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .swap-pair .house-a {
+      animation: pair-a 6s ease-in-out infinite;
+    }
+
+    .swap-pair .house-b {
+      animation: pair-b 6s ease-in-out infinite;
+    }
+
+    .swap-chain .house {
+      animation: chain 9s ease-in-out infinite;
+    }
+
+    .swap-chain .house-b {
+      animation-delay: -3s;
+    }
+
+    .swap-chain .house-c {
+      animation-delay: -6s;
+    }
+
+    .arrow {
+      stroke-dasharray: 14 14;
+      animation: flow 1.2s linear infinite;
+    }
+  }
+
+  @keyframes pair-a {
+    0%,
+    12% {
+      transform: translate(40px, 90px);
+    }
+    30% {
+      transform: translate(160px, 36px);
+    }
+    48%,
+    62% {
+      transform: translate(280px, 90px);
+    }
+    80% {
+      transform: translate(160px, 36px);
+    }
+    96%,
+    100% {
+      transform: translate(40px, 90px);
+    }
+  }
+
+  @keyframes pair-b {
+    0%,
+    12% {
+      transform: translate(280px, 90px);
+    }
+    30% {
+      transform: translate(160px, 144px);
+    }
+    48%,
+    62% {
+      transform: translate(40px, 90px);
+    }
+    80% {
+      transform: translate(160px, 144px);
+    }
+    96%,
+    100% {
+      transform: translate(280px, 90px);
+    }
+  }
+
+  /* Tres tramos iguales: cada casa sigue el mismo recorrido desfasado un tercio del ciclo */
+  @keyframes chain {
+    0%,
+    10% {
+      transform: translate(160px, 8px);
+    }
+    23.3%,
+    43.3% {
+      transform: translate(270px, 170px);
+    }
+    56.6%,
+    76.6% {
+      transform: translate(50px, 170px);
+    }
+    90%,
+    100% {
+      transform: translate(160px, 8px);
+    }
+  }
+
+  @keyframes flow {
+    to {
+      stroke-dashoffset: -28;
+    }
+  }
+</style>
