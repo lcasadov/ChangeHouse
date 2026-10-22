@@ -1,2 +1,20 @@
 node_modules/
 .claude/settings.local.json
+
+# Build y caché
+dist/
+.turbo/
+coverage/
+.expo/
+.astro/
+web-build/
+expo-env.d.ts
+*.tsbuildinfo
+*.log
+
+# Entorno: nunca se versionan secretos, solo el ejemplo
+.env*
+!.env.example
+
+# Sistema
+.DS_Store

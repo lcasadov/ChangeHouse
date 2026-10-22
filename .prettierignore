@@ -1,0 +1,16 @@
+node_modules
+dist
+.turbo
+coverage
+.expo
+.astro
+web-build
+pnpm-lock.yaml
+db/migrations
+openspec
+docs
+.claude
+.github
+*.md
+LICENSE
+.coderabbit.yaml
