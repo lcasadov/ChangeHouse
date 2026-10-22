@@ -46,31 +46,31 @@
       "key": "T1",
       "id": 238,
       "parent": 236,
-      "state": "open"
+      "state": "doing"
     },
     {
       "key": "B1",
       "id": 239,
       "parent": 236,
-      "state": "open"
+      "state": "doing"
     },
     {
       "key": "B2",
       "id": 240,
       "parent": 234,
-      "state": "open"
+      "state": "doing"
     },
     {
       "key": "T2",
       "id": 241,
       "parent": 235,
-      "state": "open"
+      "state": "doing"
     },
     {
       "key": "B3",
       "id": 242,
       "parent": 237,
-      "state": "open"
+      "state": "doing"
     },
     {
       "key": "T3",
