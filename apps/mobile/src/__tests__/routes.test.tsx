@@ -9,17 +9,24 @@ import HomesScreen from '../../app/(tabs)/homes';
 import ExploreScreen from '../../app/(tabs)/index';
 import MatchesScreen from '../../app/(tabs)/matches';
 import ProfileScreen from '../../app/(tabs)/profile';
+import { SessionProviders } from '../features/session/SessionProviders';
 import * as tabsModule from '../features/shell/tabs';
 import es from '../i18n/locales/es-ES.json';
+import { fakeServices } from '../test-support/render-session-app';
 import { styleOf } from '../test-utils';
 import { AppThemeProvider } from '../theme/AppThemeProvider';
 
 let themeOverride: ThemePreference = 'system';
 
+// La pestaña Perfil ofrece cerrar sesión, así que necesita la sesión (aquí, una persona ya dada de alta)
+const services = fakeServices();
+
 function TestRoot() {
   return (
     <AppThemeProvider override={themeOverride}>
-      <Slot />
+      <SessionProviders services={services}>
+        <Slot />
+      </SessionProviders>
     </AppThemeProvider>
   );
 }

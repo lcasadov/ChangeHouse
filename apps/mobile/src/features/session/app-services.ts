@@ -1,0 +1,48 @@
+import { createApiClient } from '../../api/client';
+import { createHttpAccountApi } from '../account/http-account-api';
+import type { AuthService, SocialSignIn } from '../auth/auth-service';
+import { createFirebaseAuth } from '../auth/create-firebase-auth';
+import { createFirebaseAuthService } from '../auth/firebase-auth-service';
+import { type FirebaseEnv, readFirebaseConfig } from '../auth/firebase-config';
+import type { GoogleEnv } from '../auth/google-sign-in';
+import type { AppServices } from './services';
+
+export interface AppEnv extends FirebaseEnv, GoogleEnv {
+  /** Origen de la API, sin barra final (`services/api`). */
+  EXPO_PUBLIC_API_URL?: string | undefined;
+  /** Origen donde la landing publica `/terminos` y `/privacidad`. */
+  EXPO_PUBLIC_LEGAL_BASE_URL?: string | undefined;
+}
+
+const DEFAULT_API_URL = 'http://localhost:8080';
+const DEFAULT_LEGAL_BASE_URL = 'http://localhost:4321'; // `astro dev`
+
+const withoutTrailingSlash = (url: string) => url.replace(/\/+$/, '');
+
+// Firebase solo admite una instancia por app: se crea la primera vez que hace falta y se reutiliza
+let authService: AuthService | undefined;
+
+/** Compone los servicios reales: Firebase Auth, el cliente HTTP tipado con el token y los textos legales. */
+export function createAppServices(
+  env: Readonly<AppEnv>,
+  social: readonly SocialSignIn[],
+): AppServices {
+  authService ??= createFirebaseAuthService(createFirebaseAuth(readFirebaseConfig(env)));
+  const auth = authService;
+  const client = createApiClient({
+    baseUrl: withoutTrailingSlash(env.EXPO_PUBLIC_API_URL || DEFAULT_API_URL),
+    getToken: () => auth.getIdToken(),
+  });
+  const legalBase = withoutTrailingSlash(env.EXPO_PUBLIC_LEGAL_BASE_URL || DEFAULT_LEGAL_BASE_URL);
+
+  return {
+    auth,
+    accountApi: createHttpAccountApi(client),
+    social,
+    legalUrls: { terms: `${legalBase}/terminos`, privacy: `${legalBase}/privacidad` },
+  };
+}
+
+export function resetAppServicesForTests(): void {
+  authService = undefined;
+}

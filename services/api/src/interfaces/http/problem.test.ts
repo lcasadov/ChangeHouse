@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { DomainError } from '../../domain/domain-error.js';
 import { buildApp } from './app.js';
 import { ValidationFailedError } from './problem.js';
 
@@ -16,21 +17,37 @@ function captureLogs() {
   return { lines, logger: { level: 'info', stream } };
 }
 
+class RuleBrokenError extends DomainError {
+  readonly code = 'RULE_BROKEN';
+}
+
+const PROBE = { config: { operationId: 'probe' } };
+
 function appWithFailingRoutes(logger?: ReturnType<typeof captureLogs>['logger']) {
-  const app = buildApp(logger ? { logger } : {});
-  app.get('/invalid', () => {
+  const app = buildApp({
+    ...(logger ? { logger } : {}),
+    // Estas rutas de prueba son públicas: aquí se prueba el formato de error, no el acceso
+    security: { policy: { probe: { kind: 'public' } } },
+  });
+  app.get('/invalid', PROBE, () => {
     throw new ValidationFailedError([
       { field: 'email', message: 'invalid' },
       { field: 'municipality', message: 'required' },
     ]);
   });
-  app.get('/boom', () => {
+  app.get('/boom', PROBE, () => {
     throw new Error('relation "waitlist" does not exist: SELECT * FROM waitlist WHERE email = $1');
   });
-  app.get('/limited', () => {
+  app.get('/limited', PROBE, () => {
     throw Object.assign(new Error('Rate limit exceeded'), { statusCode: 429 });
   });
-  app.post('/echo', (request) => request.body);
+  app.get('/rule', PROBE, () => {
+    throw new RuleBrokenError('detalle interno que no debe salir');
+  });
+  app.get('/rule-fields', PROBE, () => {
+    throw Object.assign(new RuleBrokenError('otro detalle interno'), { fields: ['email'] });
+  });
+  app.post('/echo', PROBE, (request) => request.body);
   return app;
 }
 
@@ -153,6 +170,25 @@ describe('formato único de error (Problem)', () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.headers['x-correlation-id']).toMatch(UUID_V7);
+    await app.close();
+  });
+
+  it('Scenario: Regla de negocio incumplida - un error de dominio es un 422 con su código estable y sin su mensaje', async () => {
+    const app = appWithFailingRoutes();
+
+    const plain = await app.inject({ method: 'GET', url: '/rule' });
+    const withFields = await app.inject({ method: 'GET', url: '/rule-fields' });
+
+    expect(plain.statusCode).toBe(422);
+    expect(plain.headers['content-type']).toContain('application/problem+json');
+    expect(plain.json()).toMatchObject({
+      type: 'https://changehouse.app/problems/unprocessable',
+      status: 422,
+      code: 'RULE_BROKEN',
+    });
+    expect(plain.json<Record<string, unknown>>()['errors']).toBeUndefined();
+    expect(withFields.json()).toMatchObject({ errors: [{ field: 'email', message: 'required' }] });
+    expect(plain.body + withFields.body).not.toContain('detalle interno');
     await app.close();
   });
 });

@@ -243,5 +243,16 @@ direcciones exactas, consultas SQL ni trazas.
 
 ## Desviaciones detectadas
 
-Ninguna: no hay código de autorización todavía. Al crear la API, repetir este
-prompt para contrastarlo.
+Contraste hecho al implementar `add-authentication` (2026-10-19). Decisiones que la matriz no
+fijaba y que ahora rigen en la política (`services/api/src/interfaces/http/authorization/policy.ts`)
+y en `services/api/test/authorization/rbac-matrix.json`:
+
+- **Actor `unregistered`**: identidad con token válido que aún no se ha dado de alta con `upsertMe`.
+  Solo puede invocar `upsertMe` (y `joinWaitlist`, que es pública). En las operaciones sobre la
+  propia cuenta (`getMe`, `listMyConsents`, `acceptConsent`) recibe **404**, porque su cuenta aún no
+  existe; en las demás operaciones con roles, **403**.
+- **Una operación implementada sin regla se deniega** (403 con token; 401 sin él).
+- La autorización corre en `onRequest`, antes de leer el cuerpo: sin token siempre es 401, aunque el
+  cuerpo sea inválido.
+- ⚠️ PENDIENTE: usuario suspendido o borrado (403 `ACCOUNT_SUSPENDED`) — sin implementar; llega con la
+  administración de usuarios.

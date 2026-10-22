@@ -26,6 +26,10 @@ jobs:
       - uses: ./.github/actions/setup
       - run: pnpm format:check
       - run: pnpm lint
+      - name: El cliente tipado de la app coincide con el contrato
+        run: |
+          pnpm --filter @changehouse/mobile generate:api
+          git diff --exit-code apps/mobile/src/api/schema.d.ts
 
   typecheck:
     name: typecheck
@@ -53,7 +57,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
-      # Testcontainers usa el Docker del runner (PostgreSQL + PostGIS reales)
+      # El emulador de Firebase necesita Java
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      # Testcontainers usa el Docker del runner (PostgreSQL + PostGIS reales) y `firebase emulators:exec`
+      # arranca el emulador de Auth para las pruebas y lo apaga al terminar (script raíz test:integration)
       - run: pnpm test:integration
 
   build:

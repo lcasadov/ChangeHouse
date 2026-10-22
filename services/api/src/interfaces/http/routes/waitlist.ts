@@ -29,16 +29,20 @@ export function waitlistRoutes(options: WaitlistRouteOptions): FastifyPluginAsyn
       max: options.rateLimit.max,
       timeWindow: options.rateLimit.windowSeconds * MILLISECONDS_PER_SECOND,
     };
-    app.post('/waitlist', { config: { rateLimit: limit } }, async (request, reply) => {
-      const input = validateWaitlistInput(request.body);
-      if (!input.success) {
-        throw new ValidationFailedError(
-          input.errors.map((error) => ({ field: error.field, message: error.code })),
-        );
-      }
-      await options.joinWaitlist(input.data);
-      // 202 también si el email ya estaba: no se revela quién está en la lista
-      return reply.code(202).send();
-    });
+    app.post(
+      '/waitlist',
+      { config: { operationId: 'joinWaitlist', rateLimit: limit } },
+      async (request, reply) => {
+        const input = validateWaitlistInput(request.body);
+        if (!input.success) {
+          throw new ValidationFailedError(
+            input.errors.map((error) => ({ field: error.field, message: error.code })),
+          );
+        }
+        await options.joinWaitlist(input.data);
+        // 202 también si el email ya estaba: no se revela quién está en la lista
+        return reply.code(202).send();
+      },
+    );
   };
 }

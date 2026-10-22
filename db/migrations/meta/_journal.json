@@ -15,6 +15,13 @@
       "when": 1792372538364,
       "tag": "0001_waitlist",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792375850057,
+      "tag": "0002_accounts",
+      "breakpoints": true
     }
   ]
 }

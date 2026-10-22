@@ -64,6 +64,7 @@ paths:
       tags: [cuenta]
       operationId: getMe
       summary: Perfil del usuario autenticado
+      description: Un usuario autenticado que aún no se ha dado de alta con `upsertMe` recibe 404.
       x-roles: [owner, seeker, agency, admin]
       responses:
         '200':
@@ -72,11 +73,15 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Me' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
     put:
       tags: [cuenta]
       operationId: upsertMe
       summary: Completa o actualiza el perfil (crea el usuario en el primer acceso)
-      description: Idempotente. En el primer acceso exige aceptar términos y privacidad (RF-04).
+      description: |
+        Idempotente. En el primer acceso exige aceptar las versiones vigentes de términos y
+        privacidad (RF-04); si faltan o no son las vigentes, 422 con `code: LEGAL_ACCEPTANCE_REQUIRED`.
+        Los siguientes accesos actualizan solo los campos enviados.
       x-roles: [authenticated]
       requestBody:
         required: true
@@ -129,6 +134,7 @@ paths:
       tags: [cuenta]
       operationId: listMyConsents
       summary: Consentimientos registrados del usuario
+      description: Un usuario autenticado que aún no se ha dado de alta con `upsertMe` recibe 404.
       x-roles: [owner, seeker, agency, admin]
       responses:
         '200':
@@ -139,10 +145,14 @@ paths:
                 type: array
                 items: { $ref: '#/components/schemas/Consent' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
     post:
       tags: [cuenta]
       operationId: acceptConsent
       summary: Registra la aceptación de una versión de un documento legal o tratamiento
+      description: |
+        Idempotente por tipo y versión: repetir una aceptación devuelve la original. Un usuario
+        autenticado que aún no se ha dado de alta con `upsertMe` recibe 404.
       x-roles: [owner, seeker, agency, admin]
       requestBody:
         required: true
@@ -157,6 +167,7 @@ paths:
               schema: { $ref: '#/components/schemas/Consent' }
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /me/devices:
     put:
       tags: [cuenta]
@@ -169,6 +180,7 @@ paths:
           application/json:
             schema:
               type: object
+              additionalProperties: false
               required: [fcmToken, platform]
               properties:
                 fcmToken: { type: string, minLength: 1, maxLength: 4096 }
@@ -338,6 +350,7 @@ paths:
           application/json:
             schema:
               type: object
+              additionalProperties: false
               required: [contentType]
               properties:
                 contentType: { type: string, enum: [image/jpeg, image/png, image/heic, image/webp] }
@@ -516,6 +529,7 @@ paths:
           application/json:
             schema:
               type: object
+              additionalProperties: false
               required: [fromHomeId, targetHomeId]
               properties:
                 fromHomeId: { type: string, format: uuid, description: Vivienda propia y publicada que ofrece el usuario }
@@ -552,6 +566,7 @@ paths:
           application/json:
             schema:
               type: object
+              additionalProperties: false
               required: [targetHomeId]
               properties:
                 fromHomeId: { type: string, format: uuid, description: Vivienda propia desde la que se descarta; omitida para un `seeker` }
@@ -679,6 +694,7 @@ paths:
           application/json:
             schema:
               type: object
+              additionalProperties: false
               required: [share]
               properties:
                 share: { type: boolean }
@@ -721,6 +737,7 @@ paths:
           application/json:
             schema:
               type: object
+              additionalProperties: false
               required: [userId]
               properties:
                 userId: { type: string, format: uuid }
@@ -773,6 +790,7 @@ paths:
           application/json:
             schema:
               type: object
+              additionalProperties: false
               required: [decision]
               properties:
                 decision: { type: string, enum: [approve, reject] }
@@ -833,6 +851,7 @@ paths:
           application/json:
             schema:
               type: object
+              additionalProperties: false
               required: [status]
               properties:
                 status: { type: string, enum: [resolved, dismissed] }
@@ -894,6 +913,7 @@ paths:
           application/json:
             schema:
               type: object
+              additionalProperties: false
               required: [suspended, reason]
               properties:
                 suspended: { type: boolean }
@@ -1208,6 +1228,7 @@ components:
         hasPublishedHome: { type: boolean, description: 'true = owner; false = seeker' }
     MeInput:
       type: object
+      additionalProperties: false
       required: [displayName]
       properties:
         displayName: { type: string, minLength: 1, maxLength: 60 }
@@ -1226,6 +1247,7 @@ components:
         acceptedAt: { type: string, format: date-time }
     ConsentInput:
       type: object
+      additionalProperties: false
       required: [type, version]
       properties:
         type: { $ref: '#/components/schemas/ConsentType' }
@@ -1233,6 +1255,7 @@ components:
 
     HomeInput:
       type: object
+      additionalProperties: false
       required: [type, regime, address, usefulM2, builtM2, bedrooms, bathrooms, hasLift, garage, storageRoom, valueMinCents, valueMaxCents, isPrimaryResidence]
       properties:
         type: { $ref: '#/components/schemas/HomeType' }
@@ -1265,6 +1288,7 @@ components:
         vppMaxLegalPriceCents: { $ref: '#/components/schemas/Money' }
     HomePatch:
       type: object
+      additionalProperties: false
       description: Cualquier subconjunto de los campos de `HomeInput`.
       minProperties: 1
       properties:
@@ -1355,6 +1379,7 @@ components:
 
     SearchPreferences:
       type: object
+      additionalProperties: false
       required: [maxToPayCents, minToReceiveCents]
       properties:
         center: { $ref: '#/components/schemas/GeoPoint' }
@@ -1425,6 +1450,7 @@ components:
 
     ReportInput:
       type: object
+      additionalProperties: false
       required: [targetType, targetId, reason]
       properties:
         targetType: { type: string, enum: [user, home, message] }
@@ -1497,6 +1523,7 @@ components:
         consentAt: { type: string, format: date-time }
     WaitlistInput:
       type: object
+      additionalProperties: false
       required: [email, municipality, homeType, lookingFor, consent]
       properties:
         email: { type: string, format: email, maxLength: 254 }
