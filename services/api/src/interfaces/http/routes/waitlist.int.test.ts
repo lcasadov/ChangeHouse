@@ -17,7 +17,7 @@ const validBody = {
 };
 
 async function join(body: unknown, headers: Record<string, string> = {}) {
-  return app.inject({ method: 'POST', url: '/waitlist', payload: body as object, headers });
+  return app.inject({ method: 'POST', url: '/v1/waitlist', payload: body as object, headers });
 }
 
 async function countEntries(): Promise<number> {
@@ -111,10 +111,10 @@ describe('POST /waitlist', () => {
   });
 
   it('Scenario: Error de validación - un cuerpo ausente o que no es un objeto devuelve Problem 400', async () => {
-    const empty = await app.inject({ method: 'POST', url: '/waitlist' });
+    const empty = await app.inject({ method: 'POST', url: '/v1/waitlist' });
     const text = await app.inject({
       method: 'POST',
-      url: '/waitlist',
+      url: '/v1/waitlist',
       headers: { 'content-type': 'application/json' },
       payload: '"hola"',
     });
@@ -156,7 +156,7 @@ describe('POST /waitlist', () => {
 
     const response = await broken.app.inject({
       method: 'POST',
-      url: '/waitlist',
+      url: '/v1/waitlist',
       payload: validBody,
     });
 
@@ -179,7 +179,7 @@ describe('CORS de POST /waitlist', () => {
   it('responde a la petición previa (preflight) del origen de la landing', async () => {
     const response = await app.inject({
       method: 'OPTIONS',
-      url: '/waitlist',
+      url: '/v1/waitlist',
       headers: {
         origin: 'https://landing.test',
         'access-control-request-method': 'POST',
@@ -195,7 +195,7 @@ describe('CORS de POST /waitlist', () => {
   it('no concede el preflight a otro origen', async () => {
     const response = await app.inject({
       method: 'OPTIONS',
-      url: '/waitlist',
+      url: '/v1/waitlist',
       headers: { origin: 'https://otro.test', 'access-control-request-method': 'POST' },
     });
 

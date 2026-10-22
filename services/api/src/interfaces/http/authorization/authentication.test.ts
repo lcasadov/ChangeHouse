@@ -191,7 +191,7 @@ describe('autenticación de las peticiones', () => {
 
     const response = await app.inject({
       method: 'OPTIONS',
-      url: '/waitlist',
+      url: '/v1/waitlist',
       headers: {
         origin: 'https://landing.test',
         'access-control-request-method': 'POST',

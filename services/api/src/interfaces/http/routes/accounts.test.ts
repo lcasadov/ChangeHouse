@@ -73,7 +73,7 @@ describe('GET /me', () => {
   it('Scenario: Consultar la propia cuenta - devuelve la cuenta del usuario autenticado', async () => {
     const { app, calls } = setup({ role: 'seeker' });
 
-    const response = await app.inject({ method: 'GET', url: '/me', headers: AUTH });
+    const response = await app.inject({ method: 'GET', url: '/v1/me', headers: AUTH });
 
     expect(response.statusCode).toBe(200);
     expect(response.json()).toEqual(ME);
@@ -83,7 +83,7 @@ describe('GET /me', () => {
   it('sin cuenta en ChangeHouse responde 404 sin ejecutar el caso de uso', async () => {
     const { app, calls } = setup();
 
-    const response = await app.inject({ method: 'GET', url: '/me', headers: AUTH });
+    const response = await app.inject({ method: 'GET', url: '/v1/me', headers: AUTH });
 
     expect(response.statusCode).toBe(404);
     expect(calls.getMe).toEqual([]);
@@ -92,7 +92,7 @@ describe('GET /me', () => {
   it('sin token responde 401', async () => {
     const { app } = setup({ role: 'seeker' });
 
-    expect((await app.inject({ method: 'GET', url: '/me' })).statusCode).toBe(401);
+    expect((await app.inject({ method: 'GET', url: '/v1/me' })).statusCode).toBe(401);
   });
 });
 
@@ -106,7 +106,12 @@ describe('PUT /me', () => {
   it('Scenario: Primer acceso completo - 201 con la cuenta, pasando la identidad verificada y los datos validados', async () => {
     const { app, calls } = setup({ created: true });
 
-    const response = await app.inject({ method: 'PUT', url: '/me', headers: AUTH, payload: body });
+    const response = await app.inject({
+      method: 'PUT',
+      url: '/v1/me',
+      headers: AUTH,
+      payload: body,
+    });
 
     expect(response.statusCode).toBe(201);
     expect(response.json()).toEqual(ME);
@@ -121,7 +126,12 @@ describe('PUT /me', () => {
   it('Scenario: Alta repetida - 200 cuando el usuario ya existía', async () => {
     const { app } = setup({ role: 'seeker', created: false });
 
-    const response = await app.inject({ method: 'PUT', url: '/me', headers: AUTH, payload: body });
+    const response = await app.inject({
+      method: 'PUT',
+      url: '/v1/me',
+      headers: AUTH,
+      payload: body,
+    });
 
     expect(response.statusCode).toBe(200);
   });
@@ -131,7 +141,7 @@ describe('PUT /me', () => {
 
     const response = await app.inject({
       method: 'PUT',
-      url: '/me',
+      url: '/v1/me',
       headers: AUTH,
       payload: { ...body, roles: ['admin'], assignedRole: 'admin', status: 'suspended' },
     });
@@ -150,7 +160,7 @@ describe('PUT /me', () => {
 
     const response = await app.inject({
       method: 'PUT',
-      url: '/me',
+      url: '/v1/me',
       headers: AUTH,
       payload: { displayName: '  ' },
     });
@@ -169,7 +179,7 @@ describe('PUT /me', () => {
 
     const response = await app.inject({
       method: 'PUT',
-      url: '/me',
+      url: '/v1/me',
       headers: AUTH,
       payload: { displayName: 'Ana', acceptedTermsVersion: '2026-10' },
     });
@@ -186,7 +196,11 @@ describe('PUT /me', () => {
   it('sin token responde 401 aunque el cuerpo no sea válido', async () => {
     const { app } = setup();
 
-    const response = await app.inject({ method: 'PUT', url: '/me', payload: { roles: ['admin'] } });
+    const response = await app.inject({
+      method: 'PUT',
+      url: '/v1/me',
+      payload: { roles: ['admin'] },
+    });
 
     expect(response.statusCode).toBe(401);
   });
@@ -196,7 +210,7 @@ describe('GET /me/consents y POST /me/consents', () => {
   it('lista los consentimientos con su fecha en ISO 8601', async () => {
     const { app, calls } = setup({ role: 'seeker' });
 
-    const response = await app.inject({ method: 'GET', url: '/me/consents', headers: AUTH });
+    const response = await app.inject({ method: 'GET', url: '/v1/me/consents', headers: AUTH });
 
     expect(response.statusCode).toBe(200);
     expect(response.json()).toEqual([
@@ -210,7 +224,7 @@ describe('GET /me/consents y POST /me/consents', () => {
 
     const response = await app.inject({
       method: 'POST',
-      url: '/me/consents',
+      url: '/v1/me/consents',
       headers: AUTH,
       payload: { type: 'privacy', version: '2026-10' },
     });
@@ -236,7 +250,7 @@ describe('GET /me/consents y POST /me/consents', () => {
     ]) {
       const response = await app.inject({
         method: 'POST',
-        url: '/me/consents',
+        url: '/v1/me/consents',
         headers: AUTH,
         payload,
       });
@@ -248,10 +262,10 @@ describe('GET /me/consents y POST /me/consents', () => {
   it('sin cuenta en ChangeHouse ambas operaciones responden 404', async () => {
     const { app } = setup();
 
-    const list = await app.inject({ method: 'GET', url: '/me/consents', headers: AUTH });
+    const list = await app.inject({ method: 'GET', url: '/v1/me/consents', headers: AUTH });
     const accept = await app.inject({
       method: 'POST',
-      url: '/me/consents',
+      url: '/v1/me/consents',
       headers: AUTH,
       payload: { type: 'terms', version: '2026-10' },
     });

@@ -6,7 +6,7 @@ import { expectNoAxeViolations, rejectCookies } from './fixtures';
 const { waitlist } = es;
 
 // URL por defecto de PUBLIC_API_URL: el formulario nunca llama a la API real en estas pruebas
-const API_WAITLIST = 'http://localhost:8080/waitlist';
+const API_WAITLIST = 'http://localhost:8080/v1/waitlist';
 const CORS = {
   'access-control-allow-origin': '*',
   'access-control-allow-headers': 'content-type',

@@ -19,7 +19,7 @@ function join(
 ) {
   return app.inject({
     method: 'POST',
-    url: '/waitlist',
+    url: '/v1/waitlist',
     payload: {
       email,
       municipality: 'Madrid',
@@ -102,7 +102,7 @@ describe('límite de altas por origen', () => {
     for (let attempt = 0; attempt < 3; attempt++) {
       const preflight = await app.inject({
         method: 'OPTIONS',
-        url: '/waitlist',
+        url: '/v1/waitlist',
         headers: { origin: 'https://landing.test', 'access-control-request-method': 'POST' },
       });
       expect(preflight.statusCode).toBe(204);

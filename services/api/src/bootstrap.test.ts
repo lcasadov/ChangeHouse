@@ -21,7 +21,7 @@ describe('createApi', () => {
 
     const response = await app.inject({
       method: 'POST',
-      url: '/waitlist',
+      url: '/v1/waitlist',
       payload: { email: 'x' },
     });
 
@@ -33,10 +33,10 @@ describe('createApi', () => {
     const { app, close } = createApi(config);
 
     const responses = await Promise.all([
-      app.inject({ method: 'GET', url: '/me' }),
-      app.inject({ method: 'PUT', url: '/me', payload: {} }),
-      app.inject({ method: 'GET', url: '/me/consents' }),
-      app.inject({ method: 'POST', url: '/me/consents', payload: {} }),
+      app.inject({ method: 'GET', url: '/v1/me' }),
+      app.inject({ method: 'PUT', url: '/v1/me', payload: {} }),
+      app.inject({ method: 'GET', url: '/v1/me/consents' }),
+      app.inject({ method: 'POST', url: '/v1/me/consents', payload: {} }),
     ]);
 
     expect(responses.map((response) => response.statusCode)).toEqual([401, 401, 401, 401]);
@@ -47,6 +47,33 @@ describe('createApi', () => {
       'listMyConsents',
       'upsertMe',
     ]);
+    await close();
+  });
+});
+
+describe('prefijo /v1 (docs/api/openapi.yaml: servers)', () => {
+  it('las operaciones responden bajo /v1 y las rutas sin prefijo dan 404 en formato Problem', async () => {
+    const { app, close } = createApi(config);
+
+    const versioned = await app.inject({ method: 'GET', url: '/v1/me' });
+    const waitlist = await app.inject({
+      method: 'POST',
+      url: '/v1/waitlist',
+      payload: { email: 'x' },
+    });
+    const legacy = await Promise.all([
+      app.inject({ method: 'GET', url: '/me' }),
+      app.inject({ method: 'GET', url: '/me/consents' }),
+      app.inject({ method: 'POST', url: '/waitlist', payload: { email: 'x' } }),
+    ]);
+
+    expect(versioned.statusCode).toBe(401);
+    expect(waitlist.statusCode).toBe(400);
+    for (const response of legacy) {
+      expect(response.statusCode).toBe(404);
+      expect(response.headers['content-type']).toContain('application/problem+json');
+      expect(response.json()).toMatchObject({ status: 404 });
+    }
     await close();
   });
 });

@@ -42,7 +42,9 @@ describe('createAppServices', () => {
   it('usa las direcciones locales por defecto', () => {
     createAppServices({ EXPO_PUBLIC_FIREBASE_API_KEY: 'clave' }, []);
 
-    expect(jest.mocked(createApiClient).mock.calls[0]?.[0].baseUrl).toBe('http://localhost:8080');
+    expect(jest.mocked(createApiClient).mock.calls[0]?.[0].baseUrl).toBe(
+      'http://localhost:8080/v1',
+    );
   });
 
   it('crea la autenticación una sola vez aunque cambien los proveedores externos', () => {
