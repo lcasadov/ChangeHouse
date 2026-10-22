@@ -402,7 +402,21 @@ export interface paths {
      * @description Crea la arista desde una vivienda publicada del usuario (`fromHomeId`)
      *     hacia la vivienda indicada y busca ciclos de 2 y 3 en la misma
      *     transacción. Cada vivienda del usuario participa de forma independiente
-     *     (RF-20). Si se cierra un ciclo compatible, devuelve el match creado.
+     *     (RF-20). Si se cierra un ciclo compatible, devuelve el match creado
+     *     (hasta `add-direct-match`, `match` es siempre `null`).
+     *
+     *     Límite diario (RF-45): 10 me gusta por usuario y día natural de
+     *     `Europe/Madrid`, sumando todas sus viviendas y configurable por entorno
+     *     (`LIKES_PER_DAY`). Al superarlo responde 429 con `Retry-After` en segundos
+     *     hasta la medianoche de Madrid (cambios de horario incluidos). Un me gusta
+     *     repetido responde 409 antes de contar contra el límite; deshacer un me gusta
+     *     devuelve el cupo.
+     *
+     *     Errores: 403 (`seeker`, `agency`, `admin`); 404 si `fromHomeId` es ajeno o
+     *     inexistente, o si el destino es propio, no está publicado o no existe (no se
+     *     distinguen); 409 con `code` `HOME_NOT_PUBLISHED` (el origen es propio pero no
+     *     está publicado) o `LIKE_EXISTS` (ya existía el me gusta); 429 con `code`
+     *     `DAILY_LIKE_LIMIT`.
      */
     post: operations['likeHome'];
     delete?: never;
@@ -420,7 +434,16 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Descarta una vivienda (RF-41, RF-44) */
+    /**
+     * Descarta una vivienda (RF-41, RF-44)
+     * @description Un `owner` descarta desde una vivienda propia y publicada (`fromHomeId`
+     *     obligatorio; sin él, 400 con `code: HOME_ID_REQUIRED` y error en
+     *     `fromHomeId`). Un `seeker` descarta desde su cuenta, sin `fromHomeId`.
+     *     Repetir un descarte lo renueva (idempotente, 204). El descarte deja de
+     *     aplicarse si la vivienda descartada cambia un dato relevante después.
+     *     404 si `fromHomeId` es ajeno, inexistente o no está publicado, o si el destino
+     *     es propio, no está publicado o no existe.
+     */
     post: operations['dismissHome'];
     delete?: never;
     options?: never;
@@ -440,7 +463,11 @@ export interface paths {
     post?: never;
     /**
      * Deshace el último me gusta o descarte (RF-41)
-     * @description No deshace un like que ya ha formado un match.
+     * @description Deshace la acción más reciente, entre los me gusta y los descartes, de la
+     *     vivienda `homeId` (o de la cuenta, para un `seeker`); la vivienda vuelve a
+     *     la pila. Un `owner` sin `homeId` recibe 400 (`code: HOME_ID_REQUIRED`).
+     *     404 si no hay ninguna acción que deshacer o la vivienda no es propia.
+     *     No deshace un like que ya ha formado un match (409, `code: LIKE_IN_MATCH`).
      */
     delete: operations['undoLastAction'];
     options?: never;
@@ -1223,7 +1250,7 @@ export interface components {
         'application/problem+json': components['schemas']['Problem'];
       };
     };
-    /** @description Límite de peticiones o límite diario de likes superado (10 por usuario y día, configurable por entorno; RF-45, RNF-06) */
+    /** @description Límite de peticiones o límite diario de likes superado (10 por usuario y día natural de Madrid, configurable por entorno; RF-45, RNF-06). `Retry-After` indica los segundos de espera; en el límite diario, hasta la medianoche de Madrid (`code: DAILY_LIKE_LIMIT`) */
     TooManyRequests: {
       headers: {
         'Retry-After'?: number;
@@ -1967,7 +1994,7 @@ export interface operations {
         };
       };
       404: components['responses']['NotFound'];
-      /** @description Ya existía el like */
+      /** @description `code: HOME_NOT_PUBLISHED` (la vivienda de origen es propia pero no está publicada) o `code: LIKE_EXISTS` (ya existía el like entre esas dos viviendas) */
       409: {
         headers: {
           [name: string]: unknown;
@@ -1976,7 +2003,16 @@ export interface operations {
           'application/problem+json': components['schemas']['Problem'];
         };
       };
-      429: components['responses']['TooManyRequests'];
+      /** @description Límite diario de me gusta superado (`code: DAILY_LIKE_LIMIT`); `Retry-After` en segundos hasta la medianoche de Madrid */
+      429: {
+        headers: {
+          'Retry-After': number;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
     };
   };
   dismissHome: {
@@ -2009,6 +2045,7 @@ export interface operations {
       };
       400: components['responses']['BadRequest'];
       401: components['responses']['Unauthorized'];
+      403: components['responses']['Forbidden'];
       404: components['responses']['NotFound'];
     };
   };
@@ -2031,9 +2068,11 @@ export interface operations {
         };
         content?: never;
       };
+      400: components['responses']['BadRequest'];
       401: components['responses']['Unauthorized'];
+      403: components['responses']['Forbidden'];
       404: components['responses']['NotFound'];
-      /** @description El like ya forma parte de un match */
+      /** @description El like ya forma parte de un match (`code: LIKE_IN_MATCH`) */
       409: {
         headers: {
           [name: string]: unknown;

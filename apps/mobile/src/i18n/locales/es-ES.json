@@ -16,8 +16,37 @@
     }
   },
   "discovery": {
-    "next": "Siguiente",
     "loading": "Buscando casas para ti",
+    "actions": {
+      "dismiss": "Descartar",
+      "undo": "Deshacer",
+      "like": "Me gusta"
+    },
+    "stamps": {
+      "like": "Me gusta",
+      "dismiss": "Descartar"
+    },
+    "decision": {
+      "liked": "Me gusta enviado",
+      "dismissed": "Casa descartada",
+      "undone": "Acción deshecha",
+      "errors": {
+        "network": "No hemos podido guardar tu decisión. Comprueba tu conexión y vuelve a intentarlo.",
+        "server": "No hemos podido guardar tu decisión. Vuelve a intentarlo en unos minutos.",
+        "homeNotPublished": "Tu casa ya no está publicada, así que no puedes dar me gusta. Vuelve a publicarla desde Mis casas.",
+        "gone": "Esta casa ya no está disponible. Hemos pasado a la siguiente.",
+        "dailyLimit": "Has usado todos tus me gusta de hoy. Podrás seguir a las {{time}}. Mientras tanto, puedes descartar.",
+        "dailyLimitUnknown": "Has usado todos tus me gusta de hoy. Podrás seguir mañana. Mientras tanto, puedes descartar.",
+        "likeInMatch": "Este me gusta ya ha formado un match y no se puede deshacer.",
+        "undoFailed": "No hemos podido deshacer la última acción. Comprueba tu conexión y vuelve a intentarlo."
+      }
+    },
+    "publishSheet": {
+      "title": "Publica tu casa para dar me gusta",
+      "message": "Sin una casa publicada no puede haber matches. Publica la tuya y podrás dar me gusta a las casas que te interesen.",
+      "action": "Publicar mi casa",
+      "close": "Ahora no"
+    },
     "card": {
       "openHint": "Abre el detalle de la vivienda",
       "m2": "{{value}} m²",

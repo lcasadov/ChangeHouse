@@ -1,0 +1,96 @@
+{
+  "tracker": "github-issues",
+  "change": "add-like-dismiss-undo",
+  "sprint": {
+    "path": "Sprint en curso",
+    "created": false
+  },
+  "epic": {
+    "capability": "discovery",
+    "id": 150,
+    "reused": true
+  },
+  "related_epics": [],
+  "feature": {
+    "id": 167,
+    "reused": false
+  },
+  "stories": [
+    {
+      "key": "Me gusta desde una vivienda propia",
+      "id": 168,
+      "reused": false,
+      "prio": "P1"
+    },
+    {
+      "key": "Límite diario de me gusta",
+      "id": 169,
+      "reused": false,
+      "prio": "P1"
+    },
+    {
+      "key": "Descartar",
+      "id": 170,
+      "reused": false,
+      "prio": "P1"
+    },
+    {
+      "key": "Deshacer la última acción",
+      "id": 171,
+      "reused": false,
+      "prio": "P2"
+    },
+    {
+      "key": "Decidir con un gesto",
+      "id": 172,
+      "reused": false,
+      "prio": "P1"
+    }
+  ],
+  "tasks": [
+    {
+      "key": "B1",
+      "id": 173,
+      "parent": 168,
+      "state": "done"
+    },
+    {
+      "key": "T1",
+      "id": 174,
+      "parent": 169,
+      "state": "done"
+    },
+    {
+      "key": "B2",
+      "id": 175,
+      "parent": 168,
+      "state": "done"
+    },
+    {
+      "key": "B3",
+      "id": 176,
+      "parent": 171,
+      "state": "done"
+    },
+    {
+      "key": "T2",
+      "id": 177,
+      "parent": 172,
+      "state": "done"
+    },
+    {
+      "key": "F1",
+      "id": 178,
+      "parent": 172,
+      "state": "done"
+    },
+    {
+      "key": "V1",
+      "id": 179,
+      "parent": 168,
+      "state": "done"
+    }
+  ],
+  "bugs": [],
+  "pending": []
+}

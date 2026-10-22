@@ -53,6 +53,10 @@ export function accountId(request: FastifyRequest): string {
   return account.userId;
 }
 
+export function isUuid(value: string): boolean {
+  return UUID.test(value);
+}
+
 /** Un identificador que no es un UUID responde igual que uno que no existe: sin consultar nada. */
 export function uuidOr404(value: string, notFound: () => Error): string {
   if (!UUID.test(value)) throw notFound();

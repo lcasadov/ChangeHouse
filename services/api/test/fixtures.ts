@@ -24,6 +24,7 @@ export function testConfig(overrides: Partial<ApiConfig> = {}): ApiConfig {
     appOrigins: ['https://app.test'],
     trustProxyHops: 0,
     waitlistRateLimit: { max: 1000, windowSeconds: 600 },
+    likesPerDay: 10,
     firebase: { projectId: PROJECT_ID, authEmulatorHost: inject('authEmulatorHost') || undefined },
     // Clave de pruebas: 32 bytes fijos. Sin clave de Places se usan los lugares de prueba.
     addressEncryptionKey: Buffer.alloc(32, 7).toString('base64'),

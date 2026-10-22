@@ -67,6 +67,9 @@ export function fakeServices(overrides: Partial<AppServices> = {}): AppServices 
     discoveryApi: {
       list: () => Promise.resolve({ items: [], nextCursor: null }),
       getPublicHome: () => Promise.reject(new Error('Sin descubrimiento en este doble')),
+      like: () => Promise.reject(new Error('Sin descubrimiento en este doble')),
+      dismiss: () => Promise.reject(new Error('Sin descubrimiento en este doble')),
+      undo: () => Promise.reject(new Error('Sin descubrimiento en este doble')),
     },
     photoPicker: { pick: () => Promise.resolve([]) },
     photoUploader: { upload: () => Promise.resolve() },

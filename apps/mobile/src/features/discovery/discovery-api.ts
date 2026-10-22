@@ -39,6 +39,58 @@ export class DiscoveryApiError extends Error {
   }
 }
 
+/** Resultado de un me gusta (`LikeResult`): `match` llega con `add-direct-match`; hoy es siempre nulo. */
+export type LikeResult = components['schemas']['LikeResult'];
+
+export type DecisionApiErrorKind =
+  /** Sin respuesta del servidor: red caída o tiempo agotado. */
+  | 'network'
+  /** El token no vale (401). */
+  | 'unauthorized'
+  /** El usuario no puede dar me gusta: sin vivienda publicada, agencia o administración (403). */
+  | 'forbidden'
+  /** La vivienda de origen o la de destino ya no existe, no es la que era o no está publicada (404). */
+  | 'not-found'
+  /** La vivienda propia desde la que se decide ya no está publicada (409 `HOME_NOT_PUBLISHED`). */
+  | 'home-not-published'
+  /** Ya existía ese me gusta (409 `LIKE_EXISTS`). */
+  | 'already-liked'
+  /** Se superó el límite diario de me gusta (429 `DAILY_LIKE_LIMIT`). */
+  | 'daily-limit'
+  /** El me gusta ya forma un match y no se deshace (409 `LIKE_IN_MATCH`). */
+  | 'like-in-match'
+  /** El servidor rechaza la petición (400). */
+  | 'invalid'
+  | 'server';
+
+export class DecisionApiError extends Error {
+  constructor(
+    readonly kind: DecisionApiErrorKind,
+    /** Solo en `daily-limit`: segundos hasta que vuelve el cupo (`Retry-After`), si la cabecera era válida. */
+    readonly retryAfterSeconds?: number,
+  ) {
+    super(kind);
+    this.name = 'DecisionApiError';
+  }
+}
+
+export interface LikeInput {
+  /** La vivienda propia y publicada que ofrece el usuario. */
+  fromHomeId: string;
+  targetHomeId: string;
+}
+
+export interface DismissInput {
+  /** La vivienda propia desde la que se descarta; se omite para un buscador sin vivienda. */
+  fromHomeId?: string;
+  targetHomeId: string;
+}
+
+export interface UndoInput {
+  /** La vivienda propia cuya última acción se deshace; se omite para un buscador sin vivienda. */
+  homeId?: string;
+}
+
 export interface DiscoveryQuery {
   /** Vivienda propia y publicada desde la que se busca; se omite en modo `seeker` o con una sola. */
   homeId?: string;
@@ -52,4 +104,10 @@ export interface DiscoveryApi {
   list: (query: DiscoveryQuery) => Promise<DiscoveryPage>;
   /** La forma pública de una vivienda ajena publicada (`getHome`). */
   getPublicHome: (homeId: string) => Promise<PublicHome>;
+  /** Me gusta desde una vivienda propia (`likeHome`). */
+  like: (input: LikeInput) => Promise<LikeResult>;
+  /** Descarta una vivienda (`dismissHome`); idempotente. */
+  dismiss: (input: DismissInput) => Promise<void>;
+  /** Deshace el último me gusta o descarte (`undoLastAction`). */
+  undo: (input: UndoInput) => Promise<void>;
 }

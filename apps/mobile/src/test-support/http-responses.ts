@@ -1,5 +1,9 @@
 /** Respuestas HTTP de la API simulada: cuerpo JSON y `Problem` (RFC 9457) como los del contrato. */
-export const problem = (status: number, extra: Record<string, unknown> = {}) =>
+export const problem = (
+  status: number,
+  extra: Record<string, unknown> = {},
+  headers: Record<string, string> = {},
+) =>
   new Response(
     JSON.stringify({
       type: 'about:blank',
@@ -8,7 +12,7 @@ export const problem = (status: number, extra: Record<string, unknown> = {}) =>
       correlationId: 'corr-1',
       ...extra,
     }),
-    { status, headers: { 'content-type': 'application/problem+json' } },
+    { status, headers: { 'content-type': 'application/problem+json', ...headers } },
   );
 
 export const json = (status: number, body: unknown) =>

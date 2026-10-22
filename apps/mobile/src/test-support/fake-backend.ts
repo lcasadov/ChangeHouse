@@ -4,6 +4,7 @@ import type { components } from '../api/schema';
 import type { Me } from '../features/account/account-api';
 import type { Home } from '../features/homes/homes-api';
 import type { SearchPreferences } from '../features/search/search-preferences-api';
+import { FakeDecisions } from './fake-decisions';
 import { FakeDiscovery } from './fake-discovery';
 import { FakeHomes } from './fake-homes';
 import { FakeModeration } from './fake-moderation';
@@ -76,6 +77,8 @@ export class FakeBackend {
   readonly searchPreferences: FakeSearchPreferences;
   /** El descubrimiento de viviendas ajenas desde esas mismas viviendas y preferencias. */
   readonly discovery: FakeDiscovery;
+  /** Los me gusta, descartes y deshacer desde esas viviendas sobre las que ofrece el descubrimiento. */
+  readonly decisions: FakeDecisions;
   /** La cola de moderación sobre esas mismas viviendas. */
   private readonly moderation: FakeModeration;
 
@@ -99,10 +102,16 @@ export class FakeBackend {
     this.homes = new FakeHomes(homes);
     this.searchPreferences = new FakeSearchPreferences(this.homes, searchPreferences);
     this.moderation = new FakeModeration(this.homes);
+    this.decisions = new FakeDecisions(
+      () => this.profile.roles,
+      () => this.homes.all(),
+      (homeId) => this.discovery.offers(homeId),
+    );
     this.discovery = new FakeDiscovery(
       discoveryCards,
       () => this.homes.all(),
       () => this.searchPreferences.mine !== null || this.searchPreferences.byHome.size > 0,
+      (viewer, cardId) => this.decisions.isDecided(viewer, cardId),
     );
   }
 
@@ -171,6 +180,8 @@ export class FakeBackend {
     if (path.endsWith('/search-preferences')) {
       return this.searchPreferences.respond(method, path, body);
     }
+    const decision = this.decisions.respond(method, path, search, body);
+    if (decision) return decision;
     if (path === '/discover') return this.discovery.respond(search);
     if (method === 'GET') {
       const others = this.discovery.publicHome(path);

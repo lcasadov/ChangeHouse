@@ -205,8 +205,8 @@ operación de la API sin filas en ese fichero hace fallar la prueba.
 | `deleteHomeSearchPreferences` | 401 | `resourceOwner` | `resourceOwner` | 403 | ajena → 404 |
 | `discoverHomes` | 401 | ✅ | ✅ | 403 | filtros RN-06, RN-11, bloqueos |
 | `likeHome` | 401 | 403 | ✅ | 403 | `fromHomeId` propia y publicada; RC-12, RC-13, RC-18 |
-| `dismissHome` | 401 | ✅ | ✅ | 403 | — |
-| `undoLastAction` | 401 | ✅ | ✅ | 403 | estado → 409 |
+| `dismissHome` | 401 | ✅ | ✅ | 403 | `owner`: `fromHomeId` propia y publicada (sin ella, 400); `seeker`: desde su cuenta |
+| `undoLastAction` | 401 | ✅ | ✅ | 403 | `homeId` propia (ajena → 404); sin acción → 404; like en un match → 409 |
 | `listMyMatches` | 401 | ✅ (vacío) | ✅ | 403 | solo los propios |
 | `getMatch` | 401 | 404 | `participant` | ✅ | no participante → 404 |
 | `confirmMatch` | 401 | 404 | `participant` | 403 | estado → 409 |

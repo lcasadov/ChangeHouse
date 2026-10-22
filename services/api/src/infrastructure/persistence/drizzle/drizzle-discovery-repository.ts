@@ -166,9 +166,25 @@ function dismissedFrom(origin: Home): SQL {
       AND (h.relevant_changed_at IS NULL OR h.relevant_changed_at <= d.created_at))`;
 }
 
+/** Ya le he dado «Me gusta» desde mi vivienda: deja de aparecer en sus tarjetas (RF-41). */
+function likedFrom(origin: Home): SQL {
+  return sql`EXISTS (
+    SELECT 1 FROM likes l
+    WHERE l.from_home_id = ${origin.id}::uuid AND l.to_home_id = h.id)`;
+}
+
+/** Descartada desde mi cuenta de `seeker` y sin cambio relevante posterior al descarte (RF-44). */
+function dismissedByAccount(viewerId: string): SQL {
+  return sql`EXISTS (
+    SELECT 1 FROM account_dismissals ad
+    WHERE ad.user_id = ${viewerId}::uuid AND ad.dismissed_home_id = h.id
+      AND (h.relevant_changed_at IS NULL OR h.relevant_changed_at <= ad.created_at))`;
+}
+
 /**
  * Fase 1 del descubrimiento: viviendas publicadas, ajenas, en mi zona y con mis filtros, sin VPP si
- * no se incluyen y, desde una vivienda, sin las descartadas y solo si mi vivienda encaja en la zona
+ * no se incluyen y, desde una vivienda, sin las descartadas ni las que ya han recibido mi «Me gusta»
+ * (en modo `seeker`, sin las descartadas desde la cuenta) y solo si mi vivienda encaja en la zona
  * y los filtros de las preferencias efectivas de su dueño (sin preferencias no es compatible). De
  * la publicada más recientemente a la más antigua; el id desempata y completa el cursor.
  */
@@ -187,11 +203,14 @@ export function candidateQuerySql(query: CandidateQuery): SQL {
       sql`(h.published_at, h.id) < (${after.at.toISOString()}::timestamptz, ${after.id}::uuid)`,
     );
   }
-  if (origin !== null) {
+  if (origin === null) {
+    conditions.push(sql`NOT ${dismissedByAccount(query.viewerId)}`);
+  } else {
     conditions.push(
       inTheirZone(origin),
       meetsTheirFilters(origin),
       sql`NOT ${dismissedFrom(origin)}`,
+      sql`NOT ${likedFrom(origin)}`,
     );
   }
   return sql`

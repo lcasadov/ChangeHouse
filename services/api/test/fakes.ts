@@ -5,6 +5,13 @@ import type { ConsentRepository } from '../src/application/account/consent-repos
 import type { HomeOwnership } from '../src/application/account/home-ownership.js';
 import type { ProfileChanges, UserRepository } from '../src/application/account/user-repository.js';
 import type {
+  DecisionOrigin,
+  DecisionStore,
+  DecisionUnitOfWork,
+  LastAction,
+  MatchLookup,
+} from '../src/application/decision/decision-repository.js';
+import type {
   CandidateQuery,
   DiscoveryCandidate,
   DiscoveryRepository,
@@ -397,5 +404,103 @@ export class InMemoryDiscoveryRepository implements DiscoveryRepository {
         )
       : ordered;
     return Promise.resolve(rest.slice(0, query.limit));
+  }
+}
+
+/** Decisiones en memoria: me gusta y descartes por origen, con el mismo orden y unicidad que la base de datos. */
+export class InMemoryDecisionStore implements DecisionStore {
+  readonly likes: { from: string; to: string; at: Date }[] = [];
+  readonly dismissals: { origin: string; to: string; at: Date }[] = [];
+  readonly locks: string[] = [];
+
+  constructor(private readonly homes: InMemoryHomeRepository) {}
+
+  private static key(origin: DecisionOrigin): string {
+    return origin.kind === 'home' ? `home:${origin.homeId}` : `account:${origin.userId}`;
+  }
+
+  lockUser(userId: string): Promise<void> {
+    this.locks.push(userId);
+    return Promise.resolve();
+  }
+
+  countLikes(userId: string, start: Date, end: Date): Promise<number> {
+    const count = this.likes.filter(
+      (like) =>
+        this.homes.homes.get(like.from)?.ownerId === userId && like.at >= start && like.at < end,
+    ).length;
+    return Promise.resolve(count);
+  }
+
+  likeExists(from: string, to: string): Promise<boolean> {
+    return Promise.resolve(this.likes.some((like) => like.from === from && like.to === to));
+  }
+
+  insertLike(from: string, to: string, at: Date): Promise<void> {
+    this.likes.push({ from, to, at });
+    return Promise.resolve();
+  }
+
+  deleteLike(from: string, to: string): Promise<void> {
+    const index = this.likes.findIndex((like) => like.from === from && like.to === to);
+    if (index >= 0) this.likes.splice(index, 1);
+    return Promise.resolve();
+  }
+
+  saveDismissal(origin: DecisionOrigin, to: string, at: Date): Promise<void> {
+    const key = InMemoryDecisionStore.key(origin);
+    const current = this.dismissals.find((row) => row.origin === key && row.to === to);
+    if (current) current.at = at;
+    else this.dismissals.push({ origin: key, to, at });
+    return Promise.resolve();
+  }
+
+  deleteDismissal(origin: DecisionOrigin, to: string): Promise<void> {
+    const key = InMemoryDecisionStore.key(origin);
+    const index = this.dismissals.findIndex((row) => row.origin === key && row.to === to);
+    if (index >= 0) this.dismissals.splice(index, 1);
+    return Promise.resolve();
+  }
+
+  lastAction(origin: DecisionOrigin): Promise<LastAction | null> {
+    const key = InMemoryDecisionStore.key(origin);
+    const actions: LastAction[] = [
+      ...(origin.kind === 'home'
+        ? this.likes
+            .filter((like) => like.from === origin.homeId)
+            .map((like) => ({ kind: 'like' as const, targetHomeId: like.to, at: like.at }))
+        : []),
+      ...this.dismissals
+        .filter((row) => row.origin === key)
+        .map((row) => ({ kind: 'dismissal' as const, targetHomeId: row.to, at: row.at })),
+    ];
+    const newest = actions.sort((a, b) => b.at.getTime() - a.at.getTime())[0];
+    return Promise.resolve(newest ?? null);
+  }
+}
+
+/** Unidad de trabajo de decisiones en memoria: si el trabajo falla, vuelve al estado anterior. */
+export class InMemoryDecisionUnitOfWork implements DecisionUnitOfWork {
+  constructor(readonly store: InMemoryDecisionStore) {}
+
+  async run<T>(work: (store: DecisionStore) => Promise<T>): Promise<T> {
+    const likes = this.store.likes.map((like) => ({ ...like }));
+    const dismissals = this.store.dismissals.map((row) => ({ ...row }));
+    try {
+      return await work(this.store);
+    } catch (error) {
+      this.store.likes.splice(0, this.store.likes.length, ...likes);
+      this.store.dismissals.splice(0, this.store.dismissals.length, ...dismissals);
+      throw error;
+    }
+  }
+}
+
+/** Consulta de matches de pruebas: los me gusta indicados forman parte de un match. */
+export class FakeMatchLookup implements MatchLookup {
+  readonly inMatch = new Set<string>();
+
+  isLikeInMatch(from: string, to: string): Promise<boolean> {
+    return Promise.resolve(this.inMatch.has(`${from}>${to}`));
   }
 }

@@ -7,6 +7,9 @@ import { authUser, FakeAuthService } from '../test-support/fake-auth-service';
 import { FakeBackend } from '../test-support/fake-backend';
 import { renderSessionApp, TEST_LEGAL_URLS } from '../test-support/render-session-app';
 
+// Flujo completo de la app: el primer test carga todos los módulos (gestos y animaciones incluidos)
+jest.setTimeout(30_000);
+
 const { onboarding } = es.account;
 
 const button = (name: string) => screen.getByRole('button', { name });

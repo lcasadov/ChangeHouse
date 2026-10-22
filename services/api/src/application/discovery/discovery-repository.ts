@@ -16,7 +16,8 @@ export interface CandidateQuery {
   readonly includeVpp: boolean;
   /**
    * Vivienda propia y publicada desde la que se busca: activa la compatibilidad inversa (la
-   * candidata busca donde está y como es esta vivienda) y sus descartes. `null` en modo `seeker`.
+   * candidata busca donde está y como es esta vivienda), sus descartes y sus me gusta. En modo
+   * `seeker` (`null`) solo se excluyen los descartes de su cuenta.
    */
   readonly origin: Home | null;
   /** Continúa tras esta posición (exclusiva). */

@@ -44,11 +44,14 @@ function render(overrides: Partial<CandidateQuery> = {}) {
 }
 
 describe('candidateQuerySql', () => {
-  it('en modo seeker no cruza las preferencias de la candidata ni los descartes', () => {
+  it('en modo seeker no cruza las preferencias de la candidata y solo excluye los descartes de su cuenta', () => {
     const { sql, params } = render();
 
     expect(sql).not.toContain('CROSS JOIN LATERAL');
-    expect(sql).not.toContain('dismissals');
+    expect(sql).toContain('FROM account_dismissals ad');
+    expect(sql).not.toContain('FROM dismissals d');
+    expect(sql).not.toContain('FROM likes');
+    expect(params).toContain(ORIGIN.ownerId);
     expect(sql).not.toContain("h.regime = 'libre'");
     expect(sql).toContain('h.municipality_normalized IN');
     expect(params).toContain('leganes');
@@ -58,7 +61,9 @@ describe('candidateQuerySql', () => {
     const { sql, params } = render({ origin: ORIGIN, includeVpp: false });
 
     expect(sql).toContain('CROSS JOIN LATERAL');
-    expect(sql).toContain('NOT EXISTS');
+    expect(sql).toContain('FROM dismissals d');
+    expect(sql).toContain('FROM likes l');
+    expect(sql).not.toContain('FROM account_dismissals');
     expect(sql).toContain("h.regime = 'libre'");
     // Sin municipio en la vivienda de origen, la zona inversa solo puede cumplirse por radio
     expect(params).toContain(null);

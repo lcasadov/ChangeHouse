@@ -26,6 +26,8 @@ erDiagram
     homes ||--o{ likes : "da (from)"
     homes ||--o{ likes : "recibe (to)"
     homes ||--o{ dismissals : "descarta"
+    users ||--o{ account_dismissals : "descarta (seeker)"
+    homes ||--o{ account_dismissals : "es descartada"
     matches ||--|{ match_participants : "incluye"
     homes ||--o{ match_participants : "participa"
     users ||--o{ match_participants : "participa"
@@ -132,6 +134,11 @@ erDiagram
     }
     dismissals {
         uuid home_id PK,FK
+        uuid dismissed_home_id PK,FK
+        timestamptz created_at
+    }
+    account_dismissals {
+        uuid user_id PK,FK
         uuid dismissed_home_id PK,FK
         timestamptz created_at
     }
@@ -320,13 +327,21 @@ las de su propietario; si no hay ninguna, no hay búsqueda.
 `from_home_id` → `to_home_id`: el propietario de la vivienda origen quiere la
 vivienda destino. Clave primaria compuesta; `created_at`. Un usuario con varias
 viviendas da me gusta **desde una vivienda concreta**: cada vivienda participa
-en el matching de forma independiente (RF-20).
+en el matching de forma independiente (RF-20). `CHECK (from_home_id <> to_home_id)`; índices
+`likes(to_home_id, from_home_id)` y `likes(created_at)`. Al ser un me gusta deshecho (`undoLastAction`) la fila
+se borra, lo que devuelve el cupo diario.
 
 ### `dismissals` — descartes (RF-44)
 
 `home_id` descarta `dismissed_home_id`. El descarte deja de aplicarse si
 `homes.relevant_changed_at` de la vivienda descartada es posterior a
-`created_at` del descarte (RF-44).
+`created_at` del descarte (RF-44). Repetir un descarte renueva `created_at`; deshacerlo borra la fila.
+
+### `account_dismissals` — descartes de un `seeker`
+
+Un `seeker` no tiene vivienda desde la que descartar: `user_id` descarta `dismissed_home_id`, con la misma
+regla de cambio relevante que `dismissals`. Clave primaria `(user_id, dismissed_home_id)`, `CASCADE` en
+ambas claves ajenas. El descubrimiento en modo `seeker` los excluye.
 
 ### `matches` — ciclo de interés recíproco y compatible
 
