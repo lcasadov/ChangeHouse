@@ -283,6 +283,7 @@ export class FakeMatches {
       bathrooms: own.bathrooms,
       valueMinCents: own.valueMinCents ?? 0,
       valueMaxCents: own.valueMaxCents ?? 0,
+      vppMaxLegalPriceCents: own.vppMaxLegalPriceCents ?? null,
       location: own.location,
       photos: own.photos ?? [],
     };

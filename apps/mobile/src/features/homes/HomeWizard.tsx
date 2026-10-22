@@ -13,6 +13,7 @@ import type { Home } from './homes-api';
 import { HomesApiError } from './homes-api';
 import { LocationStep } from './LocationStep';
 import { PhotosStep } from './PhotosStep';
+import { RegimeStep } from './RegimeStep';
 import { ReviewStep } from './ReviewStep';
 import type { StepProps } from './steps';
 import { TypeStep } from './TypeStep';
@@ -24,10 +25,11 @@ import { ValueStep } from './ValueStep';
 const STEP_TITLES = {
   1: 'homes.wizard.steps.photos',
   2: 'homes.wizard.steps.type',
-  3: 'homes.wizard.steps.features',
-  4: 'homes.wizard.steps.value',
-  5: 'homes.wizard.steps.location',
-  6: 'homes.review.title',
+  3: 'homes.wizard.steps.regime',
+  4: 'homes.wizard.steps.features',
+  5: 'homes.wizard.steps.value',
+  6: 'homes.wizard.steps.location',
+  7: 'homes.review.title',
 } as const satisfies Record<WizardStep, string>;
 
 const PHOTOS_STEP: WizardStep = 1;
@@ -74,10 +76,12 @@ function StepView({
     case 2:
       return <TypeStep {...stepProps} />;
     case 3:
-      return <CharacteristicsStep {...stepProps} />;
+      return <RegimeStep {...stepProps} />;
     case 4:
-      return <ValueStep {...stepProps} />;
+      return <CharacteristicsStep {...stepProps} />;
     case 5:
+      return <ValueStep {...stepProps} />;
+    case 6:
       return <LocationStep {...stepProps} />;
     default:
       return home ? (
@@ -102,7 +106,7 @@ interface WizardBodyProps {
 }
 
 /**
- * Los seis pasos con su progreso. El avance se guarda en cada paso; salir nunca pierde datos
+ * Los siete pasos con su progreso. El avance se guarda en cada paso; salir nunca pierde datos
  * guardados. Las fotos elegidas antes de que exista el borrador esperan en el dispositivo y se suben
  * al crearlo, así que el asistente es quien las gestiona.
  */
@@ -214,7 +218,7 @@ function WizardBody({ home, initialStep, onCreated }: Readonly<WizardBodyProps>)
 }
 
 /**
- * Asistente de alta de una vivienda en seis pasos, empezando por las fotos. Sin `homeId` empieza una
+ * Asistente de alta de una vivienda en siete pasos, empezando por las fotos. Sin `homeId` empieza una
  * nueva; con él continúa el borrador por `step` (o por el primer paso con datos por rellenar).
  */
 export function HomeWizard({ homeId, step }: Readonly<{ homeId?: string; step?: string }>) {

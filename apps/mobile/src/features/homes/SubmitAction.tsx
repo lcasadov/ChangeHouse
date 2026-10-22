@@ -19,6 +19,7 @@ const SUBMIT_FIELDS = [
   'valueMinCents',
   'valueMaxCents',
   'isPrimaryResidence',
+  'vppQualificationDate',
   'photos',
 ] as const;
 type SubmitField = (typeof SUBMIT_FIELDS)[number];

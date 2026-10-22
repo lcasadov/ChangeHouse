@@ -1,0 +1,2 @@
+ALTER TABLE "homes" ADD CONSTRAINT "homes_vpp_qualification_date_required" CHECK ("homes"."regime" = 'libre' OR "homes"."status" = 'draft' OR "homes"."vpp_qualification_date" IS NOT NULL);--> statement-breakpoint
+ALTER TABLE "homes" ADD CONSTRAINT "homes_value_max_within_vpp_max_legal_price" CHECK ("homes"."regime" = 'libre' OR "homes"."vpp_max_legal_price_cents" IS NULL OR "homes"."value_max_cents" <= "homes"."vpp_max_legal_price_cents");

@@ -157,6 +157,16 @@ export const homes = pgTable(
     index('homes_municipality_published_idx')
       .on(table.municipalityNormalized)
       .where(sql`${table.status} = 'published'`),
+    // Red de seguridad de las reglas de régimen del dominio (RF-14, RN-06): el borrador admite
+    // una protegida sin fecha de calificación mientras el asistente guarda el avance
+    check(
+      'homes_vpp_qualification_date_required',
+      sql`${table.regime} = 'libre' OR ${table.status} = 'draft' OR ${table.vppQualificationDate} IS NOT NULL`,
+    ),
+    check(
+      'homes_value_max_within_vpp_max_legal_price',
+      sql`${table.regime} = 'libre' OR ${table.vppMaxLegalPriceCents} IS NULL OR ${table.valueMaxCents} <= ${table.vppMaxLegalPriceCents}`,
+    ),
   ],
 );
 
