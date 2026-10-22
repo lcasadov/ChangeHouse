@@ -15,7 +15,7 @@ import {
   zoneCards,
 } from '../test-support/explore-harness';
 import type { FakeBackend } from '../test-support/fake-backend';
-import { fakeMatch } from '../test-support/fake-matches';
+import { fakeChainMatch, fakeMatch } from '../test-support/fake-matches';
 import { styleOf } from '../test-utils';
 
 // Flujos completos de la app (rutas, consultas y API simulada): el primero carga todos los módulos
@@ -416,5 +416,82 @@ describe('Pestaña «Matches»', () => {
     await waitFor(() => {
       expect(rows()).toHaveLength(1);
     });
+  });
+});
+
+describe('Match en cadena', () => {
+  it('Scenario: Celebración en triángulo - un me gusta que cierra una cadena muestra tres casas y explica quién entrega a quién', async () => {
+    const home = published();
+    const cards = zoneCards(2);
+    const { backend } = await openExplore({ homes: [home], cards });
+    backend.matches.closeChainOnLike(home.id, cards[0]?.id ?? '', {
+      toHomeId: cards[1]?.id ?? '',
+    });
+    await cardWith('Zona 1');
+
+    await fireEvent.press(button(a.like));
+
+    expect(await screen.findByRole('header', { name: c.title })).toBeTruthy();
+    expect(screen.getByText(mt.chain.label)).toBeTruthy();
+    expect(screen.getByText('A tu casa le llega la de Beto, la tuya va a Carla')).toBeTruthy();
+    expect(screen.getByTestId('match-cover-mine').props.source).toEqual([
+      { uri: home.photos?.[0]?.url },
+    ]);
+    expect(screen.getByTestId('match-cover-theirs').props.source).toEqual([
+      { uri: cards[0]?.photos[0]?.url },
+    ]);
+    await waitFor(() => {
+      expect(screen.getByTestId('match-cover-third').props.source).toEqual([
+        { uri: cards[1]?.photos[0]?.url },
+      ]);
+    });
+    expect(screen.getByText(pay(600_000))).toBeTruthy();
+    await waitFor(() => {
+      expect(announce).toHaveBeenCalledWith(c.title);
+    });
+    expect(ExpoHaptics.notificationAsync).toHaveBeenCalledWith(
+      ExpoHaptics.NotificationFeedbackType.Success,
+    );
+  });
+
+  it('la lista rotula la cadena como «Match en cadena» y apila las portadas de las otras dos casas', async () => {
+    const home = published();
+    const cards = zoneCards(2);
+    const match = fakeChainMatch({
+      mineHomeId: home.id,
+      fromHomeId: cards[0]?.id ?? '',
+      toHomeId: cards[1]?.id ?? '',
+    });
+    await openExplore({ homes: [home], cards, matches: [match], url: '/matches' });
+
+    const [row] = (await screen.findAllByTestId('match-row')) as [Row];
+
+    await waitFor(() => {
+      expect(within(row).getByTestId('match-row-cover').props.source).toEqual([
+        { uri: cards[0]?.photos[0]?.url },
+      ]);
+      expect(within(row).getByTestId('match-row-cover-second').props.source).toEqual([
+        { uri: cards[1]?.photos[0]?.url },
+      ]);
+    });
+    expect(within(row).getByText('Piso en Zona 1 y Piso en Zona 2')).toBeTruthy();
+    expect(within(row).getByText(mt.kind.chain)).toBeTruthy();
+    expect(within(row).getByText(pay(600_000))).toBeTruthy();
+    const summary = `Piso en Zona 1 y Piso en Zona 2. ${mt.kind.chain}. ${pay(600_000)}. ${mt.status.open}.`;
+    expect(screen.getByLabelText(summary)).toBeTruthy();
+  });
+
+  it('si una de las otras casas ya no se puede consultar, la fila lo dice sin ocultar el match', async () => {
+    const home = published();
+    const cards = zoneCards(1);
+    const match = fakeChainMatch({
+      mineHomeId: home.id,
+      fromHomeId: cards[0]?.id ?? '',
+      toHomeId: '0198f3a0-dddd-7000-8000-00000000abcd',
+    });
+    await openExplore({ homes: [home], cards, matches: [match], url: '/matches' });
+
+    expect(await screen.findByText(`Piso en Zona 1 y ${mt.row.unavailable}`)).toBeTruthy();
+    expect(screen.getByText(mt.kind.chain)).toBeTruthy();
   });
 });

@@ -5,10 +5,11 @@ import type { DiscoveryCard } from '../discovery/discovery-api';
 import { photosOf } from '../homes/home-photos';
 import { homeTitleOf } from '../homes/home-title';
 import { useMyHomes } from '../homes/use-homes';
-import { matchViewOf } from './match-model';
+import { chainThirdHomeIdOf, cycleOf, matchViewOf } from './match-model';
 import { matchRoutes } from './match-routes';
-import { MatchCelebration } from './MatchCelebration';
+import { type CelebrationChain, MatchCelebration } from './MatchCelebration';
 import type { Match } from './matches-api';
+import { useOtherHome } from './use-matches';
 
 /** Un like que acaba de formar un match: el match, la vivienda propia que dio el like y la tarjeta que lo recibió. */
 export interface Celebration {
@@ -32,6 +33,22 @@ function OpenCelebration({
   const homes = useMyHomes();
   const { match, ownHomeId, card } = celebration;
   const own = homes.data?.find((home) => home.id === ownHomeId);
+  const ownHomeIds = new Set([ownHomeId]);
+  const thirdHomeId = chainThirdHomeIdOf(match, ownHomeIds);
+  const third = useOtherHome(thirdHomeId);
+  // Ciclo desde quien mira: él, de quien recibe y a quien entrega
+  const [, from, to] = cycleOf(match.participants, ownHomeIds);
+  let chain: CelebrationChain | undefined;
+  if (thirdHomeId && from && to) {
+    chain = {
+      third: {
+        title: third.data ? homeTitleOf(t, third.data) : t('matches.celebration.chain.thirdHome'),
+        coverUrl: photosOf(third.data)[0]?.url,
+      },
+      fromName: from.displayName,
+      toName: to.displayName,
+    };
+  }
 
   return (
     <MatchCelebration
@@ -41,7 +58,8 @@ function OpenCelebration({
         coverUrl: photosOf(own)[0]?.url,
       }}
       theirs={{ title: homeTitleOf(t, card), coverUrl: photosOf(card)[0]?.url }}
-      compensation={matchViewOf(match, new Set([ownHomeId])).compensation}
+      {...(chain ? { chain } : {})}
+      compensation={matchViewOf(match, ownHomeIds).compensation}
       onView={() => {
         onClose();
         // «Matches» queda debajo del detalle: al volver, la persona ve el match nuevo en su lista

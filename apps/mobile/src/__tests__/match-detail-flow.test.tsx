@@ -8,7 +8,7 @@ import { formatEuros } from '../features/homes/home-form';
 import es from '../i18n/locales/es-ES.json';
 import { button, openExplore, OWNER, published, zoneCards } from '../test-support/explore-harness';
 import { me } from '../test-support/fake-backend';
-import { fakeMatch } from '../test-support/fake-matches';
+import { fakeChainMatch, fakeMatch } from '../test-support/fake-matches';
 import { styleOf } from '../test-utils';
 
 // Flujos completos de la app (rutas, consultas y API simulada): el primero carga todos los módulos
@@ -465,5 +465,76 @@ describe('Tematización', () => {
     expect(styleOf(screen.getByTestId('switch-track')).borderColor).toBe(
       themes[theme].color.borderStrong,
     );
+  });
+});
+
+describe('Detalle de un match en cadena', () => {
+  async function openChain() {
+    const home = published();
+    const cards = zoneCards(2);
+    const match = fakeChainMatch({
+      mineHomeId: home.id,
+      fromHomeId: cards[0]?.id ?? '',
+      toHomeId: cards[1]?.id ?? '',
+    });
+    const opened = await openExplore({
+      homes: [home],
+      cards,
+      matches: [match],
+      profile: OWNER_WITH_PHONE,
+      url: `/match/${match.id}`,
+    });
+    return { ...opened, home, match };
+  }
+
+  it('Scenario: Presentación de la cadena - ve tres viviendas en el orden del ciclo, empezando por la suya, con quién entrega a quién y la compensación de cada una', async () => {
+    await openChain();
+
+    expect(
+      await screen.findByRole('header', { name: d.title.replace('{{names}}', 'Beto, Carla') }),
+    ).toBeTruthy();
+    expect(screen.getByText(mt.chain.label)).toBeTruthy();
+    const sections = screen.getAllByTestId('match-participant');
+    expect(sections).toHaveLength(3);
+    const [mine, beto, carla] = sections as [Row, Row, Row];
+
+    expect(within(mine).getByRole('header', { name: d.home.yours })).toBeTruthy();
+    expect(within(mine).getByText('Tu casa va a Carla')).toBeTruthy();
+    expect(within(mine).getByText('Recibes la casa de Beto')).toBeTruthy();
+    expect(within(mine).getByText(pay(600_000))).toBeTruthy();
+
+    expect(
+      within(beto).getByRole('header', { name: d.home.theirs.replace('{{name}}', 'Beto') }),
+    ).toBeTruthy();
+    expect(within(beto).getByText('Su casa te llega a ti')).toBeTruthy();
+    expect(within(beto).getByText('Recibe la casa de Carla')).toBeTruthy();
+    expect(
+      within(beto).getByText(
+        d.compensation.receive
+          .replace('{{name}}', 'Beto')
+          .replace('{{amount}}', formatEuros(200_000)),
+      ),
+    ).toBeTruthy();
+
+    expect(
+      within(carla).getByRole('header', { name: d.home.theirs.replace('{{name}}', 'Carla') }),
+    ).toBeTruthy();
+    expect(within(carla).getByText('Su casa va a Beto')).toBeTruthy();
+    expect(within(carla).getByText('Recibe tu casa')).toBeTruthy();
+    expect(
+      within(carla).getByText(
+        d.compensation.receive
+          .replace('{{name}}', 'Carla')
+          .replace('{{amount}}', formatEuros(400_000)),
+      ),
+    ).toBeTruthy();
+  });
+
+  it('cuenta las confirmaciones sobre tres participantes', async () => {
+    await openChain();
+
+    expect(
+      await screen.findByText(d.progress.replace('{{confirmed}}', '0').replace('{{total}}', '3')),
+    ).toBeTruthy();
   });
 });

@@ -20,9 +20,10 @@ export interface DecisionStore {
   /** Serializa hasta el final de la transacción las decisiones de este usuario (límite diario). */
   lockUser(userId: string): Promise<void>;
   /**
-   * Serializa hasta el final de la transacción las decisiones sobre un par de viviendas (su clave
-   * canónica): dos me gusta cruzados simultáneos no se pierden el uno al otro y un deshacer no se
-   * cruza con el match que usa ese me gusta. Se toma siempre después de `lockUser`.
+   * Serializa hasta el final de la transacción las decisiones que tocan cualquiera de las dos
+   * viviendas del par (su clave canónica): los me gusta simultáneos que cierran un mismo ciclo de 2
+   * o 3 no se pierden unos a otros y un deshacer no se cruza con el match que usa ese me gusta. Se
+   * toma siempre después de `lockUser`.
    */
   lockPair(pairKey: string): Promise<void>;
   /** Me gusta dados desde las viviendas del usuario en `[start, end)`. */

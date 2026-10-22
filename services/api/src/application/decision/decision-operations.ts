@@ -78,7 +78,8 @@ async function accountOrRequireHome(
 
 /**
  * Busca los ciclos que cierra la arista recién insertada y crea el match del primero que el dominio
- * acepta (publicación y RN-03 leídas dentro de la transacción). Si el ciclo ya tenía match, lo
+ * acepta (publicación y RN-03 leídas dentro de la transacción): el directo si es aceptable y, si no,
+ * la primera cadena de tres. Un me gusta crea como mucho un match. Si el ciclo ya tenía match, lo
  * devuelve sin crear otro.
  */
 async function closeCycle(
@@ -106,8 +107,8 @@ async function closeCycle(
 /**
  * Registra un me gusta (RF-41, RN-01, RN-02) y, si cierra un ciclo compatible, el match (RF-50,
  * RN-03, RN-04). Valida origen y destino antes de abrir la transacción; dentro de ella, bajo el
- * bloqueo del usuario (límite diario) y el del par de viviendas (me gusta cruzados simultáneos),
- * comprueba el duplicado y el límite, inserta la arista y busca y crea el match.
+ * bloqueo del usuario (límite diario) y el de las dos viviendas (me gusta simultáneos que cierran
+ * el mismo ciclo), comprueba el duplicado y el límite, inserta la arista y busca y crea el match.
  */
 async function likeHome(
   deps: DecisionDeps,
