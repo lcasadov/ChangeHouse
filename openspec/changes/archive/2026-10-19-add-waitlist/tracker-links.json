@@ -1,0 +1,132 @@
+{
+  "tracker": "github-issues",
+  "change": "add-waitlist",
+  "sprint": {
+    "path": "Sprint en curso",
+    "created": false
+  },
+  "epic": {
+    "capability": "waitlist",
+    "id": 38,
+    "reused": false
+  },
+  "related_epics": [],
+  "feature": {
+    "id": 39,
+    "reused": false
+  },
+  "stories": [
+    {
+      "key": "Alta en la lista de espera",
+      "id": 40,
+      "reused": false,
+      "prio": "P1"
+    },
+    {
+      "key": "Validación de los datos",
+      "id": 41,
+      "reused": false,
+      "prio": "P1"
+    },
+    {
+      "key": "Inscripciones repetidas sin revelar",
+      "id": 42,
+      "reused": false,
+      "prio": "P1"
+    },
+    {
+      "key": "Protección frente al abuso",
+      "id": 43,
+      "reused": false,
+      "prio": "P2"
+    },
+    {
+      "key": "Formulario en la landing",
+      "id": 44,
+      "reused": false,
+      "prio": "P1"
+    },
+    {
+      "key": "Formato único de error",
+      "id": 45,
+      "reused": false,
+      "prio": "P1"
+    }
+  ],
+  "tasks": [
+    {
+      "key": "B1",
+      "id": 46,
+      "parent": 40,
+      "state": "done"
+    },
+    {
+      "key": "T1",
+      "id": 47,
+      "parent": 45,
+      "state": "done"
+    },
+    {
+      "key": "B2",
+      "id": 48,
+      "parent": 45,
+      "state": "done"
+    },
+    {
+      "key": "T2",
+      "id": 49,
+      "parent": 42,
+      "state": "done"
+    },
+    {
+      "key": "B3",
+      "id": 50,
+      "parent": 40,
+      "state": "done"
+    },
+    {
+      "key": "T3",
+      "id": 51,
+      "parent": 41,
+      "state": "done"
+    },
+    {
+      "key": "B4",
+      "id": 52,
+      "parent": 41,
+      "state": "done"
+    },
+    {
+      "key": "T4",
+      "id": 53,
+      "parent": 43,
+      "state": "done"
+    },
+    {
+      "key": "B5",
+      "id": 54,
+      "parent": 43,
+      "state": "done"
+    },
+    {
+      "key": "T5",
+      "id": 55,
+      "parent": 44,
+      "state": "done"
+    },
+    {
+      "key": "F1",
+      "id": 56,
+      "parent": 44,
+      "state": "done"
+    },
+    {
+      "key": "V1",
+      "id": 57,
+      "parent": 40,
+      "state": "done"
+    }
+  ],
+  "bugs": [],
+  "pending": []
+}

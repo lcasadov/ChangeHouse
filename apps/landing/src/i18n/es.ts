@@ -134,7 +134,69 @@ export const es = {
   },
   waitlist: {
     title: 'Lista de espera',
-    placeholder: 'Muy pronto podrás apuntarte aquí para ser de los primeros en probar ChangeHouse.',
+    lead: 'Apúntate y serás de los primeros en probar ChangeHouse en Madrid. Solo te pedimos lo necesario para avisarte.',
+    formLabel: 'Formulario de la lista de espera',
+    fields: {
+      email: { label: 'Email' },
+      municipality: { label: 'Municipio de tu vivienda' },
+      homeType: {
+        label: 'Tipo de vivienda',
+        placeholder: 'Elige una opción',
+        options: {
+          piso: 'Piso',
+          atico: 'Ático',
+          duplex: 'Dúplex',
+          estudio: 'Estudio',
+          bajo: 'Bajo',
+          chalet: 'Chalet',
+          adosado: 'Adosado',
+          pareado: 'Pareado',
+          casa: 'Casa',
+        },
+      },
+      lookingFor: { label: 'Qué buscas' },
+      consent: {
+        label: 'Acepto la política de privacidad',
+        linkText: 'política de privacidad',
+      },
+    },
+    submit: 'Apuntarme a la lista',
+    sending: 'Enviando…',
+    success: {
+      title: '¡Listo, ya estás en la lista!',
+      text: 'Te escribiremos cuando ChangeHouse esté disponible en Madrid.',
+    },
+    rateLimited:
+      'Se han hecho demasiados intentos desde tu conexión. Espera unos minutos e inténtalo de nuevo; tus datos siguen en el formulario.',
+    unavailable:
+      'No hemos podido enviar tu solicitud. Inténtalo de nuevo más tarde; tus datos siguen en el formulario.',
+    errors: {
+      email: {
+        required: 'Escribe tu email.',
+        invalid: 'Revisa el email: parece incompleto o tiene un error.',
+        too_long: 'El email es demasiado largo (máximo 254 caracteres).',
+      },
+      municipality: {
+        required: 'Dinos en qué municipio está tu vivienda.',
+        invalid: 'Revisa el municipio.',
+        too_long: 'El municipio es demasiado largo (máximo 120 caracteres).',
+      },
+      homeType: {
+        required: 'Elige el tipo de vivienda.',
+        invalid: 'Elige el tipo de vivienda de la lista.',
+        too_long: 'Elige el tipo de vivienda de la lista.',
+      },
+      lookingFor: {
+        required: 'Cuéntanos qué buscas.',
+        invalid: 'Revisa lo que buscas.',
+        too_long: 'El texto es demasiado largo (máximo 500 caracteres).',
+      },
+      consent: {
+        required: 'Debes aceptar la política de privacidad para apuntarte.',
+        invalid: 'Debes aceptar la política de privacidad para apuntarte.',
+        too_long: 'Debes aceptar la política de privacidad para apuntarte.',
+      },
+    },
   },
   footer: {
     note: 'ChangeHouse. Cambia de casa de forma sencilla.',

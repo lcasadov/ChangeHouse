@@ -42,12 +42,13 @@ personas; la zona generada la reescribe `plan-sync` en cada operación.
 
 | estado | changes |
 |---|---|
-| ✅ ARCHIVADO | 1 |
+| ✅ ARCHIVADO | 2 |
 
 ### Changes archivados
 
 | change | tareas | fecha |
 |---|---|---|
 | 2026-10-19-add-landing | 12/12 | 2026-10-19 |
+| 2026-10-19-add-waitlist | 12/12 | 2026-10-19 |
 
 <!-- catalogo:generado:fin -->

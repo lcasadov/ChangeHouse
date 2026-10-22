@@ -1,24 +1,223 @@
 ---
+import { HOME_TYPES } from '@changehouse/shared';
+
 import { es } from '../i18n/es';
 
 const { waitlist } = es;
+const { fields } = waitlist;
+
+// El valor se fija al construir la landing (variable PUBLIC_API_URL)
+const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8080';
+
+const [consentBefore = '', consentAfter = ''] = fields.consent.label.split(fields.consent.linkText);
 ---
 
 <section id="lista-de-espera" class="section waitlist" aria-labelledby="waitlist-title">
   <div class="container">
     <div class="card">
-      <h2 id="waitlist-title" class="section-title">
+      <h2 id="waitlist-title" class="section-title" tabindex="-1">
         {waitlist.title}
       </h2>
-      <p class="section-lead">{waitlist.placeholder}</p>
+      <p class="section-lead">{waitlist.lead}</p>
+
+      <!-- Regiones de aviso siempre presentes (vacías) para que los lectores de pantalla anuncien su contenido -->
+      <div
+        id="waitlist-success"
+        class="message message-success"
+        role="status"
+        aria-live="polite"
+      ></div>
+      <div id="waitlist-failure" class="message message-failure" role="alert"></div>
+
+      <form
+        id="waitlist-form"
+        class="form"
+        novalidate
+        aria-label={waitlist.formLabel}
+        data-api-url={apiUrl}
+      >
+        <div class="field">
+          <label for="waitlist-email">{fields.email.label}</label>
+          <input
+            id="waitlist-email"
+            name="email"
+            type="email"
+            autocomplete="email"
+            inputmode="email"
+            maxlength="254"
+            required
+          />
+          <p id="waitlist-email-error" class="error" hidden></p>
+        </div>
+
+        <div class="field">
+          <label for="waitlist-municipality">{fields.municipality.label}</label>
+          <input
+            id="waitlist-municipality"
+            name="municipality"
+            type="text"
+            autocomplete="address-level2"
+            maxlength="120"
+            required
+          />
+          <p id="waitlist-municipality-error" class="error" hidden></p>
+        </div>
+
+        <div class="field">
+          <label for="waitlist-home-type">{fields.homeType.label}</label>
+          <select id="waitlist-home-type" name="homeType" required>
+            <option value="">{fields.homeType.placeholder}</option>
+            {HOME_TYPES.map((type) => (
+              <option value={type}>{fields.homeType.options[type]}</option>
+            ))}
+          </select>
+          <p id="waitlist-home-type-error" class="error" hidden></p>
+        </div>
+
+        <div class="field">
+          <label for="waitlist-looking-for">{fields.lookingFor.label}</label>
+          <textarea
+            id="waitlist-looking-for"
+            name="lookingFor"
+            rows="3"
+            maxlength="500"
+            required
+          ></textarea>
+          <p id="waitlist-looking-for-error" class="error" hidden></p>
+        </div>
+
+        <div class="field consent">
+          <div class="consent-row">
+            <input id="waitlist-consent" name="consent" type="checkbox" required />
+            <label for="waitlist-consent">
+              {consentBefore}
+              <a href={es.legal.pages.privacy.path}>{fields.consent.linkText}</a>
+              {consentAfter}
+            </label>
+          </div>
+          <p id="waitlist-consent-error" class="error" hidden></p>
+        </div>
+
+        <button id="waitlist-submit" type="submit" class="button button-primary">
+          {waitlist.submit}
+        </button>
+      </form>
     </div>
   </div>
 </section>
+
+<script>
+  import { initWaitlistForm } from '../lib/waitlist-form';
+
+  const form = document.querySelector<HTMLFormElement>('#waitlist-form');
+  if (form?.dataset.apiUrl) initWaitlistForm(document, { apiUrl: form.dataset.apiUrl });
+</script>
 
 <style>
   .card {
     padding: var(--space-7) var(--space-5);
     border: var(--border-thick) solid var(--color-brand);
     border-radius: calc(var(--radius-lg) * 2);
+  }
+
+  .form {
+    display: grid;
+    gap: var(--space-5);
+    margin-top: var(--space-6);
+    max-width: var(--content-max-reading);
+  }
+
+  .form[hidden] {
+    display: none;
+  }
+
+  .field {
+    display: grid;
+    gap: var(--space-2);
+  }
+
+  label {
+    font-weight: var(--font-label-weight);
+  }
+
+  input:not([type='checkbox']),
+  select,
+  textarea {
+    width: 100%;
+    min-height: var(--touch-target);
+    padding: var(--space-2) var(--space-3);
+    border: var(--border-thin) solid var(--color-border-strong);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    color: var(--color-text);
+    font: inherit;
+    box-sizing: border-box;
+  }
+
+  textarea {
+    resize: vertical;
+  }
+
+  input[aria-invalid='true'],
+  select[aria-invalid='true'],
+  textarea[aria-invalid='true'] {
+    border-width: var(--border-thick);
+    border-color: var(--color-danger);
+  }
+
+  .consent-row {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+  }
+
+  .consent-row input {
+    flex: none;
+    width: var(--space-6);
+    height: var(--space-6);
+    margin: 0;
+    accent-color: var(--color-primary);
+  }
+
+  .consent-row label {
+    font-weight: var(--font-body-weight);
+  }
+
+  /* El texto del error lleva una marca además del color: el color nunca es el único portador */
+  .error {
+    color: var(--color-danger);
+    font-weight: var(--font-label-weight);
+  }
+
+  .error::before {
+    content: '⚠ ';
+    /* Texto alternativo vacío: la marca es visual y no debe leerse en la descripción del campo */
+    content: '⚠ ' / '';
+  }
+
+  .message {
+    max-width: var(--content-max-reading);
+    margin-top: var(--space-5);
+    padding: var(--space-4);
+    border-radius: var(--radius-md);
+    background: var(--color-surface-muted);
+    font-weight: var(--font-label-weight);
+  }
+
+  .message:empty {
+    display: none;
+  }
+
+  .message-success {
+    border: var(--border-thick) solid var(--color-success);
+  }
+
+  .message-failure {
+    border: var(--border-thick) solid var(--color-danger);
+  }
+
+  .button:disabled {
+    opacity: var(--disabled-opacity);
+    cursor: not-allowed;
   }
 </style>
