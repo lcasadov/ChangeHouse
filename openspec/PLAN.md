@@ -36,14 +36,13 @@ personas; la zona generada la reescribe `plan-sync` en cada operación.
 
 | change | estado | % | completadas/total | fase |
 |---|---|---|---|---|
-| add-match-details-and-decisions | 🔄 EN PROGRESO | 57 % | 4/7 | 🔄 EN PROGRESO |
+| — | — | — | — | — |
 
-**Progreso global de los changes activos**: 4/7 (57 %)
+**Progreso global de los changes activos**: 0/0
 
 | estado | changes |
 |---|---|
-| 🔄 EN PROGRESO | 1 |
-| ✅ ARCHIVADO | 11 |
+| ✅ ARCHIVADO | 12 |
 
 ### Changes archivados
 
@@ -60,5 +59,6 @@ personas; la zona generada la reescribe `plan-sync` en cada operación.
 | 2026-10-19-add-waitlist | 12/12 | 2026-10-19 |
 | 2026-10-22-add-direct-match | 8/8 | 2026-10-22 |
 | 2026-10-22-add-like-dismiss-undo | 7/7 | 2026-10-22 |
+| 2026-10-22-add-match-details-and-decisions | 7/7 | 2026-10-22 |
 
 <!-- catalogo:generado:fin -->
