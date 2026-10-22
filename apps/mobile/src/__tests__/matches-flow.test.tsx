@@ -135,7 +135,7 @@ describe('Celebración del match', () => {
     expect(view.getPathname()).toBe('/');
   });
 
-  it('«Ver match» lleva a «Matches», que muestra el nuevo el primero sin recargar a mano', async () => {
+  it('«Ver match» lleva al detalle del match nuevo y «Matches» lo muestra el primero sin recargar a mano', async () => {
     const home = published();
     const cards = zoneCards(3);
     const older = fakeMatch({
@@ -159,7 +159,15 @@ describe('Celebración del match', () => {
 
     await fireEvent.press(button(c.view));
 
-    expect(view.getPathname()).toBe('/matches');
+    const created = backend.matches.all()[0];
+    expect(view.getPathname()).toBe(`/match/${created?.id ?? ''}`);
+    expect(
+      await screen.findByRole('header', { name: mt.detail.title.replace('{{names}}', 'Beto') }),
+    ).toBeTruthy();
+    expect(screen.queryByRole('header', { name: c.title })).toBeNull();
+
+    await fireEvent.press(button(mt.detail.back));
+
     await waitFor(() => {
       expect(rows()).toHaveLength(2);
     });
@@ -167,7 +175,6 @@ describe('Celebración del match', () => {
     expect(await within(first).findByText(/Piso en Zona 1/)).toBeTruthy();
     expect(within(first).getByText(pay(1_200_000))).toBeTruthy();
     expect(await within(second).findByText(/Piso en Zona 3/)).toBeTruthy();
-    expect(screen.queryByRole('header', { name: c.title })).toBeNull();
   });
 
   it.each(['light', 'dark'] as const)('la celebración se ve en el tema %s', async (theme) => {

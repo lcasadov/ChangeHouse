@@ -126,7 +126,7 @@
     },
     "status": {
       "open": "Pendiente de confirmar",
-      "confirmed": "Confirmado",
+      "confirmed": "Confirmado por todos",
       "in_operation": "En operación",
       "closed": "Cerrado",
       "expired": "Caducado"
@@ -136,7 +136,8 @@
       "summaryNoCompensation": "{{title}}. {{kind}}. {{status}}.",
       "unavailable": "Casa no disponible",
       "unavailableHint": "Su propietario la ha retirado de la búsqueda.",
-      "loadingHome": "Cargando la casa"
+      "loadingHome": "Cargando la casa",
+      "open": "Abre el detalle del match"
     },
     "celebration": {
       "title": "¡Tenéis un match!",
@@ -145,6 +146,90 @@
       "swap": "{{mine}} por {{theirs}}",
       "view": "Ver match",
       "continue": "Seguir explorando"
+    },
+    "detail": {
+      "title": "Match con {{names}}",
+      "back": "Volver",
+      "loading": "Cargando el match",
+      "gone": {
+        "title": "Este match ya no está disponible",
+        "description": "Puede que se haya cerrado o que ya no participes en él. Vuelve a tus matches para ver el resto.",
+        "action": "Ver mis matches"
+      },
+      "loadFailed": {
+        "title": "No hemos podido cargar el match",
+        "description": "Comprueba tu conexión y vuelve a intentarlo.",
+        "retry": "Reintentar"
+      },
+      "progress": "{{confirmed}} de {{total}} han confirmado su interés",
+      "hint": {
+        "open": "Cuando todos confirméis vuestro interés, el match quedará confirmado. Puedes retirarte en cualquier momento.",
+        "confirmed": "Todos habéis confirmado vuestro interés. Podéis poneros en contacto para seguir adelante.",
+        "in_operation": "Este match está en operación y ya no admite cambios aquí.",
+        "closed": "Este match está cerrado y ya no admite cambios.",
+        "expired": "Este match ha caducado y ya no admite cambios."
+      },
+      "closedBy": "{{name}} se ha retirado y el match se ha cerrado para todos.",
+      "closedByYou": "Te has retirado y el match se ha cerrado para todos.",
+      "participantStatus": {
+        "mine": {
+          "pending": "Aún no has confirmado",
+          "confirmed": "Has confirmado tu interés",
+          "withdrawn": "Te has retirado"
+        },
+        "theirs": {
+          "pending": "Aún no ha confirmado",
+          "confirmed": "Ha confirmado su interés",
+          "withdrawn": "Se ha retirado"
+        }
+      },
+      "home": {
+        "yours": "Tu casa",
+        "theirs": "La casa de {{name}}",
+        "address": "Dirección: {{address}}",
+        "photos": "Fotos de {{title}}"
+      },
+      "compensation": {
+        "pay": "{{name}} paga {{amount}}",
+        "receive": "{{name}} recibe {{amount}}",
+        "fair": "{{name}}: cambio justo"
+      },
+      "phone": {
+        "call": "Llamar a {{name}}: {{phone}}",
+        "notShared": "{{name}} no ha compartido su teléfono."
+      },
+      "contact": {
+        "title": "Tu contacto",
+        "share": "Compartir mi teléfono en este match",
+        "shareHint": "Los demás participantes verán tu teléfono solo en este match. Puedes dejar de compartirlo cuando quieras.",
+        "missingPhone": "Aún no tienes un teléfono en tu perfil, así que no hay nada que compartir. Añádelo en Perfil."
+      },
+      "actions": {
+        "title": "Tu decisión",
+        "confirm": "Confirmar interés",
+        "confirmed": "Interés confirmado",
+        "waiting": "Esperando a que confirmen los demás participantes.",
+        "withdraw": "Retirarme"
+      },
+      "withdrawDialog": {
+        "title": "¿Retirarte de este match?",
+        "description": "Si te retiras, el match se cerrará para todos los participantes. No se puede deshacer.",
+        "confirm": "Sí, retirarme",
+        "cancel": "Mantener el match"
+      },
+      "announce": {
+        "confirmed": "Has confirmado tu interés.",
+        "allConfirmed": "Todos habéis confirmado: el match está confirmado.",
+        "withdrawn": "Te has retirado: el match está cerrado.",
+        "shared": "Ahora los demás participantes ven tu teléfono.",
+        "unshared": "Has dejado de compartir tu teléfono."
+      },
+      "errors": {
+        "network": "Parece que no tienes conexión. Comprueba tu conexión y vuelve a intentarlo.",
+        "server": "No hemos podido completar la acción. Inténtalo de nuevo en unos minutos.",
+        "conflict": "Este match ha cambiado y ya no admite esta acción. Hemos actualizado la pantalla con su estado actual.",
+        "phone": "No hemos podido guardar tu preferencia de teléfono. Inténtalo de nuevo."
+      }
     }
   },
   "homes": {

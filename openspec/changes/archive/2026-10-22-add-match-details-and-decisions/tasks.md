@@ -13,14 +13,14 @@
 
 ## 2. App
 
-- [ ] T3 Escribir las pruebas de componentes del detalle del match (viviendas, dirección, compensación con aviso, compartir teléfono, confirmar, retirarse con confirmación, estados `confirmed` y `closed`) y comprobar que fallan. ref: Detalle del match para sus participantes · est: 3h · disc: qa
+- [x] T3 Escribir las pruebas de componentes del detalle del match (viviendas, dirección, compensación con aviso, compartir teléfono, confirmar, retirarse con confirmación, estados `confirmed` y `closed`) y comprobar que fallan. ref: Detalle del match para sus participantes · est: 3h · disc: qa
   - GIVEN «Retirarme» pulsado WHEN aparece la confirmación THEN explica que el match se cerrará para todos
-- [ ] F1 Implementar la pantalla de detalle del match con las acciones y sus estados, y verificar que pasan las pruebas de T3. ref: Confirmar interés · est: 6h · disc: front
+- [x] F1 Implementar la pantalla de detalle del match con las acciones y sus estados, y verificar que pasan las pruebas de T3. ref: Confirmar interés · est: 6h · disc: front
   - GIVEN un match confirmado por todos WHEN se abre THEN muestra el estado «Confirmado por todos»
 
 ## 3. Integración
 
-- [ ] V1 Ejecutar `pnpm lint`, `pnpm typecheck`, `pnpm test:coverage`, `pnpm test:integration` y `pnpm build` y verificar que todo pasa con cobertura ≥ 80 %. ref: Detalle del match para sus participantes · est: 1h · disc: qa
+- [x] V1 Ejecutar `pnpm lint`, `pnpm typecheck`, `pnpm test:coverage`, `pnpm test:integration` y `pnpm build` y verificar que todo pasa con cobertura ≥ 80 %. ref: Detalle del match para sus participantes · est: 1h · disc: qa
   - GIVEN el change implementado WHEN se ejecuta la puerta de calidad local THEN todos los comandos terminan con éxito
 
 ## Workflow follow-up

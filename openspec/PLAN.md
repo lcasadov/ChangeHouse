@@ -43,18 +43,17 @@ personas; la zona generada la reescribe `plan-sync` en cada operación.
 | add-home-vpp-regime | ❌ SIN EMPEZAR | 0 % | 0/5 | ❌ SIN EMPEZAR |
 | add-landing-blog | ❌ SIN EMPEZAR | 0 % | 0/5 | ❌ SIN EMPEZAR |
 | add-match-chat | ❌ SIN EMPEZAR | 0 % | 0/8 | ❌ SIN EMPEZAR |
-| add-match-details-and-decisions | 🔄 EN PROGRESO | 57 % | 4/7 | 🔄 EN PROGRESO |
 | add-notifications | ❌ SIN EMPEZAR | 0 % | 0/7 | ❌ SIN EMPEZAR |
 | add-reports-and-blocking | ❌ SIN EMPEZAR | 0 % | 0/6 | ❌ SIN EMPEZAR |
 | add-user-suspension | ❌ SIN EMPEZAR | 0 % | 0/5 | ❌ SIN EMPEZAR |
 
-**Progreso global de los changes activos**: 8/66 (12 %)
+**Progreso global de los changes activos**: 4/59 (7 %)
 
 | estado | changes |
 |---|---|
 | ❌ SIN EMPEZAR | 9 |
-| 🔄 EN PROGRESO | 2 |
-| ✅ ARCHIVADO | 11 |
+| 🔄 EN PROGRESO | 1 |
+| ✅ ARCHIVADO | 12 |
 
 ### Changes archivados
 
@@ -71,5 +70,6 @@ personas; la zona generada la reescribe `plan-sync` en cada operación.
 | 2026-10-19-add-waitlist | 12/12 | 2026-10-19 |
 | 2026-10-22-add-direct-match | 8/8 | 2026-10-22 |
 | 2026-10-22-add-like-dismiss-undo | 7/7 | 2026-10-22 |
+| 2026-10-22-add-match-details-and-decisions | 7/7 | 2026-10-22 |
 
 <!-- catalogo:generado:fin -->
