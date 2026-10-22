@@ -40,25 +40,25 @@
       "key": "T1",
       "id": 225,
       "parent": 222,
-      "state": "doing"
+      "state": "done"
     },
     {
       "key": "B1",
       "id": 226,
       "parent": 222,
-      "state": "doing"
+      "state": "done"
     },
     {
       "key": "T2",
       "id": 227,
       "parent": 223,
-      "state": "doing"
+      "state": "done"
     },
     {
       "key": "B2",
       "id": 228,
       "parent": 223,
-      "state": "doing"
+      "state": "done"
     },
     {
       "key": "T3",
