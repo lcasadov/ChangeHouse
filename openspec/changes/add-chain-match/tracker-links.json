@@ -1,0 +1,84 @@
+{
+  "tracker": "github-issues",
+  "change": "add-chain-match",
+  "sprint": {
+    "path": "Sprint en curso",
+    "created": false
+  },
+  "epic": {
+    "capability": "matching",
+    "id": 181,
+    "reused": true
+  },
+  "related_epics": [],
+  "feature": {
+    "id": 221,
+    "reused": false
+  },
+  "stories": [
+    {
+      "key": "Match en cadena de tres",
+      "id": 222,
+      "reused": false,
+      "prio": "P1"
+    },
+    {
+      "key": "Rendimiento de la detección",
+      "id": 223,
+      "reused": false,
+      "prio": "P1"
+    },
+    {
+      "key": "Presentación de la cadena",
+      "id": 224,
+      "reused": false,
+      "prio": "P2"
+    }
+  ],
+  "tasks": [
+    {
+      "key": "T1",
+      "id": 225,
+      "parent": 222,
+      "state": "open"
+    },
+    {
+      "key": "B1",
+      "id": 226,
+      "parent": 222,
+      "state": "open"
+    },
+    {
+      "key": "T2",
+      "id": 227,
+      "parent": 223,
+      "state": "open"
+    },
+    {
+      "key": "B2",
+      "id": 228,
+      "parent": 223,
+      "state": "open"
+    },
+    {
+      "key": "T3",
+      "id": 229,
+      "parent": 224,
+      "state": "open"
+    },
+    {
+      "key": "F1",
+      "id": 230,
+      "parent": 224,
+      "state": "open"
+    },
+    {
+      "key": "V1",
+      "id": 231,
+      "parent": 222,
+      "state": "open"
+    }
+  ],
+  "bugs": [],
+  "pending": []
+}

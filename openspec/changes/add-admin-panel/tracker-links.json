@@ -1,0 +1,78 @@
+{
+  "tracker": "github-issues",
+  "change": "add-admin-panel",
+  "sprint": {
+    "path": "Sprint en curso",
+    "created": false
+  },
+  "epic": {
+    "capability": "admin",
+    "id": 304,
+    "reused": false
+  },
+  "related_epics": [],
+  "feature": {
+    "id": 305,
+    "reused": false
+  },
+  "stories": [
+    {
+      "key": "Métricas del producto",
+      "id": 306,
+      "reused": false,
+      "prio": "P2"
+    },
+    {
+      "key": "Gestión de usuarios",
+      "id": 307,
+      "reused": false,
+      "prio": "P2"
+    },
+    {
+      "key": "Consulta de la auditoría",
+      "id": 308,
+      "reused": false,
+      "prio": "P2"
+    },
+    {
+      "key": "Lista de espera para el equipo",
+      "id": 309,
+      "reused": false,
+      "prio": "P2"
+    }
+  ],
+  "tasks": [
+    {
+      "key": "T1",
+      "id": 310,
+      "parent": 306,
+      "state": "open"
+    },
+    {
+      "key": "B1",
+      "id": 311,
+      "parent": 309,
+      "state": "open"
+    },
+    {
+      "key": "T2",
+      "id": 312,
+      "parent": 307,
+      "state": "open"
+    },
+    {
+      "key": "F1",
+      "id": 313,
+      "parent": 308,
+      "state": "open"
+    },
+    {
+      "key": "V1",
+      "id": 314,
+      "parent": 306,
+      "state": "open"
+    }
+  ],
+  "bugs": [],
+  "pending": []
+}
