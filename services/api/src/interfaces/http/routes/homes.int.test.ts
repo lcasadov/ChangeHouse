@@ -72,6 +72,15 @@ async function createHome(user: EmulatorUser, extra: object = {}): Promise<Json>
   return response.json<Json>();
 }
 
+/** Fotos ya procesadas de la vivienda, insertadas directamente: el envío a revisión exige al menos 3 (RF-11). */
+async function addReadyPhotos(homeId: unknown, count = 3): Promise<void> {
+  for (let position = 1; position <= count; position += 1) {
+    const id = crypto.randomUUID();
+    await sql`INSERT INTO home_photos (id, home_id, status, storage_path, position)
+              VALUES (${id}, ${String(homeId)}, 'ready', ${`homes/${String(homeId)}/${id}.webp`}, ${position})`;
+  }
+}
+
 async function setStatus(homeId: unknown, status: string): Promise<void> {
   await sql`UPDATE homes SET status = ${status}::home_status WHERE id = ${String(homeId)}`;
 }
@@ -396,6 +405,7 @@ describe.skipIf(!emulatorAvailable())('viviendas con tokens reales', () => {
     it('Scenario: Envío de una ficha completa - pasa a in_review y «Mis casas» lo refleja', async () => {
       const user = await registered();
       const { id } = await createHome(user, COMPLETE);
+      await addReadyPhotos(id);
 
       const response = await call(user, 'POST', `/v1/homes/${String(id)}/submit`);
       const list = await call(user, 'GET', '/v1/me/homes');
@@ -412,6 +422,7 @@ describe.skipIf(!emulatorAvailable())('viviendas con tokens reales', () => {
         valueMinCents: undefined,
         valueMaxCents: undefined,
       });
+      await addReadyPhotos(id);
 
       const response = await call(user, 'POST', `/v1/homes/${String(id)}/submit`);
 
@@ -427,6 +438,7 @@ describe.skipIf(!emulatorAvailable())('viviendas con tokens reales', () => {
     it('enviar una vivienda que ya está en revisión da 409', async () => {
       const user = await registered();
       const { id } = await createHome(user, COMPLETE);
+      await addReadyPhotos(id);
       await call(user, 'POST', `/v1/homes/${String(id)}/submit`);
 
       const again = await call(user, 'POST', `/v1/homes/${String(id)}/submit`);
@@ -456,6 +468,7 @@ describe.skipIf(!emulatorAvailable())('viviendas con tokens reales', () => {
     it('Scenario: Sin vivienda publicada - con una única vivienda en in_review su rol es seeker', async () => {
       const user = await registered();
       const { id } = await createHome(user, COMPLETE);
+      await addReadyPhotos(id);
       await call(user, 'POST', `/v1/homes/${String(id)}/submit`);
 
       expect(await me(user)).toMatchObject({ roles: ['seeker'], hasPublishedHome: false });

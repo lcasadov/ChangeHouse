@@ -7,6 +7,9 @@ const base = {
   DATABASE_URL: 'postgres://u:p@localhost:5432/db',
   FIREBASE_PROJECT_ID: 'changehouse-des',
   ADDRESS_ENCRYPTION_KEY: ADDRESS_KEY,
+  // Obligatorios en Cloud Run; en local tienen valor por defecto
+  STORAGE_PRIVATE_BUCKET: 'changehouse-des-photos-private',
+  STORAGE_PUBLIC_BUCKET: 'changehouse-des-photos-public',
 };
 
 describe('loadConfig', () => {
@@ -155,5 +158,63 @@ describe('loadConfig', () => {
     expect(() => loadConfig({ ...base, LANDING_ORIGIN: 'https://x.test/ruta' })).toThrow(
       /LANDING_ORIGIN/,
     );
+  });
+
+  describe('almacenamiento de fotos', () => {
+    const withoutBuckets = Object.fromEntries(
+      Object.entries(base).filter(([name]) => !name.startsWith('STORAGE_')),
+    );
+
+    it('lee los buckets y construye la URL pública a partir del bucket público', () => {
+      expect(loadConfig({ ...base }).storage).toEqual({
+        privateBucket: 'changehouse-des-photos-private',
+        publicBucket: 'changehouse-des-photos-public',
+        publicBaseUrl: 'https://storage.googleapis.com/changehouse-des-photos-public',
+        emulatorHost: undefined,
+      });
+    });
+
+    it('permite servir las fotos desde otra URL (la CDN)', () => {
+      const config = loadConfig({
+        ...base,
+        STORAGE_PUBLIC_BASE_URL: 'https://fotos.changehouse.app/',
+      });
+
+      expect(config.storage.publicBaseUrl).toBe('https://fotos.changehouse.app');
+      expect(() => loadConfig({ ...base, STORAGE_PUBLIC_BASE_URL: 'no-es-url' })).toThrow(
+        /STORAGE_PUBLIC_BASE_URL/,
+      );
+    });
+
+    it('en local los buckets tienen los nombres de docker-compose y, con emulador, la URL pública apunta a él', () => {
+      const config = loadConfig({ ...withoutBuckets, STORAGE_EMULATOR_HOST: 'localhost:4443' });
+
+      expect(config.storage).toEqual({
+        privateBucket: 'changehouse-photos-private',
+        publicBucket: 'changehouse-photos-public',
+        publicBaseUrl: 'http://localhost:4443/changehouse-photos-public',
+        emulatorHost: 'localhost:4443',
+      });
+    });
+
+    it('se niega a arrancar en Cloud Run sin los dos buckets: las fotos no tendrían dónde vivir', () => {
+      const cloudRun = { ...withoutBuckets, K_SERVICE: 'api', GOOGLE_PLACES_SERVER_KEY: 'k' };
+
+      expect(() => loadConfig(cloudRun)).toThrow(/STORAGE_PRIVATE_BUCKET/);
+      expect(() => loadConfig({ ...cloudRun, STORAGE_PRIVATE_BUCKET: 'privado' })).toThrow(
+        /STORAGE_PUBLIC_BUCKET/,
+      );
+    });
+
+    it('se niega a arrancar en Cloud Run con el emulador de Storage: subiría las fotos a un servidor falso', () => {
+      expect(() =>
+        loadConfig({
+          ...base,
+          K_SERVICE: 'api',
+          GOOGLE_PLACES_SERVER_KEY: 'k',
+          STORAGE_EMULATOR_HOST: 'localhost:4443',
+        }),
+      ).toThrow(/STORAGE_EMULATOR_HOST/);
+    });
   });
 });

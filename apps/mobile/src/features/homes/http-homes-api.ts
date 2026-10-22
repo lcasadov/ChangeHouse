@@ -1,8 +1,14 @@
-import type { HomeInput, HomePatch } from '@changehouse/shared';
+import type { HomeInput, HomePatch, PhotoContentType } from '@changehouse/shared';
 
 import type { ApiClient } from '../../api/client';
 import type { components } from '../../api/schema';
-import { type Home, type HomesApi, HomesApiError } from './homes-api';
+import {
+  type Home,
+  type HomePhoto,
+  type HomesApi,
+  HomesApiError,
+  type PhotoUpload,
+} from './homes-api';
 
 type Problem = components['schemas']['Problem'];
 
@@ -14,17 +20,29 @@ const UNPROCESSABLE = 422;
 
 const BUSINESS_KINDS: Record<
   string,
-  'address-not-resolved' | 'invalid-value-range' | 'incomplete'
+  | 'address-not-resolved'
+  | 'invalid-value-range'
+  | 'incomplete'
+  | 'invalid-image'
+  | 'photo-not-uploaded'
 > = {
   ADDRESS_NOT_RESOLVED: 'address-not-resolved',
   INVALID_VALUE_RANGE: 'invalid-value-range',
   HOME_INCOMPLETE: 'incomplete',
+  INVALID_IMAGE: 'invalid-image',
+  PHOTO_NOT_UPLOADED: 'photo-not-uploaded',
+};
+
+const CONFLICT_KINDS: Record<string, 'photo-limit' | 'min-photos'> = {
+  PHOTO_LIMIT_REACHED: 'photo-limit',
+  HOME_MIN_PHOTOS: 'min-photos',
 };
 
 function failureOf(status: number, problem: Problem | undefined): HomesApiError {
   if (status === UNAUTHORIZED) return new HomesApiError('unauthorized');
   if (status === NOT_FOUND) return new HomesApiError('not-found');
-  if (status === CONFLICT) return new HomesApiError('conflict');
+  if (status === CONFLICT)
+    return new HomesApiError(CONFLICT_KINDS[problem?.code ?? ''] ?? 'conflict');
   if (status === UNPROCESSABLE) {
     const kind = BUSINESS_KINDS[problem?.code ?? ''];
     const fields = (problem?.errors ?? []).map((error) => error.field);
@@ -86,6 +104,33 @@ export function createHttpHomesApi(client: ApiClient): HomesApi {
       );
       if (data) return data;
       throw failureOf(response.status, error);
+    },
+
+    async createPhotoUpload(homeId: string, contentType: PhotoContentType): Promise<PhotoUpload> {
+      const { data, error, response } = await request(() =>
+        client.POST('/homes/{homeId}/photos', { ...pathOf(homeId), body: { contentType } }),
+      );
+      if (data) return data;
+      throw failureOf(response.status, error);
+    },
+
+    async completePhotoUpload(homeId: string, photoId: string): Promise<HomePhoto> {
+      const { data, error, response } = await request(() =>
+        client.POST('/homes/{homeId}/photos/{photoId}/complete', {
+          params: { path: { homeId, photoId } },
+        }),
+      );
+      if (data) return data;
+      throw failureOf(response.status, error);
+    },
+
+    async deletePhoto(homeId: string, photoId: string): Promise<void> {
+      const { error, response } = await request(() =>
+        client.DELETE('/homes/{homeId}/photos/{photoId}', {
+          params: { path: { homeId, photoId } },
+        }),
+      );
+      if (!response.ok) throw failureOf(response.status, error);
     },
   };
 }

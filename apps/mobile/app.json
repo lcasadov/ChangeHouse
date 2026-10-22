@@ -13,7 +13,13 @@
       "expo-splash-screen",
       "expo-localization",
       "expo-web-browser",
-      "expo-apple-authentication"
+      "expo-apple-authentication",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "ChangeHouse necesita acceder a tus fotos para que puedas añadirlas a tu casa."
+        }
+      ]
     ],
     "ios": {
       "supportsTablet": true

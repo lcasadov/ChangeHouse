@@ -1,9 +1,15 @@
 import { FIXTURE_PLACES } from '@changehouse/shared';
 import { describe, expect, it } from 'vitest';
 
-import { CatalogPlaceResolver, InMemoryHomeRepository } from '../../../test/fakes.js';
+import {
+  CatalogPlaceResolver,
+  InMemoryHomeRepository,
+  InMemoryPhotoRepository,
+  InMemoryPhotoStorage,
+} from '../../../test/fakes.js';
 import { HomeIncompleteError, HomeNotEditableError } from '../../domain/home/errors.js';
 import type { Home, HomeLocation } from '../../domain/home/home.js';
+import type { HomePhoto } from '../../domain/home/photo.js';
 import { AddressNotResolvedError, HomeNotFoundError } from './errors.js';
 import { homeOperations } from './home-operations.js';
 
@@ -26,11 +32,15 @@ const COMPLETE = {
 
 function setup() {
   const homes = new InMemoryHomeRepository();
+  const photos = new InMemoryPhotoRepository();
+  const storage = new InMemoryPhotoStorage();
   let sequence = 0;
   const resolved: string[] = [];
   const places = new CatalogPlaceResolver();
   const operations = homeOperations({
     homes,
+    photos,
+    storage,
     places: {
       resolve: (placeId: string): Promise<HomeLocation | null> => {
         resolved.push(placeId);
@@ -40,8 +50,28 @@ function setup() {
     clock: { now: () => NOW },
     ids: { next: () => `home-${String(++sequence)}` },
   });
-  return { homes, resolved, ...operations };
+  return { homes, photos, resolved, ...operations };
 }
+
+/** Fotos de la vivienda: `ready` con su posición, o `pending` sin ella. */
+const addPhotos = (
+  photos: InMemoryPhotoRepository,
+  homeId: string,
+  count: number,
+  status: HomePhoto['status'] = 'ready',
+) => {
+  for (let index = 1; index <= count; index += 1) {
+    const id = `${status}-${homeId}-${String(index)}`;
+    photos.photos.set(id, {
+      id,
+      homeId,
+      status,
+      storagePath: `homes/${homeId}/${id}.webp`,
+      position: status === 'ready' ? index : null,
+      createdAt: NOW,
+    });
+  }
+};
 
 const publish = (homes: InMemoryHomeRepository, id: string, changes: Partial<Home> = {}) => {
   const home = homes.homes.get(id);
@@ -287,8 +317,9 @@ describe('getHome', () => {
 
 describe('submitHome', () => {
   it('Scenario: Envío de una ficha completa - pasa a in_review', async () => {
-    const { createHome, submitHome, homes } = setup();
+    const { createHome, submitHome, homes, photos } = setup();
     await createHome('user-1', { type: 'piso', address: ADDRESS, ...COMPLETE });
+    addPhotos(photos, 'home-1', 3);
 
     const view = await submitHome('user-1', 'home-1');
 
@@ -297,7 +328,7 @@ describe('submitHome', () => {
   });
 
   it('Scenario: Envío de una ficha incompleta - falla señalando los campos y sigue en draft', async () => {
-    const { createHome, submitHome, homes } = setup();
+    const { createHome, submitHome, homes, photos } = setup();
     await createHome('user-1', {
       type: 'piso',
       address: ADDRESS,
@@ -305,6 +336,7 @@ describe('submitHome', () => {
       valueMinCents: undefined,
       valueMaxCents: undefined,
     });
+    addPhotos(photos, 'home-1', 3);
 
     await expect(submitHome('user-1', 'home-1')).rejects.toBeInstanceOf(HomeIncompleteError);
     await expect(submitHome('user-1', 'home-1')).rejects.toMatchObject({
@@ -313,10 +345,84 @@ describe('submitHome', () => {
     expect(homes.homes.get('home-1')?.status).toBe('draft');
   });
 
+  it('Scenario: Envío con menos de 3 fotos - con 2 fotos listas falla señalando photos y sigue en draft; las pendientes no cuentan', async () => {
+    const { createHome, submitHome, homes, photos } = setup();
+    await createHome('user-1', { type: 'piso', address: ADDRESS, ...COMPLETE });
+    addPhotos(photos, 'home-1', 2);
+    addPhotos(photos, 'home-1', 5, 'pending');
+
+    await expect(submitHome('user-1', 'home-1')).rejects.toBeInstanceOf(HomeIncompleteError);
+    await expect(submitHome('user-1', 'home-1')).rejects.toMatchObject({ fields: ['photos'] });
+    expect(homes.homes.get('home-1')?.status).toBe('draft');
+  });
+
   it('enviar la vivienda de otro es un 404', async () => {
     const { createHome, submitHome } = setup();
     await createHome('user-1', { type: 'piso', address: ADDRESS, ...COMPLETE });
 
     await expect(submitHome('user-2', 'home-1')).rejects.toBeInstanceOf(HomeNotFoundError);
+  });
+});
+
+describe('fotos en la ficha', () => {
+  it('Scenario: Subida sin confirmar - el propietario solo ve las fotos listas, por posición, con su URL pública', async () => {
+    const { createHome, getHome, photos } = setup();
+    await createHome('user-1', { type: 'piso', address: ADDRESS });
+    addPhotos(photos, 'home-1', 2);
+    addPhotos(photos, 'home-1', 1, 'pending');
+
+    const view = await getHome('user-1', 'home-1');
+
+    expect(view.photos).toEqual([
+      {
+        id: 'ready-home-1-1',
+        url: 'https://cdn.test/homes/home-1/ready-home-1-1.webp',
+        position: 1,
+      },
+      {
+        id: 'ready-home-1-2',
+        url: 'https://cdn.test/homes/home-1/ready-home-1-2.webp',
+        position: 2,
+      },
+    ]);
+  });
+
+  it('Scenario: Subida sin confirmar - cualquier usuario ve una vivienda publicada sin sus fotos pendientes', async () => {
+    const { createHome, getHome, photos, homes } = setup();
+    await createHome('user-1', { type: 'piso', address: ADDRESS, ...COMPLETE });
+    publish(homes, 'home-1');
+    addPhotos(photos, 'home-1', 3);
+    addPhotos(photos, 'home-1', 4, 'pending');
+
+    const view = await getHome('user-2', 'home-1');
+
+    expect(view.photos.map((photo) => photo.id)).toEqual([
+      'ready-home-1-1',
+      'ready-home-1-2',
+      'ready-home-1-3',
+    ]);
+  });
+
+  it('«Mis casas» trae las fotos de cada vivienda y no mezcla las de una con las de otra', async () => {
+    const { createHome, listMyHomes, photos } = setup();
+    await createHome('user-1', { type: 'piso', address: ADDRESS });
+    await createHome('user-1', { type: 'casa', address: ADDRESS });
+    addPhotos(photos, 'home-1', 3);
+    addPhotos(photos, 'home-2', 1);
+
+    const views = await listMyHomes('user-1');
+
+    expect(views.map((view) => view.photos.length)).toEqual([3, 1]);
+    expect(views[1]?.photos[0]?.id).toBe('ready-home-2-1');
+  });
+
+  it('actualizar la ficha conserva sus fotos en la respuesta', async () => {
+    const { createHome, updateHome, photos } = setup();
+    await createHome('user-1', { type: 'piso', address: ADDRESS });
+    addPhotos(photos, 'home-1', 3);
+
+    const view = await updateHome('user-1', 'home-1', { bedrooms: 2 });
+
+    expect(view.photos).toHaveLength(3);
   });
 });

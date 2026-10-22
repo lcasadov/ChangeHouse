@@ -4,7 +4,7 @@
 
 | Pieza | Cómo |
 |---|---|
-| PostgreSQL 17 + PostGIS | `pnpm infra:up` (Docker Compose, puerto 5432) · `pnpm infra:down` |
+| PostgreSQL 17 + PostGIS y Cloud Storage simulado | `pnpm infra:up` (Docker Compose: PostgreSQL en el puerto 5432 y `fake-gcs-server` en el 4443, con los buckets `changehouse-photos-private` y `changehouse-photos-public` de `infra/fake-gcs`) · `pnpm infra:down` |
 | Firebase Auth, Firestore, Storage | `pnpm emulators` (proyecto `demo-changehouse`, UI en http://localhost:4000). Requiere Java 11+ |
 | Variables de la API | `services/api/.env.example` → copia a `services/api/.env` |
 

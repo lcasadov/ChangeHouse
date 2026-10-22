@@ -29,7 +29,7 @@ cuesta el cambio?* Todo lo demás se esconde hasta que hace falta.
 | **Un gesto, una decisión** | Deslizar o pulsar ♥ / ✕ grandes al alcance del pulgar; deshacer siempre visible durante 5 s; háptica en cada acción |
 | **Buscar es escribir un sitio** | Una sola barra «¿Dónde quieres vivir?» con autocompletado y chips de filtro de un toque (dormitorios, m², garaje, ascensor, terraza). El resto, en una hoja inferior |
 | **El match se celebra** | Animación de pantalla completa: las casas se deslizan una hacia la otra y se intercambian (en cadena, tres casas en triángulo). Botón directo al chat |
-| **Tu casa, tu escaparate** | Alta de vivienda en 5 pasos con progreso, empezando por las fotos; borrador guardado en cada paso |
+| **Tu casa, tu escaparate** | Alta de vivienda en 6 pasos con progreso, empezando por las fotos; borrador guardado en cada paso |
 | **Cero jerga** | Textos cortos en tú; nada de «permuta» sin explicar ni términos fiscales sin ayuda contextual |
 
 **Navegación**: 4 pestañas — *Explorar* · *Matches* (con contador) · *Mis casas* ·

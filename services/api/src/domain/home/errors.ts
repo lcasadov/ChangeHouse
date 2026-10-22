@@ -39,3 +39,37 @@ export class HomeIncompleteError extends DomainError {
     this.fields = missing;
   }
 }
+
+export class InvalidImageError extends DomainError {
+  readonly code = 'INVALID_IMAGE';
+  constructor() {
+    super('El fichero subido no es una imagen válida (JPEG, PNG, HEIC o WebP)');
+    this.name = 'InvalidImageError';
+  }
+}
+
+export class PhotoNotUploadedError extends DomainError {
+  readonly code = 'PHOTO_NOT_UPLOADED';
+  constructor() {
+    super('La foto aún no se ha subido a la URL firmada');
+    this.name = 'PhotoNotUploadedError';
+  }
+}
+
+export class PhotoLimitReachedError extends DomainError {
+  readonly code = 'PHOTO_LIMIT_REACHED';
+  override readonly kind: DomainErrorKind = 'conflict';
+  constructor() {
+    super('Una vivienda no puede tener más de 20 fotos');
+    this.name = 'PhotoLimitReachedError';
+  }
+}
+
+export class HomeMinPhotosError extends DomainError {
+  readonly code = 'HOME_MIN_PHOTOS';
+  override readonly kind: DomainErrorKind = 'conflict';
+  constructor() {
+    super('Una vivienda enviada a revisión o publicada no puede quedarse con menos de 3 fotos');
+    this.name = 'HomeMinPhotosError';
+  }
+}

@@ -7,6 +7,21 @@ import type {
 } from '@changehouse/shared';
 
 import type { GeoPoint, Home } from '../../domain/home/home.js';
+import type { HomePhoto } from '../../domain/home/photo.js';
+
+/** `Photo` del contrato: solo las fotos procesadas llegan a una vista. */
+export interface PhotoView {
+  id: string;
+  url: string;
+  position: number;
+}
+
+/** `PhotoUpload` del contrato: dónde subir el original y hasta cuándo vale la URL. */
+export interface PhotoUploadView {
+  photoId: string;
+  uploadUrl: string;
+  expiresAt: string;
+}
 
 /**
  * Forma pública de una vivienda (`HomePublic` en `docs/api/openapi.yaml`): sin dirección postal,
@@ -35,8 +50,7 @@ export interface HomePublicView {
     point: GeoPoint;
     areaName: string;
   };
-  /** Las fotos llegan con `add-home-photos`. */
-  photos: never[];
+  photos: PhotoView[];
 }
 
 /** Ficha completa (`Home`): la ve su propietario. */
@@ -53,7 +67,7 @@ export interface HomeView extends HomePublicView {
 }
 
 /** Construida campo a campo, sin propagar la entidad: lo que no se nombra aquí no sale de la API. */
-export function toHomePublicView(home: Home): HomePublicView {
+export function toHomePublicView(home: Home, photos: readonly PhotoView[]): HomePublicView {
   const exact = home.locationVisibility === 'exact';
   return {
     id: home.id,
@@ -77,13 +91,13 @@ export function toHomePublicView(home: Home): HomePublicView {
       point: exact ? home.location.exact : home.location.areaCenter,
       areaName: home.location.areaName,
     },
-    photos: [],
+    photos: [...photos],
   };
 }
 
-export function toHomeView(home: Home): HomeView {
+export function toHomeView(home: Home, photos: readonly PhotoView[]): HomeView {
   return {
-    ...toHomePublicView(home),
+    ...toHomePublicView(home, photos),
     status: home.status,
     isPrimaryResidence: home.isPrimaryResidence,
     mortgageOutstandingCents: home.mortgageOutstandingCents,
@@ -94,4 +108,16 @@ export function toHomeView(home: Home): HomeView {
     moderationNote: home.moderationNote,
     createdAt: home.createdAt.toISOString(),
   };
+}
+
+/** Las fotos listas de una vivienda como las ve el cliente; `publicUrl` resuelve su dirección pública. */
+export function toPhotoViews(
+  photos: readonly HomePhoto[],
+  publicUrl: (path: string) => string,
+): PhotoView[] {
+  return photos.flatMap((photo) =>
+    photo.status === 'ready' && photo.position !== null
+      ? [{ id: photo.id, url: publicUrl(photo.storagePath), position: photo.position }]
+      : [],
+  );
 }

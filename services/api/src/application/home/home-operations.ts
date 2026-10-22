@@ -1,21 +1,27 @@
 import type { HomeInput, HomePatch } from '@changehouse/shared';
 
-import {
-  editHome,
-  type Home,
-  type HomeLocation,
-  newDraft,
-  submitHome,
-} from '../../domain/home/home.js';
+import { editHome, type HomeLocation, newDraft, submitHome } from '../../domain/home/home.js';
 import type { Clock } from '../clock.js';
 import type { IdGenerator } from '../id-generator.js';
 import { AddressNotResolvedError, HomeNotFoundError } from './errors.js';
 import type { HomeRepository } from './home-repository.js';
-import { type HomePublicView, type HomeView, toHomePublicView, toHomeView } from './home-views.js';
+import {
+  type HomePublicView,
+  type HomeView,
+  type PhotoView,
+  toHomePublicView,
+  toHomeView,
+  toPhotoViews,
+} from './home-views.js';
+import { ownHome } from './own-home.js';
+import type { PhotoRepository } from './photo-repository.js';
+import type { PhotoStorage } from './photo-storage.js';
 import type { PlaceResolver } from './place-resolver.js';
 
 export interface HomeDeps {
   homes: HomeRepository;
+  photos: PhotoRepository;
+  storage: PhotoStorage;
   places: PlaceResolver;
   clock: Clock;
   ids: IdGenerator;
@@ -28,11 +34,9 @@ async function resolveLocation(deps: HomeDeps, placeId: string): Promise<HomeLoc
   return location;
 }
 
-/** Una vivienda propia; la ajena y la inexistente son indistinguibles (404). */
-async function ownHome(deps: HomeDeps, ownerId: string, homeId: string): Promise<Home> {
-  const home = await deps.homes.findById(homeId);
-  if (home?.ownerId !== ownerId) throw new HomeNotFoundError();
-  return home;
+/** Las fotos listas de una vivienda, ya con su URL pública. */
+async function photosOf(deps: HomeDeps, homeId: string): Promise<PhotoView[]> {
+  return toPhotoViews(await deps.photos.listReady(homeId), (path) => deps.storage.publicUrl(path));
 }
 
 async function createHome(deps: HomeDeps, ownerId: string, input: HomeInput): Promise<HomeView> {
@@ -48,7 +52,7 @@ async function createHome(deps: HomeDeps, ownerId: string, input: HomeInput): Pr
     details,
   });
   await deps.homes.insert(home);
-  return toHomeView(home);
+  return toHomeView(home, []);
 }
 
 async function updateHome(
@@ -57,19 +61,28 @@ async function updateHome(
   homeId: string,
   patch: HomePatch,
 ): Promise<HomeView> {
-  const home = await ownHome(deps, ownerId, homeId);
+  const home = await ownHome(deps.homes, ownerId, homeId);
   const { address, ...changes } = patch;
   const place = address
     ? { address: address.formatted, location: await resolveLocation(deps, address.placeId) }
     : undefined;
   const edited = editHome(home, { ...changes, place }, deps.clock.now());
   await deps.homes.save(edited);
-  return toHomeView(edited);
+  return toHomeView(edited, await photosOf(deps, homeId));
 }
 
 async function listMyHomes(deps: HomeDeps, ownerId: string): Promise<HomeView[]> {
   const homes = await deps.homes.listByOwner(ownerId);
-  return homes.map(toHomeView);
+  const ready = await deps.photos.listReadyByHomes(homes.map((home) => home.id));
+  return homes.map((home) =>
+    toHomeView(
+      home,
+      toPhotoViews(
+        ready.filter((photo) => photo.homeId === home.id),
+        (path) => deps.storage.publicUrl(path),
+      ),
+    ),
+  );
 }
 
 /** Ficha completa para su propietario; forma pública si está publicada; si no, como si no existiera. */
@@ -79,15 +92,16 @@ async function getHome(
   homeId: string,
 ): Promise<HomeView | HomePublicView> {
   const home = await deps.homes.findById(homeId);
-  if (home?.ownerId === viewerId) return toHomeView(home);
-  if (home?.status === 'published') return toHomePublicView(home);
+  if (home?.ownerId === viewerId) return toHomeView(home, await photosOf(deps, homeId));
+  if (home?.status === 'published') return toHomePublicView(home, await photosOf(deps, homeId));
   throw new HomeNotFoundError();
 }
 
 async function submitOwnHome(deps: HomeDeps, ownerId: string, homeId: string): Promise<HomeView> {
-  const submitted = submitHome(await ownHome(deps, ownerId, homeId));
+  const home = await ownHome(deps.homes, ownerId, homeId);
+  const submitted = submitHome(home, await deps.photos.countReady(homeId));
   await deps.homes.save(submitted);
-  return toHomeView(submitted);
+  return toHomeView(submitted, await photosOf(deps, homeId));
 }
 
 /** Los casos de uso de las viviendas con sus dependencias ya inyectadas, listos para el transporte. */

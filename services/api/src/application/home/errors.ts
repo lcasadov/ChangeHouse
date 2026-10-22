@@ -20,3 +20,13 @@ export class AddressNotResolvedError extends DomainError {
     this.fields = ['address'];
   }
 }
+
+/** La foto no existe en esa vivienda. */
+export class PhotoNotFoundError extends DomainError {
+  readonly code = 'PHOTO_NOT_FOUND';
+  override readonly kind: DomainErrorKind = 'not_found';
+  constructor() {
+    super('Foto no encontrada');
+    this.name = 'PhotoNotFoundError';
+  }
+}

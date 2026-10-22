@@ -124,6 +124,39 @@ describe('migraciones', () => {
     expect(references).toEqual([{ delete_rule: 'RESTRICT' }]);
   });
 
+  it('GIVEN la base migrada WHEN se inspecciona THEN home_photos cuelga de homes en cascada, con estado pending por defecto, posición 1-20 y única por vivienda', async () => {
+    const target = openSql(urlFor(EMPTY_DB));
+    const columns = await target<{ column_name: string; udt_name: string; is_nullable: string }[]>`
+      SELECT column_name, udt_name, is_nullable FROM information_schema.columns
+      WHERE table_name = 'home_photos' ORDER BY column_name`;
+    const status = await target<{ column_default: string }[]>`
+      SELECT column_default FROM information_schema.columns
+      WHERE table_name = 'home_photos' AND column_name = 'status'`;
+    const references = await target<{ delete_rule: string }[]>`
+      SELECT delete_rule FROM information_schema.referential_constraints
+      WHERE constraint_name = 'home_photos_home_id_homes_id_fk'`;
+    const constraints = await target<{ conname: string; contype: string }[]>`
+      SELECT conname, contype FROM pg_constraint
+      WHERE conrelid = 'home_photos'::regclass AND contype IN ('c', 'u') ORDER BY conname`;
+    await target.end();
+
+    expect(columns).toEqual([
+      { column_name: 'created_at', udt_name: 'timestamptz', is_nullable: 'NO' },
+      { column_name: 'home_id', udt_name: 'uuid', is_nullable: 'NO' },
+      { column_name: 'id', udt_name: 'uuid', is_nullable: 'NO' },
+      { column_name: 'position', udt_name: 'int2', is_nullable: 'YES' },
+      { column_name: 'status', udt_name: 'photo_status', is_nullable: 'NO' },
+      { column_name: 'storage_path', udt_name: 'text', is_nullable: 'NO' },
+    ]);
+    expect(status).toEqual([{ column_default: "'pending'::photo_status" }]);
+    expect(references).toEqual([{ delete_rule: 'CASCADE' }]);
+    expect(constraints).toEqual([
+      { conname: 'home_photos_home_id_position_key', contype: 'u' },
+      { conname: 'home_photos_position_range', contype: 'c' },
+      { conname: 'home_photos_ready_has_position', contype: 'c' },
+    ]);
+  });
+
   it('es repetible: aplicar de nuevo no falla', async () => {
     await expect(runMigrations(urlFor(EMPTY_DB), MIGRATIONS)).resolves.toBeUndefined();
   });

@@ -3,13 +3,12 @@ import {
   type HomePatch,
   validateHomeInput,
   validateHomePatch,
-  type Validation,
 } from '@changehouse/shared';
 import type { FastifyPluginCallback, FastifyRequest } from 'fastify';
 
 import { HomeNotFoundError } from '../../../application/home/errors.js';
 import type { HomePublicView, HomeView } from '../../../application/home/home-views.js';
-import { ValidationFailedError } from '../problem.js';
+import { accountId, uuidOr404, validated } from './request-helpers.js';
 
 export interface HomeRouteOptions {
   createHome: (userId: string, input: HomeInput) => Promise<HomeView>;
@@ -19,32 +18,12 @@ export interface HomeRouteOptions {
   submitHome: (userId: string, homeId: string) => Promise<HomeView>;
 }
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 interface HomeParams {
   homeId: string;
 }
 
-/** Datos válidos o un 400 con los campos erróneos. */
-function validated<T>(result: Validation<T>): T {
-  if (result.success) return result.data;
-  throw new ValidationFailedError(
-    result.errors.map((error) => ({ field: error.field, message: error.code })),
-  );
-}
-
-/** Id de la cuenta propia; la política ya garantizó que existe en las operaciones que lo piden. */
-function accountId(request: FastifyRequest): string {
-  const account = request.principal?.account;
-  if (!account) throw new Error('La operación exige una cuenta y la política no lo comprobó');
-  return account.userId;
-}
-
-/** Un identificador que no es un UUID responde igual que uno que no existe: sin consultar nada. */
 function homeIdOf(request: FastifyRequest<{ Params: HomeParams }>): string {
-  const { homeId } = request.params;
-  if (!UUID.test(homeId)) throw new HomeNotFoundError();
-  return homeId;
+  return uuidOr404(request.params.homeId, () => new HomeNotFoundError());
 }
 
 /**

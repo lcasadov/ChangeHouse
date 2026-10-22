@@ -1,12 +1,12 @@
 import { borderWidth, useTheme } from '@changehouse/ui';
-import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { Badge, Button, Text } from '../../ui';
 import { useFocusRing } from '../../ui/useFocusRing';
 import { formatEuros } from './home-form';
 import { primaryActionOf, STATUS_PRESENTATION } from './home-status';
+import { HomeCover } from './HomeCover';
 import type { Home } from './homes-api';
 
 export interface HomeCardProps {
@@ -15,32 +15,6 @@ export interface HomeCardProps {
   onOpen: () => void;
   /** La acción principal del estado: continuar el asistente, enviar a revisión o ver. */
   onPrimary: () => void;
-}
-
-/** Marcador que reserva el espacio de la foto hasta que haya fotos (`add-home-photos`). */
-export function PhotoPlaceholder() {
-  const { t } = useTranslation();
-  const theme = useTheme();
-  return (
-    <View
-      style={[
-        styles.photo,
-        {
-          backgroundColor: theme.color.surfaceMuted,
-          borderRadius: theme.radius.md,
-          gap: theme.space[2],
-        },
-      ]}
-    >
-      <Ionicons
-        accessible={false}
-        name="home-outline"
-        size={theme.space[7]}
-        color={theme.color.primary}
-      />
-      <Text tone="textMuted">{t('homes.card.noPhotos')}</Text>
-    </View>
-  );
 }
 
 /** El título de una vivienda: su tipo y su barrio o zona, que es lo único público de su ubicación. */
@@ -84,7 +58,7 @@ export function HomeCard({ home, onOpen, onPrimary }: Readonly<HomeCardProps>) {
         onBlur={focusRing.onBlur}
         style={[{ gap: theme.space[3] }, focusRing.style]}
       >
-        <PhotoPlaceholder />
+        <HomeCover home={home} title={title} decorative />
         <Text variant="heading">{title}</Text>
         <Badge tone={tone} icon={icon} label={statusLabel} />
         <Text tone="textMuted">
@@ -105,7 +79,3 @@ export function HomeCard({ home, onOpen, onPrimary }: Readonly<HomeCardProps>) {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  photo: { alignItems: 'center', aspectRatio: 16 / 9, justifyContent: 'center', width: '100%' },
-});

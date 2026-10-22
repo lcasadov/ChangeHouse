@@ -99,6 +99,10 @@ export function HomeSummary({ home }: Readonly<{ home: Home }>) {
           value={formatEuros(home.mortgageOutstandingCents)}
         />
       )}
+      <Row
+        label={t('homes.summary.photos')}
+        value={t('homes.photos.counter', { count: home.photos?.length ?? 0 })}
+      />
       <Row label={t('homes.summary.primaryResidence')} value={yesNo(home.isPrimaryResidence)} />
     </View>
   );

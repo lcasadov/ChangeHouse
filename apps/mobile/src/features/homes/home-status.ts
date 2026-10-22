@@ -2,7 +2,7 @@ import type { Ionicons } from '@expo/vector-icons';
 import type { ComponentProps } from 'react';
 
 import type { BadgeTone } from '../../ui';
-import { firstIncompleteStep, type WizardStep } from './home-form';
+import { firstIncompleteStep, REVIEW_STEP, type WizardStep } from './home-form';
 import type { Home } from './homes-api';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
@@ -24,8 +24,6 @@ export type PrimaryAction =
   | { kind: 'submit'; step: WizardStep }
   /** Cualquier otro estado: consultar la ficha. */
   | { kind: 'view' };
-
-const REVIEW_STEP: WizardStep = 5;
 
 /** La acción principal de una tarjeta de «Mis casas» según el estado y lo que falta. */
 export function primaryActionOf(home: Home): PrimaryAction {

@@ -1,0 +1,90 @@
+{
+  "tracker": "github-issues",
+  "change": "add-home-photos",
+  "sprint": {
+    "path": "Sprint en curso",
+    "created": false
+  },
+  "epic": {
+    "capability": "homes",
+    "id": 92,
+    "reused": true
+  },
+  "related_epics": [],
+  "feature": {
+    "id": 113,
+    "reused": false
+  },
+  "stories": [
+    {
+      "key": "Fotos de la vivienda",
+      "id": 114,
+      "reused": false,
+      "prio": "P1"
+    },
+    {
+      "key": "Fotos sin metadatos de ubicación",
+      "id": 115,
+      "reused": false,
+      "prio": "P1"
+    },
+    {
+      "key": "Envío a revisión",
+      "id": 116,
+      "reused": false,
+      "prio": "P1"
+    }
+  ],
+  "tasks": [
+    {
+      "key": "B1",
+      "id": 117,
+      "parent": 114,
+      "state": "done"
+    },
+    {
+      "key": "T1",
+      "id": 118,
+      "parent": 115,
+      "state": "done"
+    },
+    {
+      "key": "B2",
+      "id": 119,
+      "parent": 115,
+      "state": "done"
+    },
+    {
+      "key": "T2",
+      "id": 120,
+      "parent": 114,
+      "state": "done"
+    },
+    {
+      "key": "B3",
+      "id": 121,
+      "parent": 116,
+      "state": "done"
+    },
+    {
+      "key": "T3",
+      "id": 122,
+      "parent": 114,
+      "state": "done"
+    },
+    {
+      "key": "F1",
+      "id": 123,
+      "parent": 114,
+      "state": "done"
+    },
+    {
+      "key": "V1",
+      "id": 124,
+      "parent": 114,
+      "state": "done"
+    }
+  ],
+  "bugs": [],
+  "pending": []
+}
