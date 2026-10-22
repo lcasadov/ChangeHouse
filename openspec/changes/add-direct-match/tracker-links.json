@@ -82,19 +82,19 @@
       "key": "T3",
       "id": 193,
       "parent": 187,
-      "state": "open"
+      "state": "doing"
     },
     {
       "key": "F1",
       "id": 194,
       "parent": 186,
-      "state": "open"
+      "state": "doing"
     },
     {
       "key": "V1",
       "id": 195,
       "parent": 183,
-      "state": "open"
+      "state": "doing"
     }
   ],
   "bugs": [],
