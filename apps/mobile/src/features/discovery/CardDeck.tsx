@@ -1,21 +1,27 @@
 import { useTheme } from '@changehouse/ui';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
 
-import { Button, Notice } from '../../ui';
+import { Notice } from '../../ui';
 import { CardStack } from './CardStack';
+import { DecisionActions } from './DecisionActions';
+import { DecisionBar } from './DecisionBar';
 import type { DiscoveryCard } from './discovery-api';
 import { discoveryRoutes } from './discovery-routes';
 import { EndOfFeed } from './EndOfFeed';
 import { shouldLoadMore } from './feed-model';
 import { FeedPlaceholder } from './FeedPlaceholder';
 import { prefetchImage } from './image-prefetch';
+import { PublishHomeSheet } from './PublishHomeSheet';
+import { useCardDecisions } from './use-card-decisions';
 
 export interface CardDeckProps {
-  /** Todas las tarjetas cargadas hasta ahora, sin repetir. */
+  /** Todas las tarjetas cargadas hasta ahora y aún sin decidir, sin repetir; la primera es la que se ve. */
   cards: readonly DiscoveryCard[];
+  /** La vivienda propia y publicada desde la que se decide; sin ella, el buscador decide desde su cuenta. */
+  homeId: string | undefined;
   hasNextPage: boolean;
   isFetchingNextPage: boolean;
   /** La última petición de página falló. */
@@ -29,12 +35,13 @@ export interface CardDeckProps {
 const COVERS_AHEAD = 2;
 
 /**
- * La pila de tarjetas con su botón «Siguiente». Pide la página siguiente al quedar pocas tarjetas y
- * calienta la portada de las que vienen. Aún no hay me gusta ni descartar (`add-like-dismiss-undo`):
- * «Siguiente» pasa de tarjeta sin descartar nada.
+ * La pila de tarjetas con sus botones de decisión. Decidir cuesta un gesto: se desliza la tarjeta
+ * o se pulsa «Me gusta» o «Descartar», y siempre queda a la vista «Deshacer» durante unos segundos.
+ * Pide la página siguiente al quedar pocas tarjetas y calienta la portada de las que vienen.
  */
 export function CardDeck({
   cards,
+  homeId,
   hasNextPage,
   isFetchingNextPage,
   nextPageFailed,
@@ -45,9 +52,9 @@ export function CardDeck({
   const { t } = useTranslation();
   const theme = useTheme();
   const router = useRouter();
-  const [index, setIndex] = useState(0);
-  const remaining = cards.length - index;
-  const current = cards[index];
+  const decisions = useCardDecisions({ homeId });
+  const remaining = cards.length;
+  const current = cards[0];
 
   useEffect(() => {
     if (
@@ -59,11 +66,29 @@ export function CardDeck({
 
   useEffect(() => {
     for (let ahead = 1; ahead <= COVERS_AHEAD; ahead += 1) {
-      prefetchImage(cards[index + ahead]?.photos[0]?.url);
+      prefetchImage(cards[ahead]?.photos[0]?.url);
     }
-  }, [cards, index]);
+  }, [cards]);
 
-  if (!current) {
+  const stack = () => {
+    if (current) {
+      return (
+        <CardStack
+          current={current}
+          next={cards[1]}
+          canLike={homeId !== undefined}
+          canDecide={!decisions.busy}
+          exitDirection={decisions.exitDirection}
+          onOpen={(card) => {
+            router.push(discoveryRoutes.detail(card.id));
+          }}
+          onDecide={(card, decision) => {
+            decisions.decide(decision, card);
+          }}
+          onBlockedLike={decisions.openNeedsHome}
+        />
+      );
+    }
     if (!hasNextPage) {
       return <EndOfFeed onWidenZone={onWidenZone} onAdjustCompensation={onAdjustCompensation} />;
     }
@@ -82,25 +107,33 @@ export function CardDeck({
     ) : (
       <FeedPlaceholder />
     );
-  }
+  };
 
   return (
     <View style={[styles.deck, { gap: theme.space[3] }]}>
-      <View style={styles.stack}>
-        <CardStack
-          current={current}
-          next={cards[index + 1]}
-          onOpen={(card) => {
-            router.push(discoveryRoutes.detail(card.id));
+      <View style={styles.stack}>{stack()}</View>
+      {decisions.notice ? (
+        <Notice tone={decisions.notice.tone}>{decisions.notice.message}</Notice>
+      ) : null}
+      {decisions.offer ? (
+        <DecisionBar key={decisions.offer.id} decision={decisions.offer.decision} />
+      ) : null}
+      {current || decisions.canUndo ? (
+        <DecisionActions
+          canUndo={decisions.canUndo}
+          canDecide={current !== undefined && !decisions.busy}
+          onDismiss={() => {
+            if (current) decisions.decide('dismiss', current);
+          }}
+          onUndo={() => {
+            decisions.undo().catch(() => undefined);
+          }}
+          onLike={() => {
+            if (current) decisions.decide('like', current);
           }}
         />
-      </View>
-      <Button
-        label={t('discovery.next')}
-        onPress={() => {
-          setIndex((position) => position + 1);
-        }}
-      />
+      ) : null}
+      <PublishHomeSheet visible={decisions.needsHome} onClose={decisions.closeNeedsHome} />
     </View>
   );
 }

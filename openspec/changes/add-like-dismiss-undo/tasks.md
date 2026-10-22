@@ -13,14 +13,14 @@
 
 ## 2. App
 
-- [ ] T2 Escribir las pruebas de componentes de los botones «Me gusta» y «Descartar», la barra de deshacer de 5 s, el aviso a `seeker`, el mensaje del límite diario y el modo «reducir movimiento», y comprobar que fallan. ref: Decidir con un gesto · est: 3h · disc: qa
+- [x] T2 Escribir las pruebas de componentes de los botones «Me gusta» y «Descartar», la barra de deshacer de 5 s, el aviso a `seeker`, el mensaje del límite diario y el modo «reducir movimiento», y comprobar que fallan. ref: Decidir con un gesto · est: 3h · disc: qa
   - GIVEN «reducir movimiento» activo WHEN se descarta THEN no se ejecuta la animación de vuelo
-- [ ] F1 Implementar el gesto de deslizar con `react-native-gesture-handler` y Reanimated, los botones accesibles, la háptica con `expo-haptics`, la barra de deshacer y los mensajes, con actualización optimista y reversión ante error, y verificar que pasan las pruebas de T2. ref: Decidir con un gesto · est: 7h · disc: front
+- [x] F1 Implementar el gesto de deslizar con `react-native-gesture-handler` y Reanimated, los botones accesibles, la háptica con `expo-haptics`, la barra de deshacer y los mensajes, con actualización optimista y reversión ante error, y verificar que pasan las pruebas de T2. ref: Decidir con un gesto · est: 7h · disc: front
   - GIVEN un error de la API tras un me gusta optimista WHEN llega THEN la tarjeta vuelve y se muestra qué hacer
 
 ## 3. Integración
 
-- [ ] V1 Ejecutar `pnpm lint`, `pnpm typecheck`, `pnpm test:coverage`, `pnpm test:integration` y `pnpm build` y verificar que todo pasa con cobertura ≥ 80 %. ref: Me gusta desde una vivienda propia · est: 1h · disc: qa
+- [x] V1 Ejecutar `pnpm lint`, `pnpm typecheck`, `pnpm test:coverage`, `pnpm test:integration` y `pnpm build` y verificar que todo pasa con cobertura ≥ 80 %. ref: Me gusta desde una vivienda propia · est: 1h · disc: qa
   - GIVEN el change implementado WHEN se ejecuta la puerta de calidad local THEN todos los comandos terminan con éxito
 
 ## Workflow follow-up

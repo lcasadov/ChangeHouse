@@ -165,16 +165,15 @@ describe('Tarjetas a pantalla completa', () => {
     expect(screen.queryByRole('button', { name: /Piso en Zona 2/ })).toBeNull();
   });
 
-  it('«Siguiente» pasa a la siguiente tarjeta sin descartar nada', async () => {
+  it('al decidir sube la siguiente tarjeta, con la portada de la que viene ya calentada', async () => {
     const cards = zoneCards(3);
-    const backend = await open({ cards });
+    await open({ cards });
     await cardWith('Zona 1');
 
-    await fireEvent.press(button(d.next));
+    await fireEvent.press(button(d.actions.dismiss));
 
     expect(await cardWith('Zona 2')).toBeTruthy();
     expect(screen.queryByRole('button', { name: /Piso en Zona 1/ })).toBeNull();
-    expect(backend.requests.filter((request) => request.method !== 'GET')).toHaveLength(0);
     expect(prefetch).toHaveBeenCalledWith(cards[2]?.photos[0]?.url);
   });
 
@@ -287,7 +286,7 @@ describe('Ver el detalle', () => {
   it('volver desde el detalle conserva la tarjeta que se estaba viendo', async () => {
     await open({ cards: zoneCards(3) });
     await cardWith('Zona 1');
-    await fireEvent.press(button(d.next));
+    await fireEvent.press(button(d.actions.dismiss));
     await fireEvent.press(await cardWith('Zona 2'));
     await screen.findByRole('header', { name: 'Piso en Zona 2' });
 
@@ -408,13 +407,13 @@ describe('Sin más viviendas', () => {
   it('al pasar la última tarjeta aparece el estado vacío', async () => {
     await open({ cards: zoneCards(2) });
     await cardWith('Zona 1');
-    await fireEvent.press(button(d.next));
+    await fireEvent.press(button(d.actions.dismiss));
     await cardWith('Zona 2');
 
-    await fireEvent.press(button(d.next));
+    await fireEvent.press(button(d.actions.dismiss));
 
     expect(await screen.findByRole('header', { name: d.end.title })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: d.next })).toBeNull();
+    expect(button(d.actions.dismiss).props.accessibilityState).toMatchObject({ disabled: true });
   });
 
   it('tras ajustar la compensación vuelve a buscar con lo guardado', async () => {
@@ -449,7 +448,7 @@ describe('Paginación', () => {
           expect(discoverRequests(backend)).toHaveLength(2);
         });
       }
-      if (position < 8) await fireEvent.press(button(d.next));
+      if (position < 8) await fireEvent.press(button(d.actions.dismiss));
     }
 
     expect(new Set(seen).size).toBe(8);
@@ -457,7 +456,7 @@ describe('Paginación', () => {
       `?homeId=${homeId}`,
       `?homeId=${homeId}&cursor=5`,
     ]);
-    await fireEvent.press(button(d.next));
+    await fireEvent.press(button(d.actions.dismiss));
     expect(await screen.findByRole('header', { name: d.end.title })).toBeTruthy();
     expect(discoverRequests(backend)).toHaveLength(2);
   });
@@ -465,7 +464,7 @@ describe('Paginación', () => {
   it('no pide más páginas si la primera ya era la última', async () => {
     const backend = await open({ cards: zoneCards(2), pageSize: 5 });
     await cardWith('Zona 1');
-    await fireEvent.press(button(d.next));
+    await fireEvent.press(button(d.actions.dismiss));
     await cardWith('Zona 2');
 
     expect(discoverRequests(backend)).toHaveLength(1);
@@ -477,10 +476,10 @@ describe('Paginación', () => {
     await open({ cards: repeated, pageSize: 5 });
     const areas: string[] = [];
 
-    for (let position = 0; position < 7; position += 1) {
-      const card = await screen.findByRole('button', { name: /Piso en Zona/ });
+    for (let position = 1; position <= 7; position += 1) {
+      const card = await cardWith(`Zona ${String(position)}`);
       areas.push((card.props.accessibilityLabel as string).split('.')[0] ?? '');
-      await fireEvent.press(button(d.next));
+      await fireEvent.press(button(d.actions.dismiss));
     }
 
     expect(new Set(areas).size).toBe(7);
@@ -498,11 +497,11 @@ describe('Paginación', () => {
     backend.discovery.rejectNextPage(500);
     await renderSessionApp({ auth: new FakeAuthService({ initialUser: authUser() }), backend });
     await cardWith('Zona 1');
-    await fireEvent.press(button(d.next));
+    await fireEvent.press(button(d.actions.dismiss));
     await cardWith('Zona 2');
-    await fireEvent.press(button(d.next));
+    await fireEvent.press(button(d.actions.dismiss));
     await cardWith('Zona 3');
-    await fireEvent.press(button(d.next));
+    await fireEvent.press(button(d.actions.dismiss));
 
     expect(await screen.findByText(d.errors.more)).toBeTruthy();
     await fireEvent.press(button(d.errors.retry));

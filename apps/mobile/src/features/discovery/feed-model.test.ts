@@ -1,5 +1,11 @@
 import { discoveryCard } from '../../test-support/fake-discovery';
-import { homeOptions, PREFETCH_THRESHOLD, shouldLoadMore, uniqueCards } from './feed-model';
+import {
+  homeOptions,
+  PREFETCH_THRESHOLD,
+  shouldLoadMore,
+  uniqueCards,
+  withoutDecided,
+} from './feed-model';
 
 describe('uniqueCards', () => {
   it('junta las páginas en orden y descarta las tarjetas repetidas', () => {
@@ -17,6 +23,24 @@ describe('uniqueCards', () => {
   it('sin páginas no hay tarjetas', () => {
     expect(uniqueCards(undefined)).toEqual([]);
     expect(uniqueCards([])).toEqual([]);
+  });
+});
+
+describe('withoutDecided', () => {
+  it('quita las tarjetas ya decididas y conserva el orden del resto', () => {
+    const [a, b, c] = [discoveryCard(), discoveryCard(), discoveryCard()];
+    if (!a || !b || !c) throw new Error('fixture');
+
+    const cards = withoutDecided([a, b, c], new Set([a.id, c.id]));
+
+    expect(cards).toEqual([b]);
+  });
+
+  it('sin nada decidido devuelve todas', () => {
+    const [a, b] = [discoveryCard(), discoveryCard()];
+    if (!a || !b) throw new Error('fixture');
+
+    expect(withoutDecided([a, b], new Set())).toEqual([a, b]);
   });
 });
 

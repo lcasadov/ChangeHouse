@@ -77,6 +77,8 @@ export class FakeDiscovery {
     cards: readonly DiscoveryCard[],
     private readonly ownHomes: () => readonly Home[],
     private readonly hasPreferences: () => boolean,
+    /** Lo ya decidido (me gusta o descartado) desde esa vivienda, o desde la cuenta con `null`, no se vuelve a ofrecer. */
+    private readonly isDecided: (viewer: string | null, cardId: string) => boolean = () => false,
   ) {
     this.cards = cards;
   }
@@ -94,6 +96,11 @@ export class FakeDiscovery {
   /** El detalle público devuelve también una dirección (un fallo del servidor): la interfaz no debe mostrarla. */
   leakAddressInDetail(address: string): void {
     this.detailAddress = address;
+  }
+
+  /** `true` si alguna vivienda ofrecida tiene ese identificador. */
+  offers(homeId: string): boolean {
+    return [...this.cards, ...[...this.byHome.values()].flat()].some((card) => card.id === homeId);
   }
 
   /** La forma pública de una vivienda ofrecida (`getHome` de una vivienda ajena), o `null`. */
@@ -135,8 +142,11 @@ export class FakeDiscovery {
 
     const limit = Math.min(Number(search.get('limit') ?? this.pageSize), MAX_PAGE_SIZE);
     const start = Number(search.get('cursor') ?? 0);
-    const page = available.slice(start, start + limit);
-    const end = start + page.length;
+    // El cursor es una posición en la lista completa: lo decidido se quita de la página, no de la cuenta
+    const window = available.slice(start, start + limit);
+    const end = start + window.length;
+    const viewer = seeker ? null : (homeId ?? null);
+    const page = window.filter((card) => !this.isDecided(viewer, card.id));
     return json(200, {
       items: seeker ? page.map((card) => ({ ...card, compensation: null as Compensation })) : page,
       nextCursor: end < available.length ? String(end) : null,

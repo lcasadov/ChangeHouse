@@ -14,6 +14,7 @@ import { photosOf } from '../homes/home-photos';
 import { useHomeTitle } from '../homes/HomeCard';
 import { cardSummary, factsOf } from './card-summary';
 import { CompensationPill } from './CompensationPill';
+import type { Decision } from './decision-model';
 import type { DiscoveryCard } from './discovery-api';
 import { prefetchImage } from './image-prefetch';
 import { PhotoIndicator } from './PhotoIndicator';
@@ -33,6 +34,8 @@ export interface DiscoveryCardViewProps {
   card: DiscoveryCard;
   /** Abre el detalle de la vivienda. */
   onOpen: () => void;
+  /** Si se da, el lector de pantalla ofrece "Me gusta" y "Descartar" como acciones de la tarjeta. */
+  onDecide?: (decision: Decision) => void;
 }
 
 interface ZoneButtonProps {
@@ -86,7 +89,7 @@ function NoPhoto() {
  * toques laterales, y sobre el degradado inferior la zona, los datos y la compensación. Para
  * un lector de pantalla es un único botón con el resumen; los botones de las fotos van aparte.
  */
-export function DiscoveryCardView({ card, onOpen }: Readonly<DiscoveryCardViewProps>) {
+export function DiscoveryCardView({ card, onOpen, onDecide }: Readonly<DiscoveryCardViewProps>) {
   const { t } = useTranslation();
   const theme = useTheme();
   const reduceMotion = useReduceMotion();
@@ -169,6 +172,18 @@ export function DiscoveryCardView({ card, onOpen }: Readonly<DiscoveryCardViewPr
           accessibilityRole="button"
           accessibilityLabel={cardSummary(t, card, position + 1)}
           accessibilityHint={t('discovery.card.openHint')}
+          accessibilityActions={
+            onDecide
+              ? [
+                  { name: 'like', label: t('discovery.actions.like') },
+                  { name: 'dismiss', label: t('discovery.actions.dismiss') },
+                ]
+              : undefined
+          }
+          onAccessibilityAction={(event) => {
+            const action = event.nativeEvent.actionName;
+            if (action === 'like' || action === 'dismiss') onDecide?.(action);
+          }}
           onPress={onOpen}
           onFocus={focusPanel.onFocus}
           onBlur={focusPanel.onBlur}

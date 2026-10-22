@@ -17,6 +17,14 @@ export function uniqueCards(pages: readonly DiscoveryPage[] | undefined): Discov
   return cards;
 }
 
+/** Las tarjetas que aún no se han decidido, en el mismo orden. */
+export function withoutDecided(
+  cards: readonly DiscoveryCard[],
+  decided: ReadonlySet<string>,
+): DiscoveryCard[] {
+  return cards.filter((card) => !decided.has(card.id));
+}
+
 export interface LoadMoreState {
   /** Tarjetas por ver, contando la que está a la vista. */
   remaining: number;

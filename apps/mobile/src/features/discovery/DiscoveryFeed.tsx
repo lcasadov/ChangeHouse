@@ -4,10 +4,12 @@ import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
 
 import { Notice } from '../../ui';
+import { useAuth } from '../auth/AuthProvider';
 import { useMyHomes } from '../homes/use-homes';
 import { CardDeck } from './CardDeck';
+import { useDecidedIds } from './decided-cards';
 import { DiscoveryApiError } from './discovery-api';
-import { uniqueCards } from './feed-model';
+import { uniqueCards, withoutDecided } from './feed-model';
 import { FeedPlaceholder } from './FeedPlaceholder';
 import { HomeSelector } from './HomeSelector';
 import { SeekerNotice } from './SeekerNotice';
@@ -38,6 +40,7 @@ export function DiscoveryFeed({
   const { t } = useTranslation();
   const theme = useTheme();
   const homes = useMyHomes();
+  const { user } = useAuth();
   const published = useMemo(
     () => (homes.data ?? []).filter((home) => home.status === 'published'),
     [homes.data],
@@ -51,6 +54,8 @@ export function DiscoveryFeed({
     searchKey: `${searchKey}#${String(attempt)}`,
     enabled: homes.isSuccess,
   });
+  // Lo decidido desde esta vivienda no vuelve a la pila aunque la consulta ya cargada se reutilice
+  const decided = useDecidedIds(user?.uid, homeId);
   const failure = feed.data || !(feed.error instanceof DiscoveryApiError) ? null : feed.error.kind;
   const retry = useCallback(() => {
     setAttempt((count) => count + 1);
@@ -80,7 +85,8 @@ export function DiscoveryFeed({
       return (
         <CardDeck
           key={`${homeId ?? 'seeker'}|${searchKey}|${String(attempt)}`}
-          cards={uniqueCards(feed.data.pages)}
+          cards={withoutDecided(uniqueCards(feed.data.pages), decided)}
+          homeId={homeId}
           hasNextPage={feed.hasNextPage}
           isFetchingNextPage={feed.isFetchingNextPage}
           nextPageFailed={feed.isFetchNextPageError}
