@@ -1,0 +1,72 @@
+{
+  "tracker": "github-issues",
+  "change": "add-home-vpp-regime",
+  "sprint": {
+    "path": "Sprint en curso",
+    "created": false
+  },
+  "epic": {
+    "capability": "homes",
+    "id": 92,
+    "reused": true
+  },
+  "related_epics": [],
+  "feature": {
+    "id": 260,
+    "reused": false
+  },
+  "stories": [
+    {
+      "key": "Régimen de protección",
+      "id": 261,
+      "reused": false,
+      "prio": "P2"
+    },
+    {
+      "key": "Precio máximo legal",
+      "id": 262,
+      "reused": false,
+      "prio": "P2"
+    },
+    {
+      "key": "Aviso informativo de vivienda protegida",
+      "id": 263,
+      "reused": false,
+      "prio": "P3"
+    }
+  ],
+  "tasks": [
+    {
+      "key": "T1",
+      "id": 264,
+      "parent": 262,
+      "state": "open"
+    },
+    {
+      "key": "B1",
+      "id": 265,
+      "parent": 261,
+      "state": "open"
+    },
+    {
+      "key": "T2",
+      "id": 266,
+      "parent": 263,
+      "state": "open"
+    },
+    {
+      "key": "F1",
+      "id": 267,
+      "parent": 261,
+      "state": "open"
+    },
+    {
+      "key": "V1",
+      "id": 268,
+      "parent": 261,
+      "state": "open"
+    }
+  ],
+  "bugs": [],
+  "pending": []
+}

@@ -1,0 +1,96 @@
+{
+  "tracker": "github-issues",
+  "change": "add-match-chat",
+  "sprint": {
+    "path": "Sprint en curso",
+    "created": false
+  },
+  "epic": {
+    "capability": "chat",
+    "id": 232,
+    "reused": false
+  },
+  "related_epics": [],
+  "feature": {
+    "id": 233,
+    "reused": false
+  },
+  "stories": [
+    {
+      "key": "Chat de grupo por match",
+      "id": 234,
+      "reused": false,
+      "prio": "P1"
+    },
+    {
+      "key": "Enviar mensajes",
+      "id": 235,
+      "reused": false,
+      "prio": "P1"
+    },
+    {
+      "key": "Solo los participantes leen el chat",
+      "id": 236,
+      "reused": false,
+      "prio": "P1"
+    },
+    {
+      "key": "Chat de un match cerrado",
+      "id": 237,
+      "reused": false,
+      "prio": "P2"
+    }
+  ],
+  "tasks": [
+    {
+      "key": "T1",
+      "id": 238,
+      "parent": 236,
+      "state": "open"
+    },
+    {
+      "key": "B1",
+      "id": 239,
+      "parent": 236,
+      "state": "open"
+    },
+    {
+      "key": "B2",
+      "id": 240,
+      "parent": 234,
+      "state": "open"
+    },
+    {
+      "key": "T2",
+      "id": 241,
+      "parent": 235,
+      "state": "open"
+    },
+    {
+      "key": "B3",
+      "id": 242,
+      "parent": 237,
+      "state": "open"
+    },
+    {
+      "key": "T3",
+      "id": 244,
+      "parent": 235,
+      "state": "open"
+    },
+    {
+      "key": "F1",
+      "id": 245,
+      "parent": 234,
+      "state": "open"
+    },
+    {
+      "key": "V1",
+      "id": 246,
+      "parent": 235,
+      "state": "open"
+    }
+  ],
+  "bugs": [],
+  "pending": []
+}

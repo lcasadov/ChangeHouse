@@ -1,0 +1,66 @@
+{
+  "tracker": "github-issues",
+  "change": "add-user-suspension",
+  "sprint": {
+    "path": "Sprint en curso",
+    "created": false
+  },
+  "epic": {
+    "capability": "moderation",
+    "id": 125,
+    "reused": true
+  },
+  "related_epics": [],
+  "feature": {
+    "id": 296,
+    "reused": false
+  },
+  "stories": [
+    {
+      "key": "Suspender y reactivar usuarios",
+      "id": 297,
+      "reused": false,
+      "prio": "P2"
+    },
+    {
+      "key": "Efecto de la suspensión",
+      "id": 298,
+      "reused": false,
+      "prio": "P2"
+    }
+  ],
+  "tasks": [
+    {
+      "key": "T1",
+      "id": 299,
+      "parent": 298,
+      "state": "open"
+    },
+    {
+      "key": "B1",
+      "id": 300,
+      "parent": 297,
+      "state": "open"
+    },
+    {
+      "key": "T2",
+      "id": 301,
+      "parent": 298,
+      "state": "open"
+    },
+    {
+      "key": "F1",
+      "id": 302,
+      "parent": 297,
+      "state": "open"
+    },
+    {
+      "key": "V1",
+      "id": 303,
+      "parent": 297,
+      "state": "open"
+    }
+  ],
+  "bugs": [],
+  "pending": []
+}
