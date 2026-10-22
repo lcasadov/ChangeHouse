@@ -122,8 +122,10 @@ técnica previa de golpe, pero **tampoco se admite añadir deuda nueva**.
   cobertura, dependencias) **y** revisión de CodeRabbit (`$QG_PROVIDER`) sin
   hallazgos sin atender. La cobertura es necesaria, **no suficiente**.
 - La protección de rama **bloquea la integración** si la puerta no está en verde.
-  **Los agentes nunca fusionan**: lo hace una persona tras la verificación de
-  `.claude/harness/profile/quality-gates.md`.
+  **Solo el Orquestador fusiona** (autorizado por el usuario el 2026-10-22), con
+  `gh pr merge --merge`, en orden y únicamente tras la verificación de
+  `.claude/harness/profile/quality-gates.md` en verde. Los subagentes nunca
+  fusionan.
 
 Bajar un umbral, excluir ficheros de la medición, desactivar reglas del linter o
 ignorar un comentario de CodeRabbit **no son decisiones de un agente**. Si crees
