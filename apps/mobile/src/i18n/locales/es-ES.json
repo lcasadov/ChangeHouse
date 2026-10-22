@@ -111,9 +111,40 @@
     }
   },
   "matches": {
+    "title": "Matches",
     "empty": {
       "title": "Todavía no tienes matches",
-      "description": "Cuando a otra persona le guste tu casa y a ti la suya, aparecerá aquí y podrás hablar con ella."
+      "description": "Sigue explorando: cuando a otra persona le guste tu casa y a ti la suya, el match aparecerá aquí.",
+      "action": "Explorar"
+    },
+    "loadFailed": "No hemos podido cargar tus matches. Comprueba tu conexión y vuelve a intentarlo.",
+    "loadMoreFailed": "No hemos podido cargar más matches. Comprueba tu conexión y vuelve a intentarlo.",
+    "retry": "Reintentar",
+    "kind": {
+      "direct": "Match directo",
+      "chain": "Match en cadena"
+    },
+    "status": {
+      "open": "Pendiente de confirmar",
+      "confirmed": "Confirmado",
+      "in_operation": "En operación",
+      "closed": "Cerrado",
+      "expired": "Caducado"
+    },
+    "row": {
+      "summary": "{{title}}. {{kind}}. {{compensation}}. {{status}}.",
+      "summaryNoCompensation": "{{title}}. {{kind}}. {{status}}.",
+      "unavailable": "Casa no disponible",
+      "unavailableHint": "Su propietario la ha retirado de la búsqueda.",
+      "loadingHome": "Cargando la casa"
+    },
+    "celebration": {
+      "title": "¡Tenéis un match!",
+      "subtitle": "A los dos os gusta la casa del otro. Esta es la diferencia estimada.",
+      "myHome": "Tu casa",
+      "swap": "{{mine}} por {{theirs}}",
+      "view": "Ver match",
+      "continue": "Seguir explorando"
     }
   },
   "homes": {

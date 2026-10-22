@@ -400,10 +400,15 @@ export interface paths {
     /**
      * Me gusta en una vivienda (RF-41, RN-01, RN-02)
      * @description Crea la arista desde una vivienda publicada del usuario (`fromHomeId`)
-     *     hacia la vivienda indicada y busca ciclos de 2 y 3 en la misma
-     *     transacción. Cada vivienda del usuario participa de forma independiente
-     *     (RF-20). Si se cierra un ciclo compatible, devuelve el match creado
-     *     (hasta `add-direct-match`, `match` es siempre `null`).
+     *     hacia la vivienda indicada y, en la misma transacción, busca los ciclos
+     *     que cierra (de 2 viviendas; los de 3 llegan con `add-chain-match`). Cada
+     *     vivienda del usuario participa de forma independiente (RF-20). Si el ciclo
+     *     es compatible —todas sus viviendas siguen publicadas y la compensación es
+     *     aceptable para cada propietario con sus preferencias efectivas (RN-03)—,
+     *     `match` es el match creado (`type: 2`, `status: open`, participantes en
+     *     `pending`, sin `chatId`); si no, `null`. Un mismo conjunto de viviendas
+     *     nunca forma dos matches: dos me gusta cruzados simultáneos responden los
+     *     dos 201 y solo uno de ellos trae el match.
      *
      *     Límite diario (RF-45): 10 me gusta por usuario y día natural de
      *     `Europe/Madrid`, sumando todas sus viviendas y configurable por entorno
@@ -482,7 +487,15 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Matches en los que participa el usuario */
+    /**
+     * Matches en los que participa el usuario
+     * @description Matches en los que participa alguna vivienda del usuario (RF-50), del más
+     *     reciente al más antiguo; nunca los ajenos. Un `seeker` (por ejemplo, con
+     *     su vivienda pausada) también ve los suyos; sin matches, la lista vacía.
+     *     En la lista, cada participante lleva su vivienda, su nombre visible, lo
+     *     que entrega y recibe, su compensación y su estado; ni teléfono ni
+     *     dirección exacta, que se consultan en el detalle (`getMatch`).
+     */
     get: operations['listMyMatches'];
     put?: never;
     post?: never;
@@ -1097,7 +1110,7 @@ export interface components {
       /** @enum {integer} */
       type: 2 | 3;
       status: components['schemas']['MatchStatus'];
-      /** @description Identificador del chat de grupo en Firestore */
+      /** @description Identificador del chat de grupo en Firestore; ausente hasta que se crea el chat */
       chatId?: string;
       /** Format: date-time */
       createdAt: string;
@@ -2109,7 +2122,9 @@ export interface operations {
           };
         };
       };
+      400: components['responses']['BadRequest'];
       401: components['responses']['Unauthorized'];
+      403: components['responses']['Forbidden'];
     };
   };
   getMatch: {

@@ -7,6 +7,8 @@ import type { NoticeTone } from '../../ui';
 import { announce } from '../../ui/announce';
 import { haptics } from '../../ui/haptics';
 import { useAuth } from '../auth/AuthProvider';
+import type { Celebration } from '../matches/MatchCelebrationHost';
+import { MATCHES_QUERY_KEY } from '../matches/use-matches';
 import { useServices } from '../session/services';
 import { markDecided, unmarkDecided } from './decided-cards';
 import { type Decision, UNDO_WINDOW_MS } from './decision-model';
@@ -50,6 +52,7 @@ export function useCardDecisions({ homeId }: Readonly<CardDecisionsOptions>) {
   const [notice, setNotice] = useState<DecisionNotice | null>(null);
   const [needsHome, setNeedsHome] = useState(false);
   const [undoing, setUndoing] = useState(false);
+  const [celebration, setCelebration] = useState<Celebration | null>(null);
   const sequence = useRef(0);
 
   const uid = user?.uid;
@@ -111,21 +114,36 @@ export function useCardDecisions({ homeId }: Readonly<CardDecisionsOptions>) {
     else setNotice(noticeFor(error));
   };
 
-  const send = async (decision: Decision, card: DiscoveryCard) => {
-    if (decision === 'like') {
-      if (!homeId) throw new DecisionApiError('forbidden');
-      await discoveryApi.like({ fromHomeId: homeId, targetHomeId: card.id });
-    } else {
+  /** Registra la decisión; para un «Me gusta», devuelve el match que ha formado, si lo hay. */
+  const send = async (decision: Decision, card: DiscoveryCard): Promise<Celebration | null> => {
+    if (decision === 'dismiss') {
       await discoveryApi.dismiss({
         ...(homeId ? { fromHomeId: homeId } : {}),
         targetHomeId: card.id,
       });
+      return null;
     }
+    if (!homeId) throw new DecisionApiError('forbidden');
+    const result = await discoveryApi.like({ fromHomeId: homeId, targetHomeId: card.id });
+    return result.match ? { match: result.match, ownHomeId: homeId, card } : null;
+  };
+
+  /**
+   * Un «Me gusta» que forma un match lo celebra en lugar de confirmar el envío: lo anuncia, abre la
+   * celebración y avisa a «Matches» de que su lista ya no está al día. Un match ya no se deshace, así
+   * que tampoco queda nada que deshacer.
+   */
+  const celebrate = (found: Celebration, id: number) => {
+    setOffer((current) => (current?.id === id ? null : current));
+    setCelebration(found);
+    announce(t('matches.celebration.title'));
+    queryClient.invalidateQueries({ queryKey: [MATCHES_QUERY_KEY, uid] }).catch(() => undefined);
   };
 
   const register = async (decision: Decision, card: DiscoveryCard, id: number) => {
+    let found: Celebration | null = null;
     try {
-      await send(decision, card);
+      found = await send(decision, card);
     } catch (error) {
       // Ya le había gustado: la API lo tiene, que es lo que la persona quería
       if (!(error instanceof DecisionApiError && error.kind === 'already-liked')) {
@@ -134,7 +152,12 @@ export function useCardDecisions({ homeId }: Readonly<CardDecisionsOptions>) {
         return false;
       }
     }
-    announce(t(decision === 'like' ? 'discovery.decision.liked' : 'discovery.decision.dismissed'));
+    if (found) celebrate(found, id);
+    else {
+      announce(
+        t(decision === 'like' ? 'discovery.decision.liked' : 'discovery.decision.dismissed'),
+      );
+    }
     void haptics.success();
     return true;
   };
@@ -196,5 +219,10 @@ export function useCardDecisions({ homeId }: Readonly<CardDecisionsOptions>) {
     exitDirection,
     decide,
     undo,
+    /** El match que acaba de formar un «Me gusta», mientras se celebra. */
+    celebration,
+    closeCelebration: () => {
+      setCelebration(null);
+    },
   };
 }

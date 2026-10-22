@@ -18,14 +18,14 @@
 
 ## 3. App
 
-- [ ] T3 Escribir las pruebas de componentes de la celebración (aparece con match, anuncio accesible, «Ver match», «reducir movimiento») y de la pestaña «Matches» (lista y vacío), y comprobar que fallan. ref: Celebración del match · est: 3h · disc: qa
+- [x] T3 Escribir las pruebas de componentes de la celebración (aparece con match, anuncio accesible, «Ver match», «reducir movimiento») y de la pestaña «Matches» (lista y vacío), y comprobar que fallan. ref: Celebración del match · est: 3h · disc: qa
   - GIVEN una respuesta de like con match WHEN llega THEN se anuncia «¡Tenéis un match!»
-- [ ] F1 Implementar la celebración de pantalla completa con la animación de intercambio y la pestaña «Matches» con su lista y estado vacío, y verificar que pasan las pruebas de T3. ref: Lista de matches · est: 6h · disc: front
+- [x] F1 Implementar la celebración de pantalla completa con la animación de intercambio y la pestaña «Matches» con su lista y estado vacío, y verificar que pasan las pruebas de T3. ref: Lista de matches · est: 6h · disc: front
   - GIVEN un match nuevo WHEN se cierra la celebración THEN «Matches» lo muestra el primero
 
 ## 4. Integración
 
-- [ ] V1 Ejecutar `pnpm lint`, `pnpm typecheck`, `pnpm test:coverage`, `pnpm test:integration` y `pnpm build` y verificar que todo pasa con cobertura ≥ 80 %. ref: Match directo · est: 1h · disc: qa
+- [x] V1 Ejecutar `pnpm lint`, `pnpm typecheck`, `pnpm test:coverage`, `pnpm test:integration` y `pnpm build` y verificar que todo pasa con cobertura ≥ 80 %. ref: Match directo · est: 1h · disc: qa
   - GIVEN el change implementado WHEN se ejecuta la puerta de calidad local THEN todos los comandos terminan con éxito
 
 ## Workflow follow-up

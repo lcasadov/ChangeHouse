@@ -1,4 +1,5 @@
 import type { Home } from '../features/homes/homes-api';
+import type { Match } from './fake-matches';
 import { json, problem } from './http-responses';
 
 export type DecisionOperation = 'like' | 'dismiss' | 'undo';
@@ -45,6 +46,9 @@ export class FakeDecisions {
     private readonly roles: () => readonly string[],
     private readonly ownHomes: () => readonly Home[],
     private readonly offered: (homeId: string) => boolean,
+    /** El match que cierra ese «Me gusta», si lo cierra (`likeHome` lo devuelve en `match`). */
+    private readonly matchFor: (fromHomeId: string, targetHomeId: string) => Match | null = () =>
+      null,
   ) {}
 
   /** La siguiente llamada de esa operación responde con este error. */
@@ -114,7 +118,10 @@ export class FakeDecisions {
       );
     }
     this.record({ kind: 'like', fromHomeId, targetHomeId });
-    return json(201, { liked: true, match: null });
+    const match = this.matchFor(fromHomeId, targetHomeId);
+    // Un me gusta que forma un match ya no se deshace
+    if (match) this.matched.add(`${fromHomeId}>${targetHomeId}`);
+    return json(201, { liked: true, match });
   }
 
   private dismiss(raw: unknown): Response {

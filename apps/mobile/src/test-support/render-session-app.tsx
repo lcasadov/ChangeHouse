@@ -30,6 +30,7 @@ import { createFixtureAddressSuggestions } from '../features/homes/fixture-addre
 import { createHttpHomesApi } from '../features/homes/http-homes-api';
 import type { PhotoPicker } from '../features/homes/photo-picker';
 import type { PhotoUploader } from '../features/homes/photo-uploader';
+import { createHttpMatchesApi } from '../features/matches/http-matches-api';
 import { createFixtureZoneSuggestions } from '../features/search/fixture-zone-suggestions';
 import { createHttpSearchPreferencesApi } from '../features/search/http-search-preferences-api';
 import type { ZoneSuggestions } from '../features/search/zone-suggestions';
@@ -73,6 +74,7 @@ export function fakeServices(overrides: Partial<AppServices> = {}): AppServices 
     },
     photoPicker: { pick: () => Promise.resolve([]) },
     photoUploader: { upload: () => Promise.resolve() },
+    matchesApi: { list: () => Promise.resolve({ items: [], nextCursor: null }) },
     searchPreferencesApi: {
       getMine: () => Promise.resolve(DEFAULT_SEARCH_PREFERENCES),
       putMine: () => Promise.reject(new Error('Sin preferencias en este doble')),
@@ -131,6 +133,7 @@ export function renderSessionApp({
     photoPicker,
     photoUploader,
     discoveryApi: createHttpDiscoveryApi(client),
+    matchesApi: createHttpMatchesApi(client),
     searchPreferencesApi: createHttpSearchPreferencesApi(client),
     zoneSuggestions,
     social,

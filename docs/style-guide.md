@@ -232,7 +232,7 @@ Etiqueta del estado de una vivienda (`HomeStatus`) y de un match
 | Error de carga de una pantalla | `ErrorState` con reintento |
 | Acción destructiva o irreversible (retirarse de un match, eliminar cuenta, eliminar foto) | `Dialog` de confirmación que **nombra** lo que se destruye y sus consecuencias («Si te retiras, el match se cerrará para los 3 participantes») |
 | Operación > 300 ms | Indicador de progreso o `Skeleton` |
-| Nuevo match | Pantalla de celebración + notificación push |
+| Nuevo match | Pantalla de celebración (las dos casas se intercambian; con «reducir movimiento», fundido; los textos van sobre una superficie, nunca sobre `color.matchGradient*`, que no es textual) + notificación push |
 | Sin conexión | Banner persistente; las acciones quedan deshabilitadas, no fallan en silencio |
 
 Todo error dice **qué hacer a continuación**: «No hemos podido subir la foto.

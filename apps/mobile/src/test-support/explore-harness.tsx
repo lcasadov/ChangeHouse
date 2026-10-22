@@ -5,6 +5,7 @@ import { authUser, FakeAuthService } from './fake-auth-service';
 import { FakeBackend, me } from './fake-backend';
 import { type DiscoveryCard, discoveryCard } from './fake-discovery';
 import { completeHome } from './fake-homes';
+import type { Match } from './fake-matches';
 import { renderSessionApp } from './render-session-app';
 
 /** Un usuario con vivienda publicada: el único que puede dar «Me gusta». */
@@ -36,6 +37,10 @@ export interface ExploreOptions {
   cards?: readonly DiscoveryCard[];
   pageSize?: number;
   theme?: 'light' | 'dark';
+  /** Los matches que ya tiene la persona. */
+  matches?: readonly Match[];
+  /** La ruta con la que se abre la app (por defecto, «Explorar»). */
+  url?: string;
 }
 
 /** Una persona dada de alta que abre «Explorar» con esas viviendas y esas tarjetas. */
@@ -45,18 +50,22 @@ export async function openExplore({
   cards = zoneCards(3),
   pageSize,
   theme,
+  matches,
+  url,
 }: ExploreOptions = {}) {
   const backend = new FakeBackend({
     registered: true,
     profile,
     homes,
     discoveryCards: cards,
+    ...(matches ? { matches } : {}),
   });
   if (pageSize) backend.discovery.pageSize = pageSize;
-  await renderSessionApp({
+  const view = await renderSessionApp({
     auth: new FakeAuthService({ initialUser: authUser() }),
     backend,
     ...(theme ? { theme } : {}),
+    ...(url ? { url } : {}),
   });
-  return { backend, homeId: homes[0]?.id ?? '', cards };
+  return { backend, homeId: homes[0]?.id ?? '', cards, view };
 }
