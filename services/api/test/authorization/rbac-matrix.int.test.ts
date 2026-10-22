@@ -7,11 +7,37 @@ import { FixedHomeOwnership } from '../fakes.js';
 import { openSql, testConfig } from '../fixtures.js';
 import { loadMatrix, type MatrixActor, matrixGaps, type MatrixRow } from './matrix.js';
 
+/** Viviendas que la matriz necesita: una propia del actor (borrador completo) y una publicada ajena. */
+interface HomeContext {
+  ownHomeId: string;
+  publishedHomeId: string;
+}
+
 interface RequestTemplate {
-  method: 'GET' | 'POST' | 'PUT';
-  url: string;
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH';
+  url: string | ((context: HomeContext) => string);
   payload?: () => object;
 }
+
+const MISSING_HOME = '0199c1a2-0000-7000-8000-000000000000';
+const ADDRESS = {
+  placeId: 'fixture-malasana',
+  formatted: 'Calle del Pez, 12, 28004 Madrid, España',
+};
+const COMPLETE_HOME = {
+  type: 'piso',
+  address: ADDRESS,
+  usefulM2: 80,
+  builtM2: 95,
+  bedrooms: 3,
+  bathrooms: 2,
+  hasLift: true,
+  garage: false,
+  storageRoom: false,
+  valueMinCents: 250_000_00,
+  valueMaxCents: 280_000_00,
+  isPrimaryResidence: true,
+};
 
 /** Una petición válida por operación implementada: la matriz mide la autorización, no la validación. */
 const REQUESTS: Record<string, RequestTemplate> = {
@@ -37,6 +63,19 @@ const REQUESTS: Record<string, RequestTemplate> = {
     }),
   },
   listMyConsents: { method: 'GET', url: '/v1/me/consents' },
+  listMyHomes: { method: 'GET', url: '/v1/me/homes' },
+  createHome: {
+    method: 'POST',
+    url: '/v1/homes',
+    payload: () => ({ type: 'piso', address: ADDRESS }),
+  },
+  getHome: { method: 'GET', url: (context) => `/v1/homes/${context.publishedHomeId}` },
+  updateHome: {
+    method: 'PATCH',
+    url: (context) => `/v1/homes/${context.ownHomeId}`,
+    payload: () => ({ bedrooms: 2 }),
+  },
+  submitHome: { method: 'POST', url: (context) => `/v1/homes/${context.ownHomeId}/submit` },
   acceptConsent: {
     method: 'POST',
     url: '/v1/me/consents',
@@ -60,18 +99,51 @@ afterAll(async () => {
   await sql.end();
 });
 
+let publishedHomeId: string | undefined;
+
+/** Una vivienda publicada de un tercero, creada una sola vez para todas las filas. */
+async function publishedHome(): Promise<string> {
+  if (publishedHomeId) return publishedHomeId;
+  const landlord = await signUp();
+  const landlordId = crypto.randomUUID();
+  await sql`INSERT INTO users (id, firebase_uid, email, display_name)
+            VALUES (${landlordId}, ${landlord.uid}, ${landlord.email}, 'Propietario de la matriz')`;
+  const created = await api.app.inject({
+    method: 'POST',
+    url: '/v1/homes',
+    headers: { authorization: `Bearer ${landlord.idToken}` },
+    payload: COMPLETE_HOME,
+  });
+  publishedHomeId = created.json<{ id: string }>().id;
+  await sql`UPDATE homes SET status = 'published' WHERE id = ${publishedHomeId}`;
+  return publishedHomeId;
+}
+
 /** Prepara un actor nuevo en cada caso: ninguna fila depende de lo que dejó otra. */
-async function authorizationFor(actor: MatrixActor): Promise<Record<string, string>> {
-  if (actor === 'anon') return {};
+async function authorizationFor(
+  actor: MatrixActor,
+): Promise<{ headers: Record<string, string>; context: HomeContext }> {
+  const context: HomeContext = { ownHomeId: MISSING_HOME, publishedHomeId: await publishedHome() };
+  if (actor === 'anon') return { headers: {}, context };
   const { uid, email, idToken } = await signUp();
-  if (actor !== 'unregistered') {
-    const assigned = actor === 'agency' || actor === 'admin' ? actor : null;
-    const id = crypto.randomUUID();
-    await sql`INSERT INTO users (id, firebase_uid, email, display_name, assigned_role)
-              VALUES (${id}, ${uid}, ${email}, 'Actor de prueba', ${assigned})`;
-    if (actor === 'owner') ownership.owners.add(id);
+  const headers = { authorization: `Bearer ${idToken}` };
+  if (actor === 'unregistered') return { headers, context };
+
+  const assigned = actor === 'agency' || actor === 'admin' ? actor : null;
+  const id = crypto.randomUUID();
+  await sql`INSERT INTO users (id, firebase_uid, email, display_name, assigned_role)
+            VALUES (${id}, ${uid}, ${email}, 'Actor de prueba', ${assigned})`;
+  if (actor === 'owner') ownership.owners.add(id);
+  if (assigned === null) {
+    const created = await api.app.inject({
+      method: 'POST',
+      url: '/v1/homes',
+      headers,
+      payload: COMPLETE_HOME,
+    });
+    context.ownHomeId = created.json<{ id: string }>().id;
   }
-  return { authorization: `Bearer ${idToken}` };
+  return { headers, context };
 }
 
 describe('matriz de permisos (docs/rbac-matrix.md)', () => {
@@ -106,11 +178,11 @@ describe('matriz de permisos (docs/rbac-matrix.md)', () => {
         const template = REQUESTS[row.operationId];
         if (!template)
           throw new Error(`Falta la petición de ejemplo de ${row.operationId} en la prueba`);
-        const headers = await authorizationFor(row.actor);
+        const { headers, context } = await authorizationFor(row.actor);
 
         const response = await api.app.inject({
           method: template.method,
-          url: template.url,
+          url: typeof template.url === 'function' ? template.url(context) : template.url,
           headers,
           ...(template.payload ? { payload: template.payload() } : {}),
         });

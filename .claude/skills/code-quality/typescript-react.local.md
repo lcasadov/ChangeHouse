@@ -50,3 +50,28 @@ fc.assert(
   llamadas; usa `clearAllMocks` en `beforeEach` si cuentas llamadas.
 - **Una ruta protegida (`Stack.Protected`) no redirige sola en el arranque**: queda «no encontrada».
   Hace falta `app/+not-found.tsx` que lleve a la pantalla de inicio que le toca a la sesión.
+
+## Drizzle y PostGIS
+
+- **`drizzle-kit generate` entrecomilla el tipo de una columna `customType`**: `"geography(Point,4326)"` no es un
+  identificador y la migración falla al aplicarse. Se corrige a mano en el `.sql` (sin comillas) y se deja un
+  comentario en la primera línea; la prueba de migración (`migrate.int.test.ts`) la aplica de verdad.
+- **Las pruebas de `application/` no importan de `infrastructure/`** (`no-restricted-imports`, también en los
+  `.test.ts`): los dobles de prueba viven en `test/fakes.ts`.
+
+## React: efectos y llamadas opcionales
+
+- **`react-hooks/set-state-in-effect`: no se llama a `setState` en el cuerpo del efecto para «resetear».** Se deriva
+  el valor al renderizar (`return active ? (outcome?.query === text ? outcome : SEARCHING) : IDLE`) y el efecto solo
+  guarda en el estado la respuesta asíncrona, dentro de su callback, con el texto al que responde.
+- **`callback?.(await accion())` no ejecuta `accion` si `callback` es `undefined`**: el optional call corta también los
+  argumentos. Se espera antes (`const resultado = await accion(); callback?.(resultado);`).
+
+## Pruebas con React Native Testing Library
+
+- **`getByRole` solo ve elementos `accessible`**: un grupo `radiogroup` que no lo es (para no agrupar a sus opciones en
+  iOS) se consulta con `getByLabelText(...)` y se comprueba `props.accessibilityRole`.
+- **`JSON.stringify(screen.toJSON())` falla con estructuras circulares** cuando hay proveedores de contexto en el árbol:
+  se comprueba el estilo del elemento concreto (`styleOf(screen.getByTestId(...))`).
+- **Un flujo completo de la app tarda más de 5 s en su primer test** (carga todos los módulos): el fichero declara
+  `jest.setTimeout(30_000)`.

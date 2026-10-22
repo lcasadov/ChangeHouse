@@ -210,6 +210,11 @@ paths:
       tags: [viviendas]
       operationId: createHome
       summary: Crea una vivienda en borrador (RF-10). Un usuario puede tener varias (RF-20)
+      description: |
+        El borrador nace con el tipo y la dirección (primer paso del asistente); el resto de
+        campos de `HomeInput` es opcional y se completa con `updateHome`. La completitud se
+        exige al enviar (`submitHome`). El servidor resuelve el `placeId` (punto exacto, barrio
+        o zona y su centro); si no puede, responde 422 con `code: ADDRESS_NOT_RESOLVED`.
       x-roles: [owner, seeker]
       requestBody:
         required: true
@@ -286,7 +291,11 @@ paths:
       tags: [viviendas]
       operationId: submitHome
       summary: Envía la vivienda a moderación (`draft` → `in_review`)
-      description: Exige al menos 3 fotos (RF-11) y los campos obligatorios completos.
+      description: |
+        Exige los campos obligatorios completos (`usefulM2`, `builtM2`, `bedrooms`, `bathrooms`,
+        `hasLift`, `garage`, `storageRoom`, `valueMinCents`, `valueMaxCents`, `isPrimaryResidence`);
+        si faltan, 422 con `code: HOME_INCOMPLETE` y `errors` con cada campo. La exigencia de al
+        menos 3 fotos (RF-11) se incorpora con `add-home-photos`.
       x-roles: [resourceOwner]
       responses:
         '200':
@@ -1256,7 +1265,11 @@ components:
     HomeInput:
       type: object
       additionalProperties: false
-      required: [type, regime, address, usefulM2, builtM2, bedrooms, bathrooms, hasLift, garage, storageRoom, valueMinCents, valueMaxCents, isPrimaryResidence]
+      description: |
+        Solo `type` y `address` son obligatorios al crear el borrador; `regime` es `libre` por
+        defecto. Los demás son obligatorios para enviar a revisión (`submitHome`), no para guardar.
+        Si hay rango, `valueMinCents` > 0 y `valueMinCents` <= `valueMaxCents` (422 en otro caso).
+      required: [type, address]
       properties:
         type: { $ref: '#/components/schemas/HomeType' }
         regime: { $ref: '#/components/schemas/HomeRegime' }
@@ -1316,25 +1329,27 @@ components:
         vppMaxLegalPriceCents: { $ref: '#/components/schemas/Money' }
     HomePublic:
       type: object
-      description: Forma pública de una vivienda. Sin dirección postal exacta ni datos del propietario.
+      description: |
+        Forma pública de una vivienda. Sin dirección postal exacta ni datos del propietario.
+        En un borrador (solo la ve su propietario) los datos aún sin rellenar son `null`.
       required: [id, type, regime, usefulM2, builtM2, bedrooms, bathrooms, valueMinCents, valueMaxCents, location, photos]
       properties:
         id: { type: string, format: uuid }
         type: { $ref: '#/components/schemas/HomeType' }
         regime: { $ref: '#/components/schemas/HomeRegime' }
-        usefulM2: { type: number }
-        builtM2: { type: number }
-        bedrooms: { type: integer }
-        bathrooms: { type: integer }
+        usefulM2: { type: [number, 'null'] }
+        builtM2: { type: [number, 'null'] }
+        bedrooms: { type: [integer, 'null'] }
+        bathrooms: { type: [integer, 'null'] }
         floor: { type: [string, 'null'] }
-        hasLift: { type: boolean }
-        garage: { type: boolean }
-        storageRoom: { type: boolean }
+        hasLift: { type: [boolean, 'null'] }
+        garage: { type: [boolean, 'null'] }
+        storageRoom: { type: [boolean, 'null'] }
         features: { $ref: '#/components/schemas/HomeFeatures' }
         energyRating: { type: [string, 'null'] }
         yearBuilt: { type: [integer, 'null'] }
-        valueMinCents: { $ref: '#/components/schemas/Money' }
-        valueMaxCents: { $ref: '#/components/schemas/Money' }
+        valueMinCents: { type: [integer, 'null'], minimum: 0 }
+        valueMaxCents: { type: [integer, 'null'], minimum: 0 }
         location:
           type: object
           description: Punto exacto si el propietario eligió `exact`; centro del barrio o zona si eligió `area`.
@@ -1354,8 +1369,8 @@ components:
           required: [status, isPrimaryResidence, address]
           properties:
             status: { $ref: '#/components/schemas/HomeStatus' }
-            isPrimaryResidence: { type: boolean }
-            mortgageOutstandingCents: { $ref: '#/components/schemas/Money' }
+            isPrimaryResidence: { type: [boolean, 'null'] }
+            mortgageOutstandingCents: { type: [integer, 'null'], minimum: 0 }
             vppQualificationDate: { type: [string, 'null'], format: date }
             vppProtectionEnd: { type: [string, 'null'], format: date }
             vppMaxLegalPriceCents: { type: [integer, 'null'], minimum: 0 }

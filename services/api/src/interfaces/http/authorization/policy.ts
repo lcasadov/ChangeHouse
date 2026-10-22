@@ -20,6 +20,7 @@ export type Policy = Readonly<Record<string, Access>>;
 export type Decision = { allowed: true } | { allowed: false; status: DenyStatus };
 
 const ALL_ACCOUNT_ROLES: readonly Role[] = ['seeker', 'owner', 'agency', 'admin'];
+const HOME_OWNER_ROLES: readonly Role[] = ['seeker', 'owner'];
 
 /**
  * Política de autorización como datos (`docs/rbac-matrix.md` §5). Cada change que añade una
@@ -33,6 +34,14 @@ export const policy: Policy = {
   getMe: { kind: 'roles', roles: ALL_ACCOUNT_ROLES, denyStatus: 404 },
   listMyConsents: { kind: 'roles', roles: ALL_ACCOUNT_ROLES, denyStatus: 404 },
   acceptConsent: { kind: 'roles', roles: ALL_ACCOUNT_ROLES, denyStatus: 404 },
+  // Viviendas: `agency` y `admin` no publican ni gestionan viviendas propias (RC-19); la propiedad
+  // de cada vivienda (`resourceOwner`) y su visibilidad las resuelve el caso de uso con un 404
+  listMyHomes: { kind: 'roles', roles: HOME_OWNER_ROLES },
+  createHome: { kind: 'roles', roles: HOME_OWNER_ROLES },
+  updateHome: { kind: 'roles', roles: HOME_OWNER_ROLES },
+  submitHome: { kind: 'roles', roles: HOME_OWNER_ROLES },
+  // El admin consulta viviendas ajenas, pero en su forma pública hasta que exista la moderación
+  getHome: { kind: 'roles', roles: [...HOME_OWNER_ROLES, 'admin'] },
 };
 
 /** Único punto de decisión: ¿puede este actor invocar una operación con este acceso? */

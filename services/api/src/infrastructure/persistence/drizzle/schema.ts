@@ -1,19 +1,48 @@
-import { CONSENT_TYPES, HOME_TYPES } from '@changehouse/shared';
 import {
+  CONSENT_TYPES,
+  HOME_REGIMES,
+  HOME_STATUSES,
+  HOME_TYPES,
+  type HomeFeatures,
+  LOCATION_VISIBILITIES,
+} from '@changehouse/shared';
+import { sql } from 'drizzle-orm';
+import {
+  bigint,
   boolean,
   customType,
+  date,
+  index,
+  jsonb,
+  numeric,
   pgEnum,
   pgTable,
   primaryKey,
+  smallint,
   text,
   timestamp,
   uuid,
 } from 'drizzle-orm/pg-core';
 
+import { type GeoPoint, parsePoint, pointSql } from './geography.js';
+
 /** Texto sin distinción de mayúsculas (extensión `citext`): el email es único sea cual sea su capitalización. */
 const citext = customType<{ data: string }>({ dataType: () => 'citext' });
 
 export const homeTypeEnum = pgEnum('home_type', HOME_TYPES);
+export const homeStatusEnum = pgEnum('home_status', HOME_STATUSES);
+export const homeRegimeEnum = pgEnum('home_regime', HOME_REGIMES);
+export const locationVisibilityEnum = pgEnum('location_visibility', LOCATION_VISIBILITIES);
+
+/** Dirección cifrada (`bytea`): se lee y se escribe como `Buffer`. */
+const bytea = customType<{ data: Buffer }>({ dataType: () => 'bytea' });
+
+/** Punto `geography(Point, 4326)`: se escribe como `ST_MakePoint(lng, lat)` y se lee de su EWKB. */
+const geographyPoint = customType<{ data: GeoPoint; driverData: string }>({
+  dataType: () => 'geography(Point,4326)',
+  toDriver: pointSql,
+  fromDriver: parsePoint,
+});
 
 export const waitlist = pgTable('waitlist', {
   id: uuid('id').primaryKey(),
@@ -53,4 +82,48 @@ export const consents = pgTable(
     acceptedAt: timestamp('accepted_at', { withTimezone: true }).notNull(),
   },
   (table) => [primaryKey({ columns: [table.userId, table.type, table.version] })],
+);
+
+/** Fichas de vivienda (`docs/datamodel.md`). La dirección exacta va cifrada y no se expone a terceros. */
+export const homes = pgTable(
+  'homes',
+  {
+    id: uuid('id').primaryKey(),
+    ownerId: uuid('owner_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
+    type: homeTypeEnum('type').notNull(),
+    status: homeStatusEnum('status').notNull().default('draft'),
+    regime: homeRegimeEnum('regime').notNull().default('libre'),
+    vppQualificationDate: date('vpp_qualification_date', { mode: 'string' }),
+    vppProtectionEnd: date('vpp_protection_end', { mode: 'string' }),
+    vppMaxLegalPriceCents: bigint('vpp_max_legal_price_cents', { mode: 'number' }),
+    usefulM2: numeric('useful_m2', { precision: 7, scale: 2, mode: 'number' }),
+    builtM2: numeric('built_m2', { precision: 7, scale: 2, mode: 'number' }),
+    bedrooms: smallint('bedrooms'),
+    bathrooms: smallint('bathrooms'),
+    floor: text('floor'),
+    hasLift: boolean('has_lift'),
+    garage: boolean('garage'),
+    storageRoom: boolean('storage_room'),
+    features: jsonb('features')
+      .$type<HomeFeatures>()
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    energyRating: text('energy_rating'),
+    yearBuilt: smallint('year_built'),
+    valueMinCents: bigint('value_min_cents', { mode: 'number' }),
+    valueMaxCents: bigint('value_max_cents', { mode: 'number' }),
+    isPrimaryResidence: boolean('is_primary_residence'),
+    mortgageOutstandingCents: bigint('mortgage_outstanding_cents', { mode: 'number' }),
+    exactAddress: bytea('exact_address').notNull(),
+    locationVisibility: locationVisibilityEnum('location_visibility').notNull().default('area'),
+    exactLocation: geographyPoint('exact_location').notNull(),
+    approxLocation: geographyPoint('approx_location').notNull(),
+    areaName: text('area_name').notNull(),
+    moderationNote: text('moderation_note'),
+    relevantChangedAt: timestamp('relevant_changed_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index('homes_owner_id_idx').on(table.ownerId)],
 );

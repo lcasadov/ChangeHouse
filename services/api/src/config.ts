@@ -14,6 +14,12 @@ export interface ApiConfig {
     /** `host:puerto` del emulador de Auth. Solo en local y en las pruebas. */
     authEmulatorHost: string | undefined;
   };
+  /** Clave AES-256 (base64, 32 bytes) con la que se cifra la dirección postal de las viviendas. */
+  addressEncryptionKey: string;
+  places: {
+    /** Clave de servidor de Google Places. Sin ella (solo en local) rigen los lugares de prueba. */
+    serverKey: string | undefined;
+  };
   /** `false` en pruebas; las pruebas pasan un destino propio para inspeccionar el registro. */
   logger: boolean | { level: string; stream: { write(line: string): void } };
 }
@@ -62,6 +68,14 @@ export function loadConfig(env: Env = process.env): ApiConfig {
     throw new Error('FIREBASE_AUTH_EMULATOR_HOST no puede definirse en Cloud Run');
   }
 
+  const addressEncryptionKey = env['ADDRESS_ENCRYPTION_KEY'];
+  if (!addressEncryptionKey) throw new Error('Falta la variable ADDRESS_ENCRYPTION_KEY');
+  const placesServerKey = env['GOOGLE_PLACES_SERVER_KEY'] || undefined;
+  // Sin clave en Cloud Run, las direcciones se resolverían contra el catálogo de prueba
+  if (!placesServerKey && env['K_SERVICE']) {
+    throw new Error('Falta la variable GOOGLE_PLACES_SERVER_KEY en Cloud Run');
+  }
+
   return {
     port: integer(env, 'PORT', DEFAULT_PORT, 0),
     databaseUrl,
@@ -79,6 +93,8 @@ export function loadConfig(env: Env = process.env): ApiConfig {
       windowSeconds: integer(env, 'WAITLIST_RATE_LIMIT_WINDOW', DEFAULT_WAITLIST_WINDOW_SECONDS, 1),
     },
     firebase: { projectId, authEmulatorHost },
+    addressEncryptionKey,
+    places: { serverKey: placesServerKey },
     logger: env['NODE_ENV'] !== 'test',
   };
 }

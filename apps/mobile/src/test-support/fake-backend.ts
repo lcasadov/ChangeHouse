@@ -1,6 +1,9 @@
 import { PRIVACY_VERSION, TERMS_VERSION } from '@changehouse/shared';
 
 import type { Me } from '../features/account/account-api';
+import type { Home } from '../features/homes/homes-api';
+import { FakeHomes } from './fake-homes';
+import { json, problem } from './http-responses';
 
 export interface RecordedRequest {
   method: string;
@@ -21,21 +24,6 @@ export function me(overrides: Partial<Me> = {}): Me {
     ...overrides,
   };
 }
-
-const problem = (status: number, extra: Record<string, unknown> = {}) =>
-  new Response(
-    JSON.stringify({
-      type: 'about:blank',
-      title: 'Error',
-      status,
-      correlationId: 'corr-1',
-      ...extra,
-    }),
-    { status, headers: { 'content-type': 'application/problem+json' } },
-  );
-
-const json = (status: number, body: unknown) =>
-  new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 
 type UpsertBody = { displayName: string } & Record<string, unknown>;
 
@@ -64,10 +52,17 @@ export class FakeBackend {
   registered: boolean;
   failNext: Failure | null = null;
   profile: Me;
+  /** Las viviendas del usuario, con las reglas de la API. */
+  readonly homes: FakeHomes;
 
-  constructor({ registered = false, profile = me() }: { registered?: boolean; profile?: Me } = {}) {
+  constructor({
+    registered = false,
+    profile = me(),
+    homes = [],
+  }: { registered?: boolean; profile?: Me; homes?: readonly Home[] } = {}) {
     this.registered = registered;
     this.profile = profile;
+    this.homes = new FakeHomes(homes);
   }
 
   private gate: Promise<void> | null = null;
@@ -105,6 +100,9 @@ export class FakeBackend {
     if (failure) {
       this.failNext = null;
       return this.fail(failure);
+    }
+    if (path === '/me/homes' || path.startsWith('/homes')) {
+      return this.homes.respond(method, path, body);
     }
     if (path !== '/me') return problem(404);
     if (method === 'GET') return this.registered ? json(200, this.profile) : problem(404);

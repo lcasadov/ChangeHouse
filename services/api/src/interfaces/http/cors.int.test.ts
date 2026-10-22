@@ -45,7 +45,7 @@ describe('CORS de la app', () => {
 
       expect(response.statusCode).toBe(204);
       expect(response.headers['access-control-allow-origin']).toBe(origin);
-      for (const method of ['GET', 'POST', 'PUT', 'DELETE']) {
+      for (const method of ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']) {
         expect(response.headers['access-control-allow-methods']).toContain(method);
       }
       expect(String(response.headers['access-control-allow-headers']).toLowerCase()).toEqual(

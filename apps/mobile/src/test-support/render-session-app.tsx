@@ -6,7 +6,11 @@ import AccessRoute from '../../app/(auth)/access';
 import ForgotPasswordRoute from '../../app/(auth)/forgot-password';
 import WelcomeRoute from '../../app/(auth)/welcome';
 import TabsLayout from '../../app/(tabs)/_layout';
-import HomesRoute from '../../app/(tabs)/homes';
+import HomesLayout from '../../app/(tabs)/homes/_layout';
+import EditHomeRoute from '../../app/(tabs)/homes/[homeId]/edit';
+import HomeDetailRoute from '../../app/(tabs)/homes/[homeId]/index';
+import HomesRoute from '../../app/(tabs)/homes/index';
+import NewHomeRoute from '../../app/(tabs)/homes/new';
 import ExploreRoute from '../../app/(tabs)/index';
 import MatchesRoute from '../../app/(tabs)/matches';
 import ProfileRoute from '../../app/(tabs)/profile';
@@ -15,6 +19,9 @@ import OnboardingRoute from '../../app/onboarding';
 import { createApiClient } from '../api/client';
 import { createHttpAccountApi } from '../features/account/http-account-api';
 import type { SocialSignIn } from '../features/auth/auth-service';
+import type { AddressSuggestions } from '../features/homes/address-suggestions';
+import { createFixtureAddressSuggestions } from '../features/homes/fixture-address-suggestions';
+import { createHttpHomesApi } from '../features/homes/http-homes-api';
 import type { AppServices } from '../features/session/services';
 import { SessionRoot } from '../features/session/SessionRoot';
 import { AppThemeProvider } from '../theme/AppThemeProvider';
@@ -31,6 +38,14 @@ export function fakeServices(overrides: Partial<AppServices> = {}): AppServices 
   return {
     auth: new FakeAuthService({ initialUser: authUser() }),
     accountApi: { getMe: () => Promise.resolve(me()), upsertMe: () => Promise.resolve(me()) },
+    homesApi: {
+      listMine: () => Promise.resolve([]),
+      get: () => Promise.reject(new Error('Sin viviendas en este doble')),
+      create: () => Promise.reject(new Error('Sin viviendas en este doble')),
+      update: () => Promise.reject(new Error('Sin viviendas en este doble')),
+      submit: () => Promise.reject(new Error('Sin viviendas en este doble')),
+    },
+    addressSuggestions: createFixtureAddressSuggestions(),
     social: [],
     legalUrls: TEST_LEGAL_URLS,
     ...overrides,
@@ -41,6 +56,8 @@ export interface SessionAppOptions {
   auth: FakeAuthService;
   backend: FakeBackend;
   social?: readonly SocialSignIn[];
+  /** Autocompletado de direcciones; por defecto, los lugares de prueba. */
+  addressSuggestions?: AddressSuggestions;
   theme?: ThemeName;
   /** Ruta a la que se abre la app (por defecto la raíz, que es una pestaña protegida). */
   url?: string;
@@ -51,17 +68,23 @@ export function renderSessionApp({
   auth,
   backend,
   social = [],
+  addressSuggestions = createFixtureAddressSuggestions(),
   theme = 'light',
   url = '/',
 }: SessionAppOptions) {
-  const accountApi = createHttpAccountApi(
-    createApiClient({
-      baseUrl: 'https://api.test',
-      getToken: () => auth.getIdToken(),
-      fetch: backend.fetch,
-    }),
-  );
-  const services: AppServices = { auth, accountApi, social, legalUrls: TEST_LEGAL_URLS };
+  const client = createApiClient({
+    baseUrl: 'https://api.test',
+    getToken: () => auth.getIdToken(),
+    fetch: backend.fetch,
+  });
+  const services: AppServices = {
+    auth,
+    accountApi: createHttpAccountApi(client),
+    homesApi: createHttpHomesApi(client),
+    addressSuggestions,
+    social,
+    legalUrls: TEST_LEGAL_URLS,
+  };
 
   function Root() {
     return (
@@ -83,7 +106,11 @@ export function renderSessionApp({
       '(tabs)/_layout': TabsLayout,
       '(tabs)/index': ExploreRoute,
       '(tabs)/matches': MatchesRoute,
-      '(tabs)/homes': HomesRoute,
+      '(tabs)/homes/_layout': HomesLayout,
+      '(tabs)/homes/index': HomesRoute,
+      '(tabs)/homes/new': NewHomeRoute,
+      '(tabs)/homes/[homeId]/index': HomeDetailRoute,
+      '(tabs)/homes/[homeId]/edit': EditHomeRoute,
       '(tabs)/profile': ProfileRoute,
     },
     { initialUrl: url },

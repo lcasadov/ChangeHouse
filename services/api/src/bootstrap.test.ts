@@ -12,6 +12,8 @@ const config: ApiConfig = {
   trustProxyHops: 0,
   waitlistRateLimit: { max: 5, windowSeconds: 600 },
   firebase: { projectId: 'demo-changehouse', authEmulatorHost: undefined },
+  addressEncryptionKey: Buffer.alloc(32, 7).toString('base64'),
+  places: { serverKey: undefined },
   logger: false,
 };
 
@@ -42,9 +44,14 @@ describe('createApi', () => {
     expect(responses.map((response) => response.statusCode)).toEqual([401, 401, 401, 401]);
     expect([...app.operations].sort()).toEqual([
       'acceptConsent',
+      'createHome',
+      'getHome',
       'getMe',
       'joinWaitlist',
       'listMyConsents',
+      'listMyHomes',
+      'submitHome',
+      'updateHome',
       'upsertMe',
     ]);
     await close();
