@@ -1,0 +1,9 @@
+rules_version = '2';
+// Denegación por defecto: las subidas se hacen con URL firmadas emitidas por la API.
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
