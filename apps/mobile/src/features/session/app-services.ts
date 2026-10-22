@@ -6,6 +6,7 @@ import { createFirebaseAuth } from '../auth/create-firebase-auth';
 import { createFirebaseAuthService } from '../auth/firebase-auth-service';
 import { type FirebaseEnv, readFirebaseConfig } from '../auth/firebase-config';
 import type { GoogleEnv } from '../auth/google-sign-in';
+import { createHttpDiscoveryApi } from '../discovery/http-discovery-api';
 import {
   type AddressSuggestionsEnv,
   createAddressSuggestions,
@@ -53,6 +54,7 @@ export function createAppServices(
     addressSuggestions: createAddressSuggestions(env),
     photoPicker: createExpoPhotoPicker(),
     photoUploader: createXhrPhotoUploader(),
+    discoveryApi: createHttpDiscoveryApi(client),
     searchPreferencesApi: createHttpSearchPreferencesApi(client),
     // Sin servicio de zonas real todavía: las sugerencias de prueba (ver design.md de add-search-preferences)
     zoneSuggestions: createFixtureZoneSuggestions(),

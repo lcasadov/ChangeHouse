@@ -66,8 +66,31 @@ export interface HomeView extends HomePublicView {
   createdAt: string;
 }
 
+/** Los datos de una vivienda con los que se construye su forma pública: nunca la dirección ni el dueño. */
+export type PublicHome = Pick<
+  Home,
+  | 'id'
+  | 'type'
+  | 'regime'
+  | 'usefulM2'
+  | 'builtM2'
+  | 'bedrooms'
+  | 'bathrooms'
+  | 'floor'
+  | 'hasLift'
+  | 'garage'
+  | 'storageRoom'
+  | 'features'
+  | 'energyRating'
+  | 'yearBuilt'
+  | 'valueMinCents'
+  | 'valueMaxCents'
+  | 'locationVisibility'
+  | 'location'
+>;
+
 /** Construida campo a campo, sin propagar la entidad: lo que no se nombra aquí no sale de la API. */
-export function toHomePublicView(home: Home, photos: readonly PhotoView[]): HomePublicView {
+export function toHomePublicView(home: PublicHome, photos: readonly PhotoView[]): HomePublicView {
   const exact = home.locationVisibility === 'exact';
   return {
     id: home.id,

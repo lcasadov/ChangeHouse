@@ -79,7 +79,8 @@ export class GooglePlaceResolver implements PlaceResolver {
     const locality = componentText(components, 'locality');
     const query = locality && locality !== areaName ? `${areaName}, ${locality}` : areaName;
     const areaCenter = await this.areaCenter(query, exact);
-    return areaCenter === null ? null : { exact, areaName, areaCenter };
+    if (areaCenter === null) return null;
+    return { exact, areaName, areaCenter, ...(locality ? { municipality: locality } : {}) };
   }
 
   private async details(placeId: string): Promise<PlaceDetails | null> {

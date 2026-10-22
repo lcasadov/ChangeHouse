@@ -28,6 +28,11 @@ export interface HomeLocation {
   readonly exact: GeoPoint;
   readonly areaName: string;
   readonly areaCenter: GeoPoint;
+  /**
+   * Municipio (la localidad de la dirección): con él se comparan los municipios de las preferencias
+   * de búsqueda. Puede faltar si el servicio de direcciones no lo da; entonces solo cuenta el punto.
+   */
+  readonly municipality?: string;
 }
 
 /** Datos de la ficha que el propietario rellena paso a paso; todos opcionales mientras es borrador. */
@@ -66,6 +71,8 @@ export interface Home {
   readonly submittedAt: Date | null;
   /** Último cambio de un dato relevante tras publicarse; `null` si no lo hubo. */
   readonly relevantChangedAt: Date | null;
+  /** Última aprobación en moderación: ordena las tarjetas del descubrimiento. `null` si nunca se publicó. */
+  readonly publishedAt: Date | null;
   readonly createdAt: Date;
 }
 
@@ -180,6 +187,7 @@ export function newDraft(params: NewDraft): Home {
     moderationNote: null,
     submittedAt: null,
     relevantChangedAt: null,
+    publishedAt: null,
     createdAt: params.now,
     ...fromDetails(params.details ?? {}),
   };
@@ -195,9 +203,19 @@ function relevantChanged(before: Home, after: Home): boolean {
 }
 
 /**
+ * ¿Ha estado alguna vez a la vista en el descubrimiento? Lo está si está publicada o pausada, o si
+ * tiene fecha de publicación (una publicada que volvió a revisión). Solo entonces un cambio de valor
+ * o de fotos es un cambio relevante que reactiva sus descartes (RF-44).
+ */
+export function hasBeenPublished(home: Home): boolean {
+  return home.status === 'published' || home.status === 'paused' || home.publishedAt !== null;
+}
+
+/**
  * Aplica los cambios del propietario. No se edita en `in_operation` ni `closed`. Una vivienda
  * publicada que cambia un dato relevante vuelve a `in_review`; una pausada se queda pausada, pero
- * el cambio queda anotado para moderarlo al reactivarla.
+ * el cambio queda anotado para moderarlo al reactivarla. Si ya se publicó alguna vez, el cambio
+ * relevante queda anotado aunque ahora esté en revisión o en borrador.
  */
 export function editHome(home: Home, changes: HomeChanges, now: Date): Home {
   assertEditable(home);
@@ -211,15 +229,10 @@ export function editHome(home: Home, changes: HomeChanges, now: Date): Home {
   };
   assertValueRange(edited.valueMinCents, edited.valueMaxCents);
 
-  const moderated = home.status === 'published' || home.status === 'paused';
-  if (!moderated || !relevantChanged(home, edited)) return edited;
-  const backToReview = home.status === 'published';
-  return {
-    ...edited,
-    status: backToReview ? 'in_review' : home.status,
-    submittedAt: backToReview ? now : edited.submittedAt,
-    relevantChangedAt: now,
-  };
+  if (!relevantChanged(home, edited)) return edited;
+  const noted = hasBeenPublished(home) ? { ...edited, relevantChangedAt: now } : edited;
+  if (home.status !== 'published') return noted;
+  return { ...noted, status: 'in_review', submittedAt: now };
 }
 
 /** Campos obligatorios aún sin rellenar. */
@@ -247,10 +260,13 @@ function assertInReview(home: Home): void {
   if (home.status !== 'in_review') throw new HomeNotInReviewError();
 }
 
-/** Aprueba una vivienda en revisión: se publica y el motivo de un rechazo anterior deja de aplicar. */
-export function approveHome(home: Home): Home {
+/**
+ * Aprueba una vivienda en revisión: se publica en `now` y el motivo de un rechazo anterior deja de
+ * aplicar. La fecha de publicación ordena las tarjetas del descubrimiento.
+ */
+export function approveHome(home: Home, now: Date): Home {
   assertInReview(home);
-  return { ...home, status: 'published', moderationNote: null };
+  return { ...home, status: 'published', moderationNote: null, publishedAt: now };
 }
 
 /**

@@ -41,7 +41,7 @@ const ROUTES = {
 };
 
 const TAB_CASES = [
-  [es.tabs.explore, '/', es.explore.empty.title],
+  [es.tabs.explore, '/', es.discovery.end.title],
   [es.tabs.matches, '/matches', es.matches.empty.title],
   [es.tabs.homes, '/homes', es.homes.empty.title],
   [es.tabs.profile, '/profile', es.profile.title],
@@ -60,7 +60,7 @@ describe('navegación principal', () => {
       expect(await screen.findByRole('button', { name: label })).toBeTruthy();
     }
     // «Explorar» carga la búsqueda guardada antes de mostrarse
-    expect(await screen.findByText(es.explore.empty.title)).toBeTruthy();
+    expect(await screen.findByText(es.discovery.end.title)).toBeTruthy();
   });
 
   it.each(TAB_CASES)(
@@ -82,7 +82,7 @@ describe('navegación principal', () => {
       await renderRouter(ROUTES);
 
       const tab = await screen.findByRole('button', { name: es.tabs.explore });
-      const title = await screen.findByText(es.explore.empty.title);
+      const title = await screen.findByText(es.discovery.end.title);
 
       expect(styleOf(title).color).toBe(themes[scheme].color.text);
       expect(JSON.stringify(screen.toJSON())).toContain(themes[scheme].color.primary);
@@ -98,6 +98,6 @@ describe('navegación principal', () => {
       expect(await screen.findByRole('button', { name: label })).toBeTruthy();
     }
     // «Explorar» carga la búsqueda guardada antes de mostrarse
-    expect(await screen.findByText(es.explore.empty.title)).toBeTruthy();
+    expect(await screen.findByText(es.discovery.end.title)).toBeTruthy();
   });
 });

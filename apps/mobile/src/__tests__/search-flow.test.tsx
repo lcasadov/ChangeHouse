@@ -60,7 +60,7 @@ describe('Primer uso', () => {
     await openExplore({ preferences: null });
 
     expect(await screen.findByRole('header', { name: s.firstUse.title })).toBeTruthy();
-    expect(screen.queryByText(es.explore.empty.title)).toBeNull();
+    expect(screen.queryByText(es.discovery.end.title)).toBeNull();
     expect(screen.queryByRole('button', { name: s.chips.garage })).toBeNull();
   });
 
@@ -73,7 +73,7 @@ describe('Primer uso', () => {
     await fireEvent.changeText(field(s.form.minToReceive), '0');
     await fireEvent.press(button(s.firstUse.action));
 
-    expect(await screen.findByText(es.explore.empty.title)).toBeTruthy();
+    expect(await screen.findByText(es.discovery.end.title)).toBeTruthy();
     expect(backend.requestsTo(...PUT_MINE)[0]?.body).toEqual({
       municipalities: ['Getafe'],
       filters: {},
@@ -148,7 +148,7 @@ describe('Primer uso', () => {
     expect(await screen.findByText(s.sheet.saveFailed)).toBeTruthy();
 
     await fireEvent.press(button(s.firstUse.action));
-    expect(await screen.findByText(es.explore.empty.title)).toBeTruthy();
+    expect(await screen.findByText(es.discovery.end.title)).toBeTruthy();
   });
 
   it('si no se pueden cargar las preferencias lo explica y permite reintentar', async () => {
@@ -162,14 +162,14 @@ describe('Primer uso', () => {
     expect(await screen.findByText(s.loadFailed)).toBeTruthy();
     await fireEvent.press(button(s.retry));
 
-    expect(await screen.findByText(es.explore.empty.title)).toBeTruthy();
+    expect(await screen.findByText(es.discovery.end.title)).toBeTruthy();
   });
 });
 
 describe('Barra de búsqueda', () => {
   it('Scenario: Escribir un sitio - «Alcob» y «Alcobendas» queda como zona y se guarda', async () => {
     const backend = await openExplore();
-    await screen.findByText(es.explore.empty.title);
+    await screen.findByText(es.discovery.end.title);
 
     await pickZone('Alcob', 'Alcobendas');
 
@@ -181,7 +181,7 @@ describe('Barra de búsqueda', () => {
 
   it('elegir un barrio fija un punto con radio de 5 km', async () => {
     const backend = await openExplore();
-    await screen.findByText(es.explore.empty.title);
+    await screen.findByText(es.discovery.end.title);
 
     await pickZone('malasa', 'Malasaña');
 
@@ -201,7 +201,7 @@ describe('Barra de búsqueda', () => {
     const backend = await openExplore({
       preferences: { ...GETAFE, municipalities: ['Getafe', 'Madrid'] },
     });
-    await screen.findByText(es.explore.empty.title);
+    await screen.findByText(es.discovery.end.title);
 
     await fireEvent.press(button(s.zone.remove.replace('{{name}}', 'Getafe')));
 
@@ -212,7 +212,7 @@ describe('Barra de búsqueda', () => {
 
   it('quitar la última zona pide elegir otra y no llama a la API', async () => {
     const backend = await openExplore();
-    await screen.findByText(es.explore.empty.title);
+    await screen.findByText(es.discovery.end.title);
 
     await fireEvent.press(button(s.zone.remove.replace('{{name}}', 'Getafe')));
 
@@ -222,7 +222,7 @@ describe('Barra de búsqueda', () => {
 
   it('sin coincidencias lo explica', async () => {
     await openExplore();
-    await screen.findByText(es.explore.empty.title);
+    await screen.findByText(es.discovery.end.title);
 
     await fireEvent.changeText(field(s.bar.label), 'zzzz');
 
@@ -236,28 +236,28 @@ describe('Barra de búsqueda', () => {
       backend,
       zoneSuggestions: { suggest: () => Promise.reject(new Error('sin red')) },
     });
-    await screen.findByText(es.explore.empty.title);
+    await screen.findByText(es.discovery.end.title);
 
     await fireEvent.changeText(field(s.bar.label), 'getaf');
 
     expect(await screen.findByText(s.bar.failed)).toBeTruthy();
   });
 
-  it('el estado vacío resume la búsqueda guardada', async () => {
+  it('sin viviendas compatibles, la búsqueda guardada se ve en la barra y el estado vacío ofrece ampliarla', async () => {
     await openExplore();
 
-    const summary = s.summary.description
-      .replace('{{zones}}', 'Getafe')
-      .replace('{{maxToPay}}', formatEuros(3_000_000))
-      .replace('{{minToReceive}}', formatEuros(0));
-    expect(await screen.findByText(summary)).toBeTruthy();
+    expect(await screen.findByText(es.discovery.end.title)).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: s.zone.remove.replace('{{name}}', 'Getafe') }),
+    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: es.discovery.end.widenZone })).toBeTruthy();
   });
 });
 
 describe('Chips de un toque', () => {
   it('Scenario: Activar un chip - «Garaje» queda activado, se anuncia y se guarda el filtro', async () => {
     const backend = await openExplore();
-    await screen.findByText(es.explore.empty.title);
+    await screen.findByText(es.discovery.end.title);
     expect(button(s.chips.garage).props.accessibilityState).toMatchObject({ selected: false });
 
     await fireEvent.press(button(s.chips.garage));
@@ -272,7 +272,7 @@ describe('Chips de un toque', () => {
 
   it('varios toques seguidos se juntan en una sola petición con el último estado', async () => {
     const backend = await openExplore();
-    await screen.findByText(es.explore.empty.title);
+    await screen.findByText(es.discovery.end.title);
 
     await fireEvent.press(button(s.chips.garage));
     await fireEvent.press(button(s.chips.lift));
@@ -287,7 +287,7 @@ describe('Chips de un toque', () => {
 
   it('el chip de dormitorios recorre los mínimos y se anuncia con su valor', async () => {
     await openExplore();
-    await screen.findByText(es.explore.empty.title);
+    await screen.findByText(es.discovery.end.title);
 
     await fireEvent.press(button(s.chips.bedrooms));
     await fireEvent.press(button(s.chips.bedroomsMin.replace('{{count}}', '1')));
@@ -298,7 +298,7 @@ describe('Chips de un toque', () => {
 
   it('el chip «Tipo» despliega los tipos y elegir uno lo guarda', async () => {
     const backend = await openExplore();
-    await screen.findByText(es.explore.empty.title);
+    await screen.findByText(es.discovery.end.title);
 
     await fireEvent.press(button(s.chips.type));
     expect(button(s.chips.type).props.accessibilityState).toMatchObject({ expanded: true });
@@ -312,7 +312,7 @@ describe('Chips de un toque', () => {
 
   it('si la API falla deshace el cambio y avisa', async () => {
     const backend = await openExplore();
-    await screen.findByText(es.explore.empty.title);
+    await screen.findByText(es.discovery.end.title);
     backend.searchPreferences.rejectNextPut(500);
 
     await fireEvent.press(button(s.chips.garage));
@@ -324,7 +324,7 @@ describe('Chips de un toque', () => {
 
   it.each(THEME_NAMES)('en el tema %s el chip activado usa el color primario', async (theme) => {
     await openExplore({ theme });
-    await screen.findByText(es.explore.empty.title);
+    await screen.findByText(es.discovery.end.title);
 
     await fireEvent.press(button(s.chips.garage));
 
@@ -336,7 +336,7 @@ describe('Chips de un toque', () => {
 describe('Filtros y compensación', () => {
   it('la hoja muestra la compensación en euros con formato y guarda en céntimos', async () => {
     const backend = await openExplore();
-    await screen.findByText(es.explore.empty.title);
+    await screen.findByText(es.discovery.end.title);
     await openSheet();
 
     expect(field(s.form.maxToPay).props.value).toBe('30.000');
@@ -364,7 +364,7 @@ describe('Filtros y compensación', () => {
 
   it('el punto del rango de valor se ajusta, se explica en una línea y se guarda', async () => {
     const backend = await openExplore();
-    await screen.findByText(es.explore.empty.title);
+    await screen.findByText(es.discovery.end.title);
     await openSheet();
 
     expect(screen.getByText(s.valueReference.explanation)).toBeTruthy();
@@ -381,7 +381,7 @@ describe('Filtros y compensación', () => {
 
   it('el punto del rango no sale de 0 a 100', async () => {
     await openExplore({ preferences: { ...GETAFE, valueReferencePct: 100 } });
-    await screen.findByText(es.explore.empty.title);
+    await screen.findByText(es.discovery.end.title);
     await openSheet();
 
     expect(button(s.valueReference.higher).props.accessibilityState).toMatchObject({
@@ -393,7 +393,7 @@ describe('Filtros y compensación', () => {
 
   it('importes no válidos se señalan junto a su campo y no se envía nada', async () => {
     const backend = await openExplore();
-    await screen.findByText(es.explore.empty.title);
+    await screen.findByText(es.discovery.end.title);
     await openSheet();
 
     await fireEvent.changeText(field(s.form.maxToPay), 'muchos');
@@ -407,7 +407,7 @@ describe('Filtros y compensación', () => {
 
   it('Scenario: Punto de referencia fuera de rango - el 400 de la API se muestra junto al punto del rango', async () => {
     const backend = await openExplore();
-    await screen.findByText(es.explore.empty.title);
+    await screen.findByText(es.discovery.end.title);
     await openSheet();
     backend.searchPreferences.rejectNextPut(400, {
       errors: [{ field: 'valueReferencePct', message: 'invalid' }],
@@ -423,7 +423,7 @@ describe('Filtros y compensación', () => {
     const backend = await openExplore({
       preferences: { ...GETAFE, municipalities: [], center: { lat: 40.4, lng: -3.7 }, radiusKm: 5 },
     });
-    await screen.findByText(es.explore.empty.title);
+    await screen.findByText(es.discovery.end.title);
     await openSheet();
 
     await fireEvent.press(
@@ -438,7 +438,7 @@ describe('Filtros y compensación', () => {
 
   it('un fallo de red en la hoja la deja abierta con un mensaje', async () => {
     const backend = await openExplore();
-    await screen.findByText(es.explore.empty.title);
+    await screen.findByText(es.discovery.end.title);
     await openSheet();
     backend.searchPreferences.rejectNextPut(500);
 

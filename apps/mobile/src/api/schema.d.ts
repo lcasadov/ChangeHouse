@@ -370,6 +370,14 @@ export interface paths {
      *     declara cumplir los requisitos. Un `seeker` puede mirar sin `homeId`
      *     (sin filtro de compatibilidad inversa), pero no da me gusta. Con
      *     `homeId`, la compatibilidad se calcula para esa vivienda del usuario.
+     *
+     *     Un `owner` con una sola vivienda publicada puede omitir `homeId`; sin
+     *     ninguna publicada se busca en modo `seeker` (preferencias por defecto del
+     *     usuario, sin compatibilidad inversa y con `compensation: null`).
+     *     Cada tarjeta lleva la compensación estimada del usuario, calculada con el
+     *     punto de referencia del rango de valor de cada propietario. Se ordenan de
+     *     la publicada más recientemente a la más antigua; `nextCursor` es `null`
+     *     cuando no quedan más.
      */
     get: operations['discoverHomes'];
     put?: never;
@@ -987,6 +995,15 @@ export interface components {
         areaName: string;
       };
       photos: components['schemas']['Photo'][];
+    };
+    /** @description Tarjeta de descubrimiento (`discoverHomes`) = forma pública de la vivienda más la compensación estimada. */
+    DiscoveryCard: components['schemas']['HomePublic'] & {
+      /** @description Estimación orientativa de la compensación del usuario: `pay` (Tú pagas), `receive` (Tú recibes) o `fair` (Cambio justo: la diferencia no supera el 1 % del mayor de los dos valores). `amountCents` es siempre el importe exacto de la diferencia. `null` en modo `seeker` (sin vivienda publicada). */
+      compensation: {
+        /** @enum {string} */
+        kind: 'receive' | 'pay' | 'fair';
+        amountCents: components['schemas']['Money'];
+      } | null;
     };
     /** @description Ficha completa, visible para el propietario y el admin. */
     Home: components['schemas']['HomePublic'] & {
@@ -1872,13 +1889,32 @@ export interface operations {
         };
         content: {
           'application/json': {
-            items: components['schemas']['HomePublic'][];
+            items: components['schemas']['DiscoveryCard'][];
             nextCursor?: string | null;
           };
         };
       };
+      /** @description Cursor o límite no válidos, o `owner` con varias viviendas publicadas que no indica `homeId` (`code: HOME_ID_REQUIRED`, error en el campo `homeId`) */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
       401: components['responses']['Unauthorized'];
-      /** @description El usuario no ha definido preferencias de búsqueda */
+      403: components['responses']['Forbidden'];
+      /** @description `homeId` ajeno, inexistente o de una vivienda propia no publicada (no se distinguen) */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description El usuario no ha definido preferencias de búsqueda (las de la vivienda o las suyas por defecto) (`code: SEARCH_PREFERENCES_REQUIRED`) */
       422: {
         headers: {
           [name: string]: unknown;

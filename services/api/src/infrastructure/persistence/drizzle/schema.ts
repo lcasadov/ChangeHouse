@@ -127,9 +127,14 @@ export const homes = pgTable(
     exactLocation: geographyPoint('exact_location').notNull(),
     approxLocation: geographyPoint('approx_location').notNull(),
     areaName: text('area_name').notNull(),
+    // Municipio tal como lo da el servicio de direcciones y su forma comparable con las preferencias
+    municipality: text('municipality'),
+    municipalityNormalized: text('municipality_normalized'),
     moderationNote: text('moderation_note'),
     submittedAt: timestamp('submitted_at', { withTimezone: true }),
     relevantChangedAt: timestamp('relevant_changed_at', { withTimezone: true }),
+    // Última aprobación en moderación: ordena las tarjetas del descubrimiento
+    publishedAt: timestamp('published_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -138,6 +143,19 @@ export const homes = pgTable(
     index('homes_review_queue_idx')
       .on(table.submittedAt, table.id)
       .where(sql`${table.status} = 'in_review'`),
+    // Descubrimiento: solo las publicadas, por orden de publicación, zona y municipio
+    index('homes_discovery_feed_idx')
+      .on(table.publishedAt, table.id)
+      .where(sql`${table.status} = 'published'`),
+    index('homes_approx_location_published_idx')
+      .using('gist', table.approxLocation)
+      .where(sql`${table.status} = 'published'`),
+    index('homes_exact_location_published_idx')
+      .using('gist', table.exactLocation)
+      .where(sql`${table.status} = 'published'`),
+    index('homes_municipality_published_idx')
+      .on(table.municipalityNormalized)
+      .where(sql`${table.status} = 'published'`),
   ],
 );
 
@@ -236,5 +254,30 @@ export const searchPreferences = pgTable(
       'search_preferences_amounts_non_negative',
       sql`${table.maxToPayCents} >= 0 AND ${table.minToReceiveCents} >= 0`,
     ),
+    // La zona de búsqueda: el punto con radio y los municipios
+    index('search_preferences_center_idx').using('gist', table.center),
+    index('search_preferences_municipalities_idx').using('gin', table.municipalitiesNormalized),
+  ],
+);
+
+/**
+ * Descartes (RF-44): `home_id` descarta `dismissed_home_id`. Deja de aplicarse si la vivienda
+ * descartada tiene un cambio relevante posterior (`homes.relevant_changed_at`). Este change solo los
+ * lee en el descubrimiento; descartar y deshacer llegan con `add-like-dismiss-undo`.
+ */
+export const dismissals = pgTable(
+  'dismissals',
+  {
+    homeId: uuid('home_id')
+      .notNull()
+      .references(() => homes.id, { onDelete: 'cascade' }),
+    dismissedHomeId: uuid('dismissed_home_id')
+      .notNull()
+      .references(() => homes.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.homeId, table.dismissedHomeId] }),
+    check('dismissals_not_self', sql`${table.homeId} <> ${table.dismissedHomeId}`),
   ],
 );

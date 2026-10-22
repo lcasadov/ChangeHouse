@@ -1,6 +1,7 @@
 /** @type {import('jest').Config} */
 module.exports = {
   preset: 'jest-expo',
+  resolver: 'react-native-reanimated/jest/resolver',
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
   testMatch: ['<rootDir>/**/*.test.{ts,tsx}'],
   collectCoverageFrom: [

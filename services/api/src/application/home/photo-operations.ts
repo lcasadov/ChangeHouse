@@ -5,7 +5,7 @@ import {
   PhotoLimitReachedError,
   PhotoNotUploadedError,
 } from '../../domain/home/errors.js';
-import { assertEditable } from '../../domain/home/home.js';
+import { assertEditable, hasBeenPublished, type Home } from '../../domain/home/home.js';
 import {
   assertCanAddPhoto,
   assertCanDeletePhoto,
@@ -52,6 +52,11 @@ async function ownPhoto(deps: PhotoDeps, ownerId: string, homeId: string, photoI
   const photo = await deps.photos.find(homeId, photoId);
   if (!photo) throw new PhotoNotFoundError();
   return { home, photo };
+}
+
+/** Las fotos de una vivienda que ya estuvo en el descubrimiento son un cambio relevante (RF-44). */
+async function noteRelevantChange(deps: PhotoDeps, home: Home): Promise<void> {
+  if (hasBeenPublished(home)) await deps.homes.markRelevantChange(home.id, deps.clock.now());
 }
 
 /** Descarta una foto que no llegó a publicarse: su fila y el original subido. */
@@ -112,7 +117,7 @@ async function completePhotoUpload(
   homeId: string,
   photoId: string,
 ): Promise<PhotoView> {
-  const { photo } = await ownPhoto(deps, ownerId, homeId, photoId);
+  const { home, photo } = await ownPhoto(deps, ownerId, homeId, photoId);
   if (photo.status === 'ready') return toView(deps, photo);
 
   await processOriginal(deps, photo);
@@ -124,6 +129,7 @@ async function completePhotoUpload(
     throw new PhotoLimitReachedError();
   }
   await deps.storage.deleteOriginal(originalPath(homeId, photoId));
+  await noteRelevantChange(deps, home);
   return toView(deps, ready);
 }
 
@@ -139,6 +145,7 @@ async function deletePhoto(
   await deps.photos.delete(homeId, photoId);
   await deps.storage.deletePublished(photo.storagePath);
   await deps.storage.deleteOriginal(originalPath(homeId, photoId));
+  await noteRelevantChange(deps, home);
 }
 
 /** Los casos de uso de las fotos con sus dependencias ya inyectadas, listos para el transporte. */

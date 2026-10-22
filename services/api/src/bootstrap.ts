@@ -3,6 +3,7 @@ import { PRIVACY_VERSION, TERMS_VERSION } from '@changehouse/shared';
 import { accountOperations } from './application/account/account-operations.js';
 import type { HomeOwnership } from './application/account/home-ownership.js';
 import { resolvePrincipal } from './application/auth/resolve-principal.js';
+import { discoveryOperations } from './application/discovery/discovery-operations.js';
 import { homeOperations } from './application/home/home-operations.js';
 import type { ImageProcessor } from './application/home/image-processor.js';
 import { photoOperations } from './application/home/photo-operations.js';
@@ -16,6 +17,7 @@ import { createFirebaseIdentityVerifier } from './infrastructure/auth/firebase-i
 import { AddressCipher } from './infrastructure/crypto/address-cipher.js';
 import { SharpImageProcessor } from './infrastructure/images/sharp-image-processor.js';
 import { createDatabase } from './infrastructure/persistence/drizzle/database.js';
+import { DrizzleDiscoveryRepository } from './infrastructure/persistence/drizzle/drizzle-discovery-repository.js';
 import { DrizzleHomeOwnership } from './infrastructure/persistence/drizzle/drizzle-home-ownership.js';
 import { DrizzleHomeRepository } from './infrastructure/persistence/drizzle/drizzle-home-repository.js';
 import { DrizzlePhotoRepository } from './infrastructure/persistence/drizzle/drizzle-photo-repository.js';
@@ -95,11 +97,20 @@ export function createApi(config: ApiConfig, adapters: ApiAdapters = {}) {
     storage: photoStorage,
     clock: systemClock,
   });
-  // `resolveEffectivePreferences` queda disponible para el descubrimiento (add-discovery-feed)
+  const preferencesRepository = new DrizzleSearchPreferencesRepository(database.db);
   const searchPreferences = searchPreferencesOperations({
     homes: homeRepository,
-    preferences: new DrizzleSearchPreferencesRepository(database.db),
+    preferences: preferencesRepository,
     ids: uuidV7Generator,
+  });
+  const discovery = discoveryOperations({
+    homes: homeRepository,
+    users,
+    preferences: preferencesRepository,
+    effectivePreferences: searchPreferences.resolveEffectivePreferences,
+    candidates: new DrizzleDiscoveryRepository(database.db),
+    photos: photoRepository,
+    storage: photoStorage,
   });
   const app = buildApp({
     logger: config.logger,
@@ -118,6 +129,7 @@ export function createApi(config: ApiConfig, adapters: ApiAdapters = {}) {
     photos,
     adminHomes,
     searchPreferences,
+    discovery,
   });
 
   return {

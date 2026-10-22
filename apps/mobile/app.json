@@ -19,7 +19,8 @@
         {
           "photosPermission": "ChangeHouse necesita acceder a tus fotos para que puedas añadirlas a tu casa."
         }
-      ]
+      ],
+      "expo-image"
     ],
     "ios": {
       "supportsTablet": true

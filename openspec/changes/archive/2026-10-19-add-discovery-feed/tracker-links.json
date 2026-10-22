@@ -1,0 +1,108 @@
+{
+  "tracker": "github-issues",
+  "change": "add-discovery-feed",
+  "sprint": {
+    "path": "Sprint en curso",
+    "created": false
+  },
+  "epic": {
+    "capability": "discovery",
+    "id": 150,
+    "reused": false
+  },
+  "related_epics": [],
+  "feature": {
+    "id": 151,
+    "reused": false
+  },
+  "stories": [
+    {
+      "key": "Viviendas compatibles en los dos sentidos",
+      "id": 152,
+      "reused": false,
+      "prio": "P1"
+    },
+    {
+      "key": "Compensación visible en cada tarjeta",
+      "id": 153,
+      "reused": false,
+      "prio": "P1"
+    },
+    {
+      "key": "Viviendas excluidas",
+      "id": 154,
+      "reused": false,
+      "prio": "P1"
+    },
+    {
+      "key": "Descubrimiento sin vivienda publicada",
+      "id": 155,
+      "reused": false,
+      "prio": "P2"
+    },
+    {
+      "key": "Tarjetas a pantalla completa",
+      "id": 156,
+      "reused": false,
+      "prio": "P1"
+    }
+  ],
+  "tasks": [
+    {
+      "key": "T1",
+      "id": 157,
+      "parent": 153,
+      "state": "done"
+    },
+    {
+      "key": "B1",
+      "id": 158,
+      "parent": 152,
+      "state": "done"
+    },
+    {
+      "key": "T2",
+      "id": 159,
+      "parent": 154,
+      "state": "done"
+    },
+    {
+      "key": "B2",
+      "id": 160,
+      "parent": 152,
+      "state": "done"
+    },
+    {
+      "key": "B3",
+      "id": 161,
+      "parent": 155,
+      "state": "done"
+    },
+    {
+      "key": "T3",
+      "id": 162,
+      "parent": 156,
+      "state": "done"
+    },
+    {
+      "key": "F1",
+      "id": 163,
+      "parent": 156,
+      "state": "done"
+    },
+    {
+      "key": "F2",
+      "id": 164,
+      "parent": 156,
+      "state": "done"
+    },
+    {
+      "key": "V1",
+      "id": 165,
+      "parent": 152,
+      "state": "done"
+    }
+  ],
+  "bugs": [],
+  "pending": []
+}

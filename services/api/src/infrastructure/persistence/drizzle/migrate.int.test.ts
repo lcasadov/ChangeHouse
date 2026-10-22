@@ -1,4 +1,6 @@
-import { resolve } from 'node:path';
+import { cp, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
 
 import { afterAll, beforeAll, describe, expect, inject, it } from 'vitest';
 
@@ -10,6 +12,7 @@ const MIGRATIONS = resolve(import.meta.dirname, '../../../../../../db/migrations
 const EMPTY_DB = 'empty_for_migration';
 const ROLE_DB = 'migration_with_app_role';
 const NO_ROLE_DB = 'migration_without_app_role';
+const BACKFILL_DB = 'migration_discovery_backfill';
 /** Rol con el que se conectará la API en DES y PROD; la migración le quita lo que el log de auditoría no admite. */
 const APP_ROLE = 'changehouse_app';
 
@@ -307,6 +310,109 @@ describe('migraciones', () => {
       /search_preferences_reference_range/,
     );
     await target.end();
+  });
+
+  it('GIVEN la base migrada WHEN se inspecciona THEN existen dismissals (PK compuesta, en cascada, sin descartarse a sí misma), homes.published_at, el municipio y los índices del descubrimiento', async () => {
+    const target = openSql(urlFor(EMPTY_DB));
+    const columns = await target<{ column_name: string; udt_name: string; is_nullable: string }[]>`
+      SELECT column_name, udt_name, is_nullable FROM information_schema.columns
+      WHERE (table_name = 'homes'
+             AND column_name IN ('published_at', 'municipality', 'municipality_normalized'))
+         OR table_name = 'dismissals'
+      ORDER BY table_name, column_name`;
+    const references = await target<{ constraint_name: string; delete_rule: string }[]>`
+      SELECT constraint_name, delete_rule FROM information_schema.referential_constraints
+      WHERE constraint_name LIKE 'dismissals_%' ORDER BY constraint_name`;
+    const indexes = await target<{ indexname: string }[]>`
+      SELECT indexname FROM pg_indexes
+      WHERE indexname IN ('homes_discovery_feed_idx', 'homes_approx_location_published_idx',
+                          'homes_exact_location_published_idx', 'homes_municipality_published_idx',
+                          'search_preferences_center_idx', 'search_preferences_municipalities_idx',
+                          'dismissals_home_id_dismissed_home_id_pk')
+      ORDER BY indexname`;
+    const user = '0199c1a2-0000-7000-8000-0000000000f1';
+    const home = '0199c1a2-0000-7000-8000-0000000000f2';
+    await target`INSERT INTO users (id, firebase_uid, email, display_name)
+                 VALUES (${user}, 'uid-dismiss', 'dismiss@example.com', 'Ana')`;
+    await target`INSERT INTO homes (id, owner_id, type, exact_address, exact_location, approx_location, area_name)
+                 VALUES (${home}, ${user}, 'piso', ${Buffer.from('x')},
+                         ST_SetSRID(ST_MakePoint(-3.7, 40.4), 4326)::geography,
+                         ST_SetSRID(ST_MakePoint(-3.7, 40.4), 4326)::geography, 'Malasaña')`;
+    const selfDismissal = target`INSERT INTO dismissals (home_id, dismissed_home_id)
+                                 VALUES (${home}, ${home})`;
+    await expect(selfDismissal).rejects.toThrow(/dismissals_not_self/);
+    await target`DELETE FROM homes WHERE id = ${home}`;
+    await target`DELETE FROM users WHERE id = ${user}`;
+    await target.end();
+
+    expect(columns).toEqual([
+      { column_name: 'created_at', udt_name: 'timestamptz', is_nullable: 'NO' },
+      { column_name: 'dismissed_home_id', udt_name: 'uuid', is_nullable: 'NO' },
+      { column_name: 'home_id', udt_name: 'uuid', is_nullable: 'NO' },
+      { column_name: 'municipality', udt_name: 'text', is_nullable: 'YES' },
+      { column_name: 'municipality_normalized', udt_name: 'text', is_nullable: 'YES' },
+      { column_name: 'published_at', udt_name: 'timestamptz', is_nullable: 'YES' },
+    ]);
+    expect(references).toEqual([
+      { constraint_name: 'dismissals_dismissed_home_id_homes_id_fk', delete_rule: 'CASCADE' },
+      { constraint_name: 'dismissals_home_id_homes_id_fk', delete_rule: 'CASCADE' },
+    ]);
+    expect(indexes.map((row) => row.indexname)).toEqual([
+      'dismissals_home_id_dismissed_home_id_pk',
+      'homes_approx_location_published_idx',
+      'homes_discovery_feed_idx',
+      'homes_exact_location_published_idx',
+      'homes_municipality_published_idx',
+      'search_preferences_center_idx',
+      'search_preferences_municipalities_idx',
+    ]);
+  });
+
+  it('GIVEN viviendas ya publicadas antes de la migración WHEN se aplica THEN reciben su fecha de publicación y las demás no', async () => {
+    // Las migraciones hasta la 0006 en una carpeta aparte: la base queda como antes de este cambio
+    const before = await mkdtemp(join(tmpdir(), 'migrations-0006-'));
+    await cp(MIGRATIONS, before, { recursive: true });
+    const journalPath = join(before, 'meta', '_journal.json');
+    const journal = JSON.parse(await readFile(journalPath, 'utf8')) as {
+      entries: { tag: string }[];
+    };
+    journal.entries = journal.entries.filter((entry) => entry.tag <= '0006');
+    await writeFile(journalPath, JSON.stringify(journal));
+    await admin.unsafe(`CREATE DATABASE ${BACKFILL_DB}`);
+    await runMigrations(urlFor(BACKFILL_DB), before);
+    await rm(before, { recursive: true, force: true });
+
+    const target = openSql(urlFor(BACKFILL_DB));
+    const user = '0199c1a2-0000-7000-8000-0000000000f3';
+    await target`INSERT INTO users (id, firebase_uid, email, display_name)
+                 VALUES (${user}, 'uid-backfill', 'backfill@example.com', 'Ana')`;
+    const insertHome = (id: string, status: string, submittedAt: string | null) => target`
+      INSERT INTO homes (id, owner_id, type, status, exact_address, exact_location, approx_location,
+                         area_name, submitted_at, created_at)
+      VALUES (${id}, ${user}, 'piso', ${status}, ${Buffer.from('x')},
+              ST_SetSRID(ST_MakePoint(-3.7, 40.4), 4326)::geography,
+              ST_SetSRID(ST_MakePoint(-3.7, 40.4), 4326)::geography, 'Malasaña',
+              ${submittedAt}, '2026-10-01T09:00:00.123456Z')`;
+    await insertHome('0199c1a2-0000-7000-8000-0000000000a1', 'published', '2026-10-02T09:00:00Z');
+    await insertHome('0199c1a2-0000-7000-8000-0000000000a2', 'published', null);
+    await insertHome('0199c1a2-0000-7000-8000-0000000000a3', 'paused', '2026-10-03T09:00:00Z');
+    await insertHome('0199c1a2-0000-7000-8000-0000000000a4', 'in_review', '2026-10-04T09:00:00Z');
+    await insertHome('0199c1a2-0000-7000-8000-0000000000a5', 'draft', null);
+    await target.end();
+
+    await runMigrations(urlFor(BACKFILL_DB), MIGRATIONS);
+
+    const check = openSql(urlFor(BACKFILL_DB));
+    const rows = await check<{ status: string; published_at: Date | null }[]>`
+      SELECT status, published_at FROM homes ORDER BY id`;
+    await check.end();
+    expect(rows).toEqual([
+      { status: 'published', published_at: new Date('2026-10-02T09:00:00.000Z') },
+      { status: 'published', published_at: new Date('2026-10-01T09:00:00.123Z') },
+      { status: 'paused', published_at: new Date('2026-10-03T09:00:00.000Z') },
+      { status: 'in_review', published_at: null },
+      { status: 'draft', published_at: null },
+    ]);
   });
 
   it('el rol de la aplicación pierde UPDATE, DELETE y TRUNCATE sobre audit_log y conserva INSERT y SELECT', async () => {

@@ -5,7 +5,7 @@ import { FixturePlaceResolver } from './fixture-place-resolver.js';
 
 describe('FixturePlaceResolver', () => {
   it.each(FIXTURE_PLACES.map((place) => [place.placeId, place] as const))(
-    'resuelve %s a su punto exacto, su barrio o zona y el centro de esta',
+    'resuelve %s a su punto exacto, su barrio o zona, el centro de esta y su municipio',
     async (placeId, place) => {
       const location = await new FixturePlaceResolver().resolve(placeId);
 
@@ -13,6 +13,7 @@ describe('FixturePlaceResolver', () => {
         exact: place.exact,
         areaName: place.areaName,
         areaCenter: place.areaCenter,
+        municipality: place.municipality,
       });
     },
   );

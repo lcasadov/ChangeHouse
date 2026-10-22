@@ -6,6 +6,7 @@ import { Badge, Button, Notice, Text } from '../../ui';
 import { useFocusRing } from '../../ui/useFocusRing';
 import { formatEuros } from './home-form';
 import { primaryActionOf, rejectionOf, STATUS_PRESENTATION } from './home-status';
+import { homeTitleOf } from './home-title';
 import { HomeCover } from './HomeCover';
 import type { Home } from './homes-api';
 
@@ -18,12 +19,9 @@ export interface HomeCardProps {
 }
 
 /** El título de una vivienda: su tipo y su barrio o zona, que es lo único público de su ubicación. */
-export function useHomeTitle(home: Home): string {
+export function useHomeTitle(home: Pick<Home, 'type' | 'location'>): string {
   const { t } = useTranslation();
-  return t('homes.card.title', {
-    type: t(`homes.type.${home.type}`),
-    area: home.location.areaName,
-  });
+  return homeTitleOf(t, home);
 }
 
 /** Tarjeta de «Mis casas»: foto grande, título, estado con texto e icono y la acción principal. */

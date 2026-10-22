@@ -283,6 +283,8 @@ confirmado. Identificadores: `uuid` v7 generado en la aplicación —
 | `moderation_note` | text | no | Motivo del último rechazo de moderación, visible para el propietario |
 | `submitted_at` | timestamptz | no | Cuándo entró en la cola de moderación por última vez (`submitHome`, o un cambio relevante tras publicar). Ordena la cola (`in_review`); nula si nunca se envió |
 | `relevant_changed_at` | timestamptz | sí | Se actualiza cuando cambian el rango de valor o las fotos; un descarte anterior a esta fecha vuelve a mostrarse (RF-44) |
+| `published_at` | timestamptz | no | Última aprobación en moderación; ordena las tarjetas de descubrimiento y forma su cursor. Nula si nunca se publicó (relleno en la migración 0007 con el último envío o el alta) |
+| `municipality`, `municipality_normalized` | text | no | Municipio de la dirección (localidad de Google Places) y su forma comparable (sin tildes, minúsculas), con la que se cruzan `search_preferences.municipalities_normalized`. Nulos en las viviendas anteriores a la migración 0007: solo cuentan por radio |
 
 ### `home_photos` — fotos de una vivienda (3–20, RF-11)
 

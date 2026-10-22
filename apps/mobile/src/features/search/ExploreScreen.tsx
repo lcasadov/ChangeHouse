@@ -1,17 +1,17 @@
 import { useTheme } from '@changehouse/ui';
-import { useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { View } from 'react-native';
+import { ScrollView } from 'react-native';
 
-import { EmptyState, FormScreen, Notice, Text } from '../../ui';
+import { FormScreen, Notice, Screen, Text } from '../../ui';
 import { useMe } from '../account/use-me';
+import { DiscoveryFeed } from '../discovery/DiscoveryFeed';
 import { LoadingView } from '../session/LoadingView';
 import { SectionPlaceholder } from '../shell/SectionPlaceholder';
 import { FilterChips } from './FilterChips';
 import { FirstUseStep } from './FirstUseStep';
 import type { Preferences } from './preferences';
 import { PreferencesSheet } from './PreferencesSheet';
-import { summaryText } from './summary';
 import { useAutosavedPreferences } from './use-autosaved-preferences';
 import { useMyPreferences, useSaveMyPreferences } from './use-search-preferences';
 import { ZonePicker } from './ZonePicker';
@@ -30,52 +30,73 @@ function StatusLine({ status }: Readonly<{ status: 'idle' | 'saving' | 'saved' |
   );
 }
 
-/** La búsqueda guardada: barra de zona, chips de un toque, hoja de filtros y, por ahora, su resumen. */
-function SearchHome({ saved }: Readonly<{ saved: Preferences }>) {
+/** Qué filtros abre la hoja: todos, o con la zona a la vista cuando se llega desde «Ampliar zona». */
+type SheetMode = 'filters' | 'zone';
+
+interface SearchHomeProps {
+  saved: Preferences;
+  onPreferencesRequired: () => void;
+}
+
+/** La búsqueda guardada: barra de zona, chips de un toque, hoja de filtros y, debajo, las tarjetas. */
+function SearchHome({ saved, onPreferencesRequired }: Readonly<SearchHomeProps>) {
   const { t } = useTranslation();
   const theme = useTheme();
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const [sheet, setSheet] = useState<SheetMode | null>(null);
   const autosaved = useAutosavedPreferences(saved);
   const { preferences, change } = autosaved;
+  // Las tarjetas dependen de lo guardado en la API, no de lo que se está escribiendo
+  const searchKey = useMemo(() => JSON.stringify(saved), [saved]);
 
   return (
-    <FormScreen>
-      <ZonePicker
-        preferences={preferences}
-        onChange={change}
-        error={
-          (preferences.municipalities ?? []).length === 0 && !preferences.center
-            ? t('search.zone.required')
-            : undefined
-        }
-      />
-      <FilterChips
-        preferences={preferences}
-        onChange={change}
-        onMore={() => {
-          setSheetOpen(true);
+    <Screen>
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{
+          flexGrow: 1,
+          gap: theme.space[3],
+          paddingVertical: theme.space[3],
         }}
-      />
-      <StatusLine status={autosaved.status} />
-      {/* Hasta que exista el descubrimiento, la búsqueda guardada se resume aquí */}
-      <View style={{ minHeight: theme.space[8] * 4 }}>
-        <EmptyState
-          icon="compass-outline"
-          title={t('explore.empty.title')}
-          description={summaryText(t, preferences)}
+      >
+        <ZonePicker
+          preferences={preferences}
+          onChange={change}
+          error={
+            (preferences.municipalities ?? []).length === 0 && !preferences.center
+              ? t('search.zone.required')
+              : undefined
+          }
         />
-      </View>
+        <FilterChips
+          preferences={preferences}
+          onChange={change}
+          onMore={() => {
+            setSheet('filters');
+          }}
+        />
+        <StatusLine status={autosaved.status} />
+        <DiscoveryFeed
+          searchKey={searchKey}
+          onWidenZone={() => {
+            setSheet('zone');
+          }}
+          onAdjustCompensation={() => {
+            setSheet('filters');
+          }}
+          onPreferencesRequired={onPreferencesRequired}
+        />
+      </ScrollView>
       <PreferencesSheet
-        visible={sheetOpen}
+        visible={sheet !== null}
         title={t('search.sheet.title')}
         initial={preferences}
-        includeZone={false}
+        includeZone={sheet === 'zone'}
         onSave={autosaved.saveNow}
         onClose={() => {
-          setSheetOpen(false);
+          setSheet(null);
         }}
       />
-    </FormScreen>
+    </Screen>
   );
 }
 
@@ -86,6 +107,11 @@ export function ExploreScreen() {
   const searches = me.data?.roles.some((role) => SEARCHING_ROLES.has(role)) ?? false;
   const query = useMyPreferences(searches);
   const save = useSaveMyPreferences();
+  // La API puede pedir las preferencias aunque la app crea tenerlas (422): vuelve al primer paso
+  const [needsFirstUse, setNeedsFirstUse] = useState(false);
+  const requireFirstUse = useCallback(() => {
+    setNeedsFirstUse(true);
+  }, []);
 
   if (me.data && !searches) return <SectionPlaceholder section="explore" icon="compass-outline" />;
   if (me.isPending || query.isPending) return <LoadingView />;
@@ -106,14 +132,15 @@ export function ExploreScreen() {
       </FormScreen>
     );
   }
-  if (query.data === null) {
+  if (query.data === null || needsFirstUse) {
     return (
       <FirstUseStep
         onSave={async (input) => {
           await save(input);
+          setNeedsFirstUse(false);
         }}
       />
     );
   }
-  return <SearchHome saved={query.data} />;
+  return <SearchHome saved={query.data} onPreferencesRequired={requireFirstUse} />;
 }

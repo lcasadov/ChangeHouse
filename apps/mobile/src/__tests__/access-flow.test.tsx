@@ -96,7 +96,7 @@ describe('Registro e inicio de sesión', () => {
     expect(await screen.findByText(errors.network)).toBeTruthy();
 
     await fireEvent.press(button(access.signInSubmit));
-    expect(await screen.findByText(es.explore.empty.title)).toBeTruthy();
+    expect(await screen.findByText(es.discovery.end.title)).toBeTruthy();
   });
 
   it('Scenario: Acceso con Google o Apple', async () => {
@@ -127,7 +127,7 @@ describe('Registro e inicio de sesión', () => {
     await openAccess(welcome.signIn);
     await fireEvent.press(button(access.apple));
 
-    expect(await screen.findByText(es.explore.empty.title)).toBeTruthy();
+    expect(await screen.findByText(es.discovery.end.title)).toBeTruthy();
   });
 
   it('solo se ofrecen los proveedores configurados', async () => {
@@ -193,7 +193,7 @@ describe('Registro e inicio de sesión', () => {
     await renderSessionApp({ auth, backend });
 
     // Entra directamente a las pestañas, sin pasar por la bienvenida
-    expect(await screen.findByText(es.explore.empty.title)).toBeTruthy();
+    expect(await screen.findByText(es.discovery.end.title)).toBeTruthy();
     expect(screen.queryByText(welcome.title)).toBeNull();
     // La petición lleva el token de la sesión recordada
     expect(backend.requestsTo('GET', '/me')[0]?.authorization).toBe('Bearer token-de-prueba');
@@ -209,7 +209,7 @@ describe('Registro e inicio de sesión', () => {
     await act(() => {
       auth.finishRestore();
     });
-    expect(await screen.findByText(es.explore.empty.title)).toBeTruthy();
+    expect(await screen.findByText(es.discovery.end.title)).toBeTruthy();
   });
 
   it('Scenario: Cerrar sesión', async () => {
@@ -351,7 +351,7 @@ describe('Verificación del email y recuperación de la contraseña', () => {
   it('no hay aviso si el email ya está verificado ni para quien entra con Google o Apple', async () => {
     const verified = new FakeAuthService({ initialUser: authUser({ emailVerified: true }) });
     await renderSessionApp({ auth: verified, backend: new FakeBackend({ registered: true }) });
-    await screen.findByText(es.explore.empty.title);
+    await screen.findByText(es.discovery.end.title);
     expect(screen.queryByText(verify.banner)).toBeNull();
   });
 
@@ -361,7 +361,7 @@ describe('Verificación del email y recuperación de la contraseña', () => {
     });
     await renderSessionApp({ auth: social, backend: new FakeBackend({ registered: true }) });
 
-    await screen.findByText(es.explore.empty.title);
+    await screen.findByText(es.discovery.end.title);
     expect(screen.queryByText(verify.banner)).toBeNull();
   });
 
@@ -445,7 +445,7 @@ describe('estado de la cuenta al abrir la app', () => {
     expect(screen.queryByText(welcome.title)).toBeNull();
 
     await fireEvent.press(button(es.session.error.retry));
-    expect(await screen.findByText(es.explore.empty.title)).toBeTruthy();
+    expect(await screen.findByText(es.discovery.end.title)).toBeTruthy();
   });
 
   it('si la API rechaza el token se vuelve a la bienvenida y se cierra la sesión local', async () => {

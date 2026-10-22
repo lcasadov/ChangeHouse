@@ -15,12 +15,14 @@ const INTERNAL_ERROR_STATUS = 500;
 const UNPROCESSABLE_STATUS = 422;
 const CONFLICT_STATUS = 409;
 const NOT_FOUND_STATUS = 404;
+const BAD_REQUEST_STATUS = 400;
 
 /** Cómo se traduce cada clase de violación de negocio. */
 const DOMAIN_STATUS: Record<DomainErrorKind, number> = {
   rule: UNPROCESSABLE_STATUS,
   conflict: CONFLICT_STATUS,
   not_found: NOT_FOUND_STATUS,
+  invalid_request: BAD_REQUEST_STATUS,
 };
 
 export interface FieldError {
@@ -74,7 +76,7 @@ export function generateCorrelationId(request: IncomingMessage): string {
 }
 
 function clientStatus(error: unknown): number | undefined {
-  if (error instanceof ValidationFailedError) return 400;
+  if (error instanceof ValidationFailedError) return BAD_REQUEST_STATUS;
   if (error instanceof DomainError) return DOMAIN_STATUS[error.kind];
   const status = (error as Partial<FastifyError>).statusCode;
   return status !== undefined && status >= 400 && status < INTERNAL_ERROR_STATUS

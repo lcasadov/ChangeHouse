@@ -4,7 +4,8 @@ import type {
   HomeRepository,
   ModerationListing,
 } from '../../../application/home/home-repository.js';
-import type { Home } from '../../../domain/home/home.js';
+import type { Home, HomeLocation } from '../../../domain/home/home.js';
+import { normalizeMunicipality } from '../../../domain/search-preferences/search-preferences.js';
 import type { AddressCipher } from '../../crypto/address-cipher.js';
 import type { Executor } from './database.js';
 import { homes } from './schema.js';
@@ -44,6 +45,10 @@ export class DrizzleHomeRepository implements HomeRepository {
   async findByIdForUpdate(id: string): Promise<Home | null> {
     const [row] = await this.db.select().from(homes).where(eq(homes.id, id)).limit(1).for('update');
     return row ? this.toHome(row) : null;
+  }
+
+  async markRelevantChange(id: string, at: Date): Promise<void> {
+    await this.db.update(homes).set({ relevantChangedAt: at }).where(eq(homes.id, id));
   }
 
   async listByOwner(ownerId: string): Promise<Home[]> {
@@ -108,9 +113,15 @@ export class DrizzleHomeRepository implements HomeRepository {
       exactLocation: home.location.exact,
       approxLocation: home.location.areaCenter,
       areaName: home.location.areaName,
+      municipality: home.location.municipality ?? null,
+      municipalityNormalized:
+        home.location.municipality === undefined
+          ? null
+          : normalizeMunicipality(home.location.municipality),
       moderationNote: home.moderationNote,
       submittedAt: home.submittedAt,
       relevantChangedAt: home.relevantChangedAt,
+      publishedAt: home.publishedAt,
     };
   }
 
@@ -122,11 +133,7 @@ export class DrizzleHomeRepository implements HomeRepository {
       type: row.type,
       regime: row.regime,
       address: this.cipher.decrypt(row.exactAddress),
-      location: {
-        exact: row.exactLocation,
-        areaName: row.areaName,
-        areaCenter: row.approxLocation,
-      },
+      location: locationOf(row),
       locationVisibility: row.locationVisibility,
       usefulM2: row.usefulM2,
       builtM2: row.builtM2,
@@ -149,7 +156,18 @@ export class DrizzleHomeRepository implements HomeRepository {
       moderationNote: row.moderationNote,
       submittedAt: row.submittedAt,
       relevantChangedAt: row.relevantChangedAt,
+      publishedAt: row.publishedAt,
       createdAt: row.createdAt,
     };
   }
+}
+
+/** La ubicación de la fila; el municipio solo si lo hay, como lo devolvió el servicio de direcciones. */
+function locationOf(row: HomeRow): HomeLocation {
+  return {
+    exact: row.exactLocation,
+    areaName: row.areaName,
+    areaCenter: row.approxLocation,
+    ...(row.municipality === null ? {} : { municipality: row.municipality }),
+  };
 }

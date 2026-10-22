@@ -11,6 +11,7 @@ import {
 import {
   approveHome,
   editHome,
+  hasBeenPublished,
   type Home,
   type HomeDetails,
   type HomeLocation,
@@ -81,6 +82,7 @@ describe('newDraft', () => {
       moderationNote: null,
       submittedAt: null,
       relevantChangedAt: null,
+      publishedAt: null,
       createdAt: NOW,
     });
   });
@@ -314,7 +316,7 @@ describe('approveHome', () => {
   });
 
   it('Scenario: Aprobar - pasa de in_review a published y limpia el motivo del rechazo anterior', () => {
-    const approved = approveHome(inReview({ moderationNote: 'Fotos borrosas' }));
+    const approved = approveHome(inReview({ moderationNote: 'Fotos borrosas' }), LATER);
 
     expect(approved.status).toBe('published');
     expect(approved.moderationNote).toBeNull();
@@ -323,7 +325,9 @@ describe('approveHome', () => {
   it.each(['draft', 'published', 'paused', 'in_operation', 'closed'] as const)(
     'Scenario: Moderar algo que no está en revisión - una vivienda en %s no se aprueba',
     (status) => {
-      expect(() => approveHome(withStatus(draft(COMPLETE), status))).toThrow(HomeNotInReviewError);
+      expect(() => approveHome(withStatus(draft(COMPLETE), status), LATER)).toThrow(
+        HomeNotInReviewError,
+      );
     },
   );
 });
@@ -366,5 +370,61 @@ describe('rejectHome', () => {
 
     expect(resubmitted.status).toBe('in_review');
     expect(resubmitted.moderationNote).toBe('Fotos borrosas');
+  });
+});
+
+describe('publicación y cambio relevante (descubrimiento)', () => {
+  it('aprobar fija la fecha de publicación con la que se ordenan las tarjetas', () => {
+    const inReview = { ...withStatus(draft(COMPLETE), 'in_review'), submittedAt: NOW };
+
+    expect(approveHome(inReview, LATER).publishedAt).toEqual(LATER);
+  });
+
+  it('volver a aprobar tras un cambio relevante actualiza la fecha de publicación', () => {
+    const republished = {
+      ...withStatus(draft(COMPLETE), 'in_review'),
+      submittedAt: NOW,
+      publishedAt: NOW,
+    };
+
+    expect(approveHome(republished, LATER).publishedAt).toEqual(LATER);
+  });
+
+  it('una vivienda que nunca se publicó no ha estado en el descubrimiento', () => {
+    expect(hasBeenPublished(draft(COMPLETE))).toBe(false);
+    expect(hasBeenPublished(withStatus(draft(COMPLETE), 'in_review'))).toBe(false);
+  });
+
+  it.each(['published', 'paused'] as const)('una vivienda en %s ya se ha publicado', (status) => {
+    expect(hasBeenPublished(withStatus(draft(COMPLETE), status))).toBe(true);
+  });
+
+  it('una vivienda con fecha de publicación ya se ha publicado aunque ahora esté en revisión', () => {
+    const inReview = { ...withStatus(draft(COMPLETE), 'in_review'), publishedAt: NOW };
+
+    expect(hasBeenPublished(inReview)).toBe(true);
+  });
+
+  it('Scenario: Descarte y cambio relevante - cambiar el rango de valor de una publicada anota el cambio relevante', () => {
+    const published = { ...withStatus(draft(COMPLETE), 'published'), publishedAt: NOW };
+
+    const edited = editHome(published, { valueMaxCents: 300_000_00 }, LATER);
+
+    expect(edited.relevantChangedAt).toEqual(LATER);
+  });
+
+  it('un cambio de valor de una vivienda ya publicada que está en revisión también se anota', () => {
+    const inReview = { ...withStatus(draft(COMPLETE), 'in_review'), publishedAt: NOW };
+
+    const edited = editHome(inReview, { valueMinCents: 260_000_00 }, LATER);
+
+    expect(edited.status).toBe('in_review');
+    expect(edited.relevantChangedAt).toEqual(LATER);
+  });
+
+  it('un cambio de valor de un borrador que nunca se publicó no se anota', () => {
+    const edited = editHome(draft(COMPLETE), { valueMinCents: 260_000_00 }, LATER);
+
+    expect(edited.relevantChangedAt).toBeNull();
   });
 });

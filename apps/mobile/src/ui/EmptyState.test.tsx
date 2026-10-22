@@ -36,6 +36,25 @@ describe('EmptyState', () => {
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 
+  it('ofrece una segunda acción, secundaria, junto a la principal', async () => {
+    const onPrimary = jest.fn();
+    const onSecondary = jest.fn();
+    await renderThemed(
+      <EmptyState
+        title="Sin más casas"
+        description="Amplía la búsqueda"
+        action={{ label: 'Ampliar zona', onPress: onPrimary }}
+        secondaryAction={{ label: 'Ajustar compensación', onPress: onSecondary }}
+      />,
+    );
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Ajustar compensación' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Ampliar zona' }));
+
+    expect(onSecondary).toHaveBeenCalledTimes(1);
+    expect(onPrimary).toHaveBeenCalledTimes(1);
+  });
+
   it.each(THEME_NAMES)('en el tema %s los textos usan los tokens de color', async (name) => {
     await renderThemed(<EmptyState title="Título" description="Descripción" />, name);
 

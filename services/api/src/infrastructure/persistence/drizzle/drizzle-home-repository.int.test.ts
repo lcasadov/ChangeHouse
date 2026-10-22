@@ -139,6 +139,39 @@ describe('DrizzleHomeRepository', () => {
     });
   });
 
+  it('guarda el municipio de la ubicación y la fecha de publicación, y los recupera tal cual', async () => {
+    const home: Home = {
+      ...draft(1),
+      location: { ...LOCATION, municipality: 'Madrid' },
+      status: 'published',
+      publishedAt: NOW,
+    };
+
+    await repository.insert(home);
+
+    expect(await repository.findById(home.id)).toEqual(home);
+    const [row] = await sql<{ municipality: string; normalized: string }[]>`
+      SELECT municipality, municipality_normalized AS normalized FROM homes`;
+    expect(row).toEqual({ municipality: 'Madrid', normalized: 'madrid' });
+  });
+
+  it('el municipio se compara sin tildes ni mayúsculas: se guarda también normalizado', async () => {
+    await repository.insert({ ...draft(1), location: { ...LOCATION, municipality: ' Leganés ' } });
+
+    const [row] = await sql<{ normalized: string }[]>`
+      SELECT municipality_normalized AS normalized FROM homes`;
+    expect(row?.normalized).toBe('leganes');
+  });
+
+  it('markRelevantChange anota solo la fecha del cambio relevante y no toca nada más', async () => {
+    const home = draft(1);
+    await repository.insert(home);
+
+    await repository.markRelevantChange(home.id, NOW);
+
+    expect(await repository.findById(home.id)).toEqual({ ...home, relevantChangedAt: NOW });
+  });
+
   it('save de una vivienda inexistente es un error, no un alta silenciosa', async () => {
     await expect(repository.save(draft(7))).rejects.toThrow(/inexistente/);
   });

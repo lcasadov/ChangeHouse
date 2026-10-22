@@ -537,6 +537,14 @@ paths:
         declara cumplir los requisitos. Un `seeker` puede mirar sin `homeId`
         (sin filtro de compatibilidad inversa), pero no da me gusta. Con
         `homeId`, la compatibilidad se calcula para esa vivienda del usuario.
+
+        Un `owner` con una sola vivienda publicada puede omitir `homeId`; sin
+        ninguna publicada se busca en modo `seeker` (preferencias por defecto del
+        usuario, sin compatibilidad inversa y con `compensation: null`).
+        Cada tarjeta lleva la compensación estimada del usuario, calculada con el
+        punto de referencia del rango de valor de cada propietario. Se ordenan de
+        la publicada más recientemente a la más antigua; `nextCursor` es `null`
+        cuando no quedan más.
       x-roles: [owner, seeker]
       parameters:
         - name: homeId
@@ -557,11 +565,26 @@ paths:
                 properties:
                   items:
                     type: array
-                    items: { $ref: '#/components/schemas/HomePublic' }
+                    items: { $ref: '#/components/schemas/DiscoveryCard' }
                   nextCursor: { type: [string, 'null'] }
+        '400':
+          description: >-
+            Cursor o límite no válidos, o `owner` con varias viviendas publicadas que no indica
+            `homeId` (`code: HOME_ID_REQUIRED`, error en el campo `homeId`)
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: '`homeId` ajeno, inexistente o de una vivienda propia no publicada (no se distinguen)'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '422':
-          description: El usuario no ha definido preferencias de búsqueda
+          description: >-
+            El usuario no ha definido preferencias de búsqueda (las de la vivienda o las suyas por
+            defecto) (`code: SEARCH_PREFERENCES_REQUIRED`)
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -1414,6 +1437,26 @@ components:
         photos:
           type: array
           items: { $ref: '#/components/schemas/Photo' }
+    DiscoveryCard:
+      description: Tarjeta de descubrimiento (`discoverHomes`) = forma pública de la vivienda más la compensación estimada.
+      allOf:
+        - $ref: '#/components/schemas/HomePublic'
+        - type: object
+          required: [compensation]
+          properties:
+            compensation:
+              description: >-
+                Estimación orientativa de la compensación del usuario: `pay` (Tú pagas), `receive`
+                (Tú recibes) o `fair` (Cambio justo: la diferencia no supera el 1 % del mayor de los
+                dos valores). `amountCents` es siempre el importe exacto de la diferencia. `null` en
+                modo `seeker` (sin vivienda publicada).
+              oneOf:
+                - type: object
+                  required: [kind, amountCents]
+                  properties:
+                    kind: { type: string, enum: [receive, pay, fair] }
+                    amountCents: { $ref: '#/components/schemas/Money' }
+                - type: 'null'
     Home:
       description: Ficha completa, visible para el propietario y el admin.
       allOf:

@@ -118,5 +118,11 @@
   { "operationId": "deleteHomeSearchPreferences", "actor": "seeker", "expected": 204 },
   { "operationId": "deleteHomeSearchPreferences", "actor": "owner", "expected": 204 },
   { "operationId": "deleteHomeSearchPreferences", "actor": "agency", "expected": 403 },
-  { "operationId": "deleteHomeSearchPreferences", "actor": "admin", "expected": 403 }
+  { "operationId": "deleteHomeSearchPreferences", "actor": "admin", "expected": 403 },
+  { "operationId": "discoverHomes", "actor": "anon", "expected": 401 },
+  { "operationId": "discoverHomes", "actor": "unregistered", "expected": 403 },
+  { "operationId": "discoverHomes", "actor": "seeker", "expected": 200 },
+  { "operationId": "discoverHomes", "actor": "owner", "expected": 200 },
+  { "operationId": "discoverHomes", "actor": "agency", "expected": 403 },
+  { "operationId": "discoverHomes", "actor": "admin", "expected": 403 }
 ]

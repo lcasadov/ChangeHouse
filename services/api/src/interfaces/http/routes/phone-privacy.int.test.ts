@@ -94,6 +94,7 @@ const HOMES_REQUESTS: Record<string, RequestTemplate> = {
     method: 'DELETE',
     url: `/v1/homes/${MISSING_ID}/search-preferences`,
   },
+  discoverHomes: { method: 'GET', url: `/v1/discover?homeId=${MISSING_ID}` },
   adminListHomes: { method: 'GET', url: '/v1/admin/homes?status=in_review' },
   adminModerateHome: {
     method: 'POST',
