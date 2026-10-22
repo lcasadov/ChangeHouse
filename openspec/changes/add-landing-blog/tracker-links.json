@@ -1,0 +1,66 @@
+{
+  "tracker": "github-issues",
+  "change": "add-landing-blog",
+  "sprint": {
+    "path": "Sprint en curso",
+    "created": false
+  },
+  "epic": {
+    "capability": "landing",
+    "id": 18,
+    "reused": true
+  },
+  "related_epics": [],
+  "feature": {
+    "id": 315,
+    "reused": false
+  },
+  "stories": [
+    {
+      "key": "Guías publicadas",
+      "id": 316,
+      "reused": false,
+      "prio": "P3"
+    },
+    {
+      "key": "Guías encontrables",
+      "id": 317,
+      "reused": false,
+      "prio": "P3"
+    }
+  ],
+  "tasks": [
+    {
+      "key": "T1",
+      "id": 318,
+      "parent": 316,
+      "state": "open"
+    },
+    {
+      "key": "F1",
+      "id": 319,
+      "parent": 316,
+      "state": "open"
+    },
+    {
+      "key": "T2",
+      "id": 320,
+      "parent": 317,
+      "state": "open"
+    },
+    {
+      "key": "F2",
+      "id": 321,
+      "parent": 317,
+      "state": "open"
+    },
+    {
+      "key": "V1",
+      "id": 322,
+      "parent": 316,
+      "state": "open"
+    }
+  ],
+  "bugs": [],
+  "pending": []
+}

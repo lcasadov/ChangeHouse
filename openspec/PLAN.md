@@ -36,12 +36,22 @@ personas; la zona generada la reescribe `plan-sync` en cada operación.
 
 | change | estado | % | completadas/total | fase |
 |---|---|---|---|---|
-| — | — | — | — | — |
+| add-account-deletion-and-export | ❌ SIN EMPEZAR | 0 % | 0/6 | D · MVP |
+| add-admin-panel | ❌ SIN EMPEZAR | 0 % | 0/5 | D · MVP |
+| add-chain-match | ❌ SIN EMPEZAR | 0 % | 0/7 | D · MVP |
+| add-home-pause-resume | ❌ SIN EMPEZAR | 0 % | 0/5 | D · MVP |
+| add-home-vpp-regime | ❌ SIN EMPEZAR | 0 % | 0/5 | D · MVP |
+| add-landing-blog | ❌ SIN EMPEZAR | 0 % | 0/5 | D · MVP |
+| add-match-chat | ❌ SIN EMPEZAR | 0 % | 0/8 | D · MVP |
+| add-notifications | ❌ SIN EMPEZAR | 0 % | 0/7 | D · MVP |
+| add-reports-and-blocking | ❌ SIN EMPEZAR | 0 % | 0/6 | D · MVP |
+| add-user-suspension | ❌ SIN EMPEZAR | 0 % | 0/5 | D · MVP |
 
-**Progreso global de los changes activos**: 0/0
+**Progreso global de los changes activos**: 0/59 (0 %)
 
 | estado | changes |
 |---|---|
+| ❌ SIN EMPEZAR | 10 |
 | ✅ ARCHIVADO | 9 |
 
 ### Changes archivados
