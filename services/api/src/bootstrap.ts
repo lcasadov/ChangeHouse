@@ -8,6 +8,7 @@ import type { ImageProcessor } from './application/home/image-processor.js';
 import { photoOperations } from './application/home/photo-operations.js';
 import type { PhotoStorage } from './application/home/photo-storage.js';
 import type { PlaceResolver } from './application/home/place-resolver.js';
+import { moderationOperations } from './application/moderation/moderation-operations.js';
 import { joinWaitlist } from './application/waitlist/join-waitlist.js';
 import type { ApiConfig } from './config.js';
 import { createFirebaseIdentityVerifier } from './infrastructure/auth/firebase-identity-verifier.js';
@@ -17,6 +18,7 @@ import { createDatabase } from './infrastructure/persistence/drizzle/database.js
 import { DrizzleHomeOwnership } from './infrastructure/persistence/drizzle/drizzle-home-ownership.js';
 import { DrizzleHomeRepository } from './infrastructure/persistence/drizzle/drizzle-home-repository.js';
 import { DrizzlePhotoRepository } from './infrastructure/persistence/drizzle/drizzle-photo-repository.js';
+import { DrizzleUnitOfWork } from './infrastructure/persistence/drizzle/drizzle-unit-of-work.js';
 import { DrizzleUserRepository } from './infrastructure/persistence/drizzle/drizzle-user-repository.js';
 import { DrizzleWaitlistRepository } from './infrastructure/persistence/drizzle/drizzle-waitlist-repository.js';
 import { FixturePlaceResolver } from './infrastructure/places/fixture-place-resolver.js';
@@ -84,6 +86,13 @@ export function createApi(config: ApiConfig, adapters: ApiAdapters = {}) {
     clock: systemClock,
     ids: uuidV7Generator,
   });
+  const adminHomes = moderationOperations({
+    units: new DrizzleUnitOfWork(database.db, cipher),
+    homes: homeRepository,
+    photos: photoRepository,
+    storage: photoStorage,
+    clock: systemClock,
+  });
   const app = buildApp({
     logger: config.logger,
     landingOrigin: config.landingOrigin,
@@ -99,6 +108,7 @@ export function createApi(config: ApiConfig, adapters: ApiAdapters = {}) {
     accounts,
     homes,
     photos,
+    adminHomes,
   });
 
   return {

@@ -572,7 +572,10 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Viviendas por estado, p. ej. pendientes de moderación (RF-18, RF-90) */
+    /**
+     * Viviendas por estado, p. ej. pendientes de moderación (RF-18, RF-90)
+     * @description Con `status=in_review` es la cola de moderación, de la enviada antes a la enviada después. Sin `status` devuelve todas las viviendas, de la dada de alta más recientemente a la más antigua. Devuelve la ficha completa con sus fotos, pero `address` lleva el barrio o zona, nunca la dirección exacta.
+     */
     get: operations['adminListHomes'];
     put?: never;
     post?: never;
@@ -595,7 +598,7 @@ export interface paths {
     put?: never;
     /**
      * Aprueba o rechaza una vivienda en revisión (RF-18)
-     * @description Queda registrado en el log de auditoría (RF-93).
+     * @description Queda registrado en el log de auditoría (RF-93), en la misma transacción que la decisión. Aprobar publica la vivienda; rechazar la devuelve a borrador con el motivo en `moderationNote`. Una vivienda que no está en revisión responde 409. Como en `adminListHomes`, `address` lleva el barrio o zona.
      */
     post: operations['adminModerateHome'];
     delete?: never;
@@ -988,9 +991,9 @@ export interface components {
       /** Format: date */
       vppProtectionEnd?: string | null;
       vppMaxLegalPriceCents?: number | null;
-      /** @description Dirección exacta formateada */
+      /** @description Dirección exacta formateada. En las respuestas de administración (`adminListHomes`, `adminModerateHome`) lleva el barrio o zona. */
       address: string;
-      /** @description Motivo del último rechazo */
+      /** @description Motivo del último rechazo. Se conserva al volver a enviar la vivienda y se limpia al aprobarla. Solo lo ven el propietario y el admin, nunca la vista pública. */
       moderationNote?: string | null;
       /** Format: date-time */
       createdAt?: string;

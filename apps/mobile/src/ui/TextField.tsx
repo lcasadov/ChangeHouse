@@ -11,6 +11,7 @@ export interface TextFieldProps extends Pick<
   | 'autoCapitalize'
   | 'keyboardType'
   | 'maxLength'
+  | 'multiline'
   | 'onSubmitEditing'
   | 'returnKeyType'
   | 'textContentType'
@@ -37,6 +38,7 @@ export function TextField({
   hint,
   secret = false,
   autoCapitalize = 'none',
+  multiline = false,
   ...inputProps
 }: Readonly<TextFieldProps>) {
   const theme = useTheme();
@@ -48,6 +50,7 @@ export function TextField({
       <Text variant="label">{label}</Text>
       <TextInput
         {...inputProps}
+        multiline={multiline}
         value={value}
         onChangeText={onChangeText}
         onFocus={focusRing.onFocus}
@@ -71,10 +74,11 @@ export function TextField({
             color: theme.color.text,
             fontFamily: theme.font.body.family,
             fontSize: theme.font.body.size,
-            minHeight: touchTarget,
+            minHeight: multiline ? touchTarget * 2 : touchTarget,
             paddingHorizontal: theme.space[3],
             paddingVertical: theme.space[2],
           },
+          multiline && styles.multiline,
           focusRing.style,
         ]}
       />
@@ -88,4 +92,7 @@ export function TextField({
   );
 }
 
-const styles = StyleSheet.create({ input: { width: '100%' } });
+const styles = StyleSheet.create({
+  input: { width: '100%' },
+  multiline: { textAlignVertical: 'top' },
+});

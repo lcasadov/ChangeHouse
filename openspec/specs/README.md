@@ -11,3 +11,4 @@ Capacidades implementadas. Cada una se crea o amplía al archivar un change
 | [`accounts`](accounts/spec.md) | Registro, acceso, verificación del email, recuperación de la contraseña, alta con consentimiento | `2026-10-19-add-authentication` |
 | [`authorization`](authorization/spec.md) | Autenticación de las peticiones, roles derivados y asignados, denegación por defecto | `2026-10-19-add-authentication` |
 | [`homes`](homes/spec.md) | Alta en borrador con asistente, fotos sin metadatos (de 3 a 20), varias viviendas por usuario, dirección privada y ubicación por zona o exacta, envío a revisión, vistas según quién consulta y rol de propietario derivado | `2026-10-19-add-home-listing` (ampliado por `add-home-photos`) |
+| [`moderation`](moderation/spec.md) | Cola de revisión de viviendas solo para `admin`, aprobación o rechazo con motivo visible para el propietario y auditoría de solo inserción en la misma transacción | `2026-10-19-add-home-moderation` |

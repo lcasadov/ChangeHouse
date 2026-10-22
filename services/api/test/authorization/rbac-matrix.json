@@ -76,5 +76,17 @@
   { "operationId": "deleteHomePhoto", "actor": "seeker", "expected": 204 },
   { "operationId": "deleteHomePhoto", "actor": "owner", "expected": 204 },
   { "operationId": "deleteHomePhoto", "actor": "agency", "expected": 403 },
-  { "operationId": "deleteHomePhoto", "actor": "admin", "expected": 403 }
+  { "operationId": "deleteHomePhoto", "actor": "admin", "expected": 403 },
+  { "operationId": "adminListHomes", "actor": "anon", "expected": 401 },
+  { "operationId": "adminListHomes", "actor": "unregistered", "expected": 403 },
+  { "operationId": "adminListHomes", "actor": "seeker", "expected": 403 },
+  { "operationId": "adminListHomes", "actor": "owner", "expected": 403 },
+  { "operationId": "adminListHomes", "actor": "agency", "expected": 403 },
+  { "operationId": "adminListHomes", "actor": "admin", "expected": 200 },
+  { "operationId": "adminModerateHome", "actor": "anon", "expected": 401 },
+  { "operationId": "adminModerateHome", "actor": "unregistered", "expected": 403 },
+  { "operationId": "adminModerateHome", "actor": "seeker", "expected": 403 },
+  { "operationId": "adminModerateHome", "actor": "owner", "expected": 403 },
+  { "operationId": "adminModerateHome", "actor": "agency", "expected": 403 },
+  { "operationId": "adminModerateHome", "actor": "admin", "expected": 200 }
 ]

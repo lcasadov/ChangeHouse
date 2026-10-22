@@ -3,16 +3,20 @@ import { describe, expect, it } from 'vitest';
 import {
   HomeIncompleteError,
   HomeNotEditableError,
+  HomeNotInReviewError,
   HomeNotSubmittableError,
+  InvalidModerationReasonError,
   InvalidValueRangeError,
 } from './errors.js';
 import {
+  approveHome,
   editHome,
   type Home,
   type HomeDetails,
   type HomeLocation,
   missingFields,
   newDraft,
+  rejectHome,
   submitHome,
 } from './home.js';
 
@@ -75,6 +79,7 @@ describe('newDraft', () => {
       hasLift: null,
       features: {},
       moderationNote: null,
+      submittedAt: null,
       relevantChangedAt: null,
       createdAt: NOW,
     });
@@ -229,9 +234,9 @@ describe('missingFields y submitHome', () => {
   it('Scenario: Envío de una ficha incompleta - lanza HomeIncompleteError con los campos y sigue en draft', () => {
     const home = draft({ ...COMPLETE, valueMinCents: undefined, valueMaxCents: undefined });
 
-    expect(() => submitHome(home, ENOUGH_PHOTOS)).toThrow(HomeIncompleteError);
+    expect(() => submitHome(home, ENOUGH_PHOTOS, NOW)).toThrow(HomeIncompleteError);
     try {
-      submitHome(home, ENOUGH_PHOTOS);
+      submitHome(home, ENOUGH_PHOTOS, NOW);
     } catch (error) {
       expect((error as HomeIncompleteError).fields).toEqual(['valueMinCents', 'valueMaxCents']);
     }
@@ -239,16 +244,16 @@ describe('missingFields y submitHome', () => {
   });
 
   it('Scenario: Envío de una ficha completa - pasa de draft a in_review', () => {
-    expect(submitHome(draft(COMPLETE), ENOUGH_PHOTOS).status).toBe('in_review');
+    expect(submitHome(draft(COMPLETE), ENOUGH_PHOTOS, NOW).status).toBe('in_review');
   });
 
   it('Scenario: Envío con menos de 3 fotos - señala photos entre los campos que faltan y sigue en draft', () => {
     const home = draft(COMPLETE);
 
     for (const photos of [0, 1, 2]) {
-      expect(() => submitHome(home, photos)).toThrow(HomeIncompleteError);
+      expect(() => submitHome(home, photos, NOW)).toThrow(HomeIncompleteError);
       try {
-        submitHome(home, photos);
+        submitHome(home, photos, NOW);
       } catch (error) {
         expect((error as HomeIncompleteError).fields).toEqual(['photos']);
       }
@@ -257,9 +262,9 @@ describe('missingFields y submitHome', () => {
   });
 
   it('con tres fotos o más no pide fotos; con una ficha incompleta lista primero los campos y luego las fotos', () => {
-    expect(submitHome(draft(COMPLETE), 20).status).toBe('in_review');
+    expect(submitHome(draft(COMPLETE), 20, NOW).status).toBe('in_review');
     try {
-      submitHome(draft({ ...COMPLETE, bedrooms: undefined }), 2);
+      submitHome(draft({ ...COMPLETE, bedrooms: undefined }), 2, NOW);
       expect.unreachable();
     } catch (error) {
       expect((error as HomeIncompleteError).fields).toEqual(['bedrooms', 'photos']);
@@ -269,9 +274,97 @@ describe('missingFields y submitHome', () => {
   it.each(['in_review', 'published', 'paused', 'in_operation', 'closed'] as const)(
     'una vivienda en %s no se puede enviar',
     (status) => {
-      expect(() => submitHome(withStatus(draft(COMPLETE), status), ENOUGH_PHOTOS)).toThrow(
+      expect(() => submitHome(withStatus(draft(COMPLETE), status), ENOUGH_PHOTOS, NOW)).toThrow(
         HomeNotSubmittableError,
       );
     },
   );
+});
+
+describe('submittedAt', () => {
+  it('Scenario: Ver la cola - al enviar a revisión se fija la fecha de envío', () => {
+    const submitted = submitHome(draft(COMPLETE), ENOUGH_PHOTOS, LATER);
+
+    expect(submitted.submittedAt).toBe(LATER);
+  });
+
+  it('una vivienda publicada que vuelve a revisión por un cambio relevante se encola con la fecha del cambio', () => {
+    const published = withStatus(draft(COMPLETE), 'published');
+
+    const edited = editHome(published, { bedrooms: 5 }, LATER);
+
+    expect(edited.status).toBe('in_review');
+    expect(edited.submittedAt).toBe(LATER);
+  });
+
+  it('un cambio no relevante o en una vivienda pausada no cambia la fecha de envío', () => {
+    const published = { ...withStatus(draft(COMPLETE), 'published'), submittedAt: NOW };
+    const paused = { ...withStatus(draft(COMPLETE), 'paused'), submittedAt: NOW };
+
+    expect(editHome(published, { floor: '2ª' }, LATER).submittedAt).toBe(NOW);
+    expect(editHome(paused, { bedrooms: 5 }, LATER).submittedAt).toBe(NOW);
+  });
+});
+
+describe('approveHome', () => {
+  const inReview = (changes: Partial<Home> = {}): Home => ({
+    ...withStatus(draft(COMPLETE), 'in_review'),
+    submittedAt: NOW,
+    ...changes,
+  });
+
+  it('Scenario: Aprobar - pasa de in_review a published y limpia el motivo del rechazo anterior', () => {
+    const approved = approveHome(inReview({ moderationNote: 'Fotos borrosas' }));
+
+    expect(approved.status).toBe('published');
+    expect(approved.moderationNote).toBeNull();
+  });
+
+  it.each(['draft', 'published', 'paused', 'in_operation', 'closed'] as const)(
+    'Scenario: Moderar algo que no está en revisión - una vivienda en %s no se aprueba',
+    (status) => {
+      expect(() => approveHome(withStatus(draft(COMPLETE), status))).toThrow(HomeNotInReviewError);
+    },
+  );
+});
+
+describe('rejectHome', () => {
+  const inReview = (): Home => ({ ...withStatus(draft(COMPLETE), 'in_review'), submittedAt: NOW });
+
+  it('Scenario: Rechazar con motivo - vuelve a draft y guarda el motivo recortado', () => {
+    const rejected = rejectHome(inReview(), '  Las fotos no corresponden a la vivienda  ');
+
+    expect(rejected.status).toBe('draft');
+    expect(rejected.moderationNote).toBe('Las fotos no corresponden a la vivienda');
+  });
+
+  it('acepta un motivo de 1 y de 1000 caracteres', () => {
+    expect(rejectHome(inReview(), 'x').moderationNote).toBe('x');
+    expect(rejectHome(inReview(), 'x'.repeat(1000)).moderationNote).toHaveLength(1000);
+  });
+
+  it.each(['', '   ', '\n\t', 'x'.repeat(1001)])(
+    'Scenario: Rechazar sin motivo - el motivo %j no es válido',
+    (reason) => {
+      expect(() => rejectHome(inReview(), reason)).toThrow(InvalidModerationReasonError);
+    },
+  );
+
+  it.each(['draft', 'published', 'paused', 'in_operation', 'closed'] as const)(
+    'Scenario: Moderar algo que no está en revisión - una vivienda en %s no se rechaza',
+    (status) => {
+      expect(() => rejectHome(withStatus(draft(COMPLETE), status), 'motivo')).toThrow(
+        HomeNotInReviewError,
+      );
+    },
+  );
+
+  it('al volver a enviarla conserva el motivo del rechazo hasta que se apruebe', () => {
+    const rejected = rejectHome(inReview(), 'Fotos borrosas');
+
+    const resubmitted = submitHome(rejected, ENOUGH_PHOTOS, LATER);
+
+    expect(resubmitted.status).toBe('in_review');
+    expect(resubmitted.moderationNote).toBe('Fotos borrosas');
+  });
 });

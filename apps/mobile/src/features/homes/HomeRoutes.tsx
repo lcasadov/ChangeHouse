@@ -1,12 +1,19 @@
 import { useTheme } from '@changehouse/ui';
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { Redirect, Stack, useLocalSearchParams } from 'expo-router';
 
+import { adminRoutes } from '../admin/admin-routes';
+import { useIsAdmin } from '../admin/use-is-admin';
 import { HomeDetailScreen } from './HomeDetailScreen';
 import { HomeWizard } from './HomeWizard';
 
-/** Pila de la pestaña «Mis casas»: listado, alta, asistente de un borrador y detalle. */
+/**
+ * Pila de la pestaña «Mis casas»: listado, alta, asistente de un borrador y detalle. Un admin no
+ * publica viviendas: sus rutas lo llevan a la administración.
+ */
 export function HomesStack() {
   const theme = useTheme();
+  const isAdmin = useIsAdmin();
+  if (isAdmin) return <Redirect href={adminRoutes.queue} />;
   return (
     <Stack
       screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.color.bg } }}

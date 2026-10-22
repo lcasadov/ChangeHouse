@@ -214,8 +214,8 @@ operación de la API sin filas en ese fichero hace fallar la prueba.
 | `setPhoneSharing` | 401 | 404 | `participant` | 403 | — |
 | `createReport` | 401 | ✅ | ✅ | 403 | límite de peticiones |
 | `blockUser` | 401 | ✅ | ✅ | 403 | — |
-| `adminListHomes` | 401 | 403 | 403 | ✅ | — |
-| `adminModerateHome` | 401 | 403 | 403 | ✅ | auditoría |
+| `adminListHomes` | 401 | 403 | 403 | ✅ | cola `in_review` por envío; sin dirección exacta |
+| `adminModerateHome` | 401 | 403 | 403 | ✅ | auditoría en la misma transacción; fuera de revisión → 409; rechazar sin motivo → 400 |
 | `adminListReports` | 401 | 403 | 403 | ✅ | — |
 | `adminResolveReport` | 401 | 403 | 403 | ✅ | auditoría |
 | `adminListUsers` | 401 | 403 | 403 | ✅ | — |

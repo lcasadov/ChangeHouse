@@ -327,6 +327,16 @@ describe('submitHome', () => {
     expect(homes.homes.get('home-1')?.status).toBe('in_review');
   });
 
+  it('Scenario: Ver la cola - al enviar se guarda la fecha de envío con la que se ordena la cola', async () => {
+    const { createHome, submitHome, homes, photos } = setup();
+    await createHome('user-1', { type: 'piso', address: ADDRESS, ...COMPLETE });
+    addPhotos(photos, 'home-1', 3);
+
+    await submitHome('user-1', 'home-1');
+
+    expect(homes.homes.get('home-1')?.submittedAt).toEqual(NOW);
+  });
+
   it('Scenario: Envío de una ficha incompleta - falla señalando los campos y sigue en draft', async () => {
     const { createHome, submitHome, homes, photos } = setup();
     await createHome('user-1', {

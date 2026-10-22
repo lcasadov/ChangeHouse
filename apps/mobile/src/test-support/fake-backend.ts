@@ -3,12 +3,15 @@ import { PRIVACY_VERSION, TERMS_VERSION } from '@changehouse/shared';
 import type { Me } from '../features/account/account-api';
 import type { Home } from '../features/homes/homes-api';
 import { FakeHomes } from './fake-homes';
+import { FakeModeration } from './fake-moderation';
 import { json, problem } from './http-responses';
 
 export interface RecordedRequest {
   method: string;
   path: string;
   authorization: string | null;
+  /** La cadena de consulta (`?status=…`); ausente si la petición no lleva. */
+  search?: string;
   body: unknown;
 }
 
@@ -54,6 +57,8 @@ export class FakeBackend {
   profile: Me;
   /** Las viviendas del usuario, con las reglas de la API. */
   readonly homes: FakeHomes;
+  /** La cola de moderación sobre esas mismas viviendas. */
+  private readonly moderation: FakeModeration;
 
   constructor({
     registered = false,
@@ -63,6 +68,7 @@ export class FakeBackend {
     this.registered = registered;
     this.profile = profile;
     this.homes = new FakeHomes(homes);
+    this.moderation = new FakeModeration(this.homes);
   }
 
   private gate: Promise<void> | null = null;
@@ -78,28 +84,39 @@ export class FakeBackend {
 
   readonly fetch = async (input: Request): Promise<Response> => {
     const raw = await input.text();
-    const path = new URL(input.url).pathname;
+    const { pathname: path, search } = new URL(input.url);
     this.requests.push({
       method: input.method,
       path,
+      ...(search ? { search } : {}),
       authorization: input.headers.get('authorization'),
       body: raw === '' ? undefined : (JSON.parse(raw) as unknown),
     });
     const gate = this.gate;
     this.gate = null;
     await gate;
-    return this.respond(input.method, path, raw === '' ? undefined : (JSON.parse(raw) as unknown));
+    return this.respond(
+      input.method,
+      path,
+      new URLSearchParams(search),
+      raw === '' ? undefined : (JSON.parse(raw) as unknown),
+    );
   };
 
   requestsTo(method: string, path: string): RecordedRequest[] {
     return this.requests.filter((request) => request.method === method && request.path === path);
   }
 
-  private respond(method: string, path: string, body: unknown): Response {
+  private respond(method: string, path: string, search: URLSearchParams, body: unknown): Response {
     const failure = this.failNext;
     if (failure) {
       this.failNext = null;
       return this.fail(failure);
+    }
+    if (path.startsWith('/admin/')) {
+      return this.profile.roles.includes('admin')
+        ? this.moderation.respond(path, method, search, body)
+        : problem(403);
     }
     if (path === '/me/homes' || path.startsWith('/homes')) {
       return this.homes.respond(method, path, body);

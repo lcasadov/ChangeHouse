@@ -12,7 +12,8 @@
     "test:coverage": "vitest run --coverage",
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "db:migrate": "node --env-file-if-exists=.env --import tsx scripts/migrate.ts",
-    "db:generate": "drizzle-kit generate"
+    "db:generate": "drizzle-kit generate",
+    "admin:grant": "node --env-file-if-exists=.env --import tsx scripts/admin-grant.ts"
   },
   "dependencies": {
     "@changehouse/shared": "workspace:*",

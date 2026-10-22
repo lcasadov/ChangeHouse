@@ -1,13 +1,20 @@
-import type {
-  HomeFeatures,
-  HomeInput,
-  HomeRegime,
-  HomeStatus,
-  HomeType,
-  LocationVisibility,
+import {
+  type HomeFeatures,
+  type HomeInput,
+  type HomeRegime,
+  type HomeStatus,
+  type HomeType,
+  type LocationVisibility,
+  MAX_MODERATION_REASON,
 } from '@changehouse/shared';
 
-import { HomeIncompleteError, HomeNotEditableError, HomeNotSubmittableError } from './errors.js';
+import {
+  HomeIncompleteError,
+  HomeNotEditableError,
+  HomeNotInReviewError,
+  HomeNotSubmittableError,
+  InvalidModerationReasonError,
+} from './errors.js';
 import { assertValueRange } from './money.js';
 import { MIN_PHOTOS } from './photo.js';
 
@@ -55,6 +62,8 @@ export interface Home {
   readonly vppProtectionEnd: string | null;
   readonly vppMaxLegalPriceCents: number | null;
   readonly moderationNote: string | null;
+  /** Cuándo entró en la cola de moderación por última vez; ordena la cola. `null` si nunca se envió. */
+  readonly submittedAt: Date | null;
   /** Último cambio de un dato relevante tras publicarse; `null` si no lo hubo. */
   readonly relevantChangedAt: Date | null;
   readonly createdAt: Date;
@@ -169,6 +178,7 @@ export function newDraft(params: NewDraft): Home {
     vppProtectionEnd: null,
     vppMaxLegalPriceCents: null,
     moderationNote: null,
+    submittedAt: null,
     relevantChangedAt: null,
     createdAt: params.now,
     ...fromDetails(params.details ?? {}),
@@ -203,9 +213,11 @@ export function editHome(home: Home, changes: HomeChanges, now: Date): Home {
 
   const moderated = home.status === 'published' || home.status === 'paused';
   if (!moderated || !relevantChanged(home, edited)) return edited;
+  const backToReview = home.status === 'published';
   return {
     ...edited,
-    status: home.status === 'published' ? 'in_review' : home.status,
+    status: backToReview ? 'in_review' : home.status,
+    submittedAt: backToReview ? now : edited.submittedAt,
     relevantChangedAt: now,
   };
 }
@@ -224,9 +236,32 @@ export function assertEditable(home: Home): void {
  * Envía a revisión una vivienda en borrador con la ficha completa y al menos 3 fotos procesadas
  * (`readyPhotos`). Si falta algo, el error lista los campos y `photos` si faltan fotos.
  */
-export function submitHome(home: Home, readyPhotos: number): Home {
+export function submitHome(home: Home, readyPhotos: number, now: Date): Home {
   if (home.status !== 'draft') throw new HomeNotSubmittableError();
   const missing = [...missingFields(home), ...(readyPhotos < MIN_PHOTOS ? ['photos'] : [])];
   if (missing.length > 0) throw new HomeIncompleteError(missing);
-  return { ...home, status: 'in_review' };
+  return { ...home, status: 'in_review', submittedAt: now };
+}
+
+function assertInReview(home: Home): void {
+  if (home.status !== 'in_review') throw new HomeNotInReviewError();
+}
+
+/** Aprueba una vivienda en revisión: se publica y el motivo de un rechazo anterior deja de aplicar. */
+export function approveHome(home: Home): Home {
+  assertInReview(home);
+  return { ...home, status: 'published', moderationNote: null };
+}
+
+/**
+ * Rechaza una vivienda en revisión con un motivo de 1 a 1000 caracteres (tras recortar espacios):
+ * vuelve a borrador y el propietario ve el motivo.
+ */
+export function rejectHome(home: Home, reason: string): Home {
+  assertInReview(home);
+  const note = reason.trim();
+  if (note.length === 0 || note.length > MAX_MODERATION_REASON) {
+    throw new InvalidModerationReasonError();
+  }
+  return { ...home, status: 'draft', moderationNote: note };
 }

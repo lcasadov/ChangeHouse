@@ -126,10 +126,17 @@ export const homes = pgTable(
     approxLocation: geographyPoint('approx_location').notNull(),
     areaName: text('area_name').notNull(),
     moderationNote: text('moderation_note'),
+    submittedAt: timestamp('submitted_at', { withTimezone: true }),
     relevantChangedAt: timestamp('relevant_changed_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index('homes_owner_id_idx').on(table.ownerId)],
+  (table) => [
+    index('homes_owner_id_idx').on(table.ownerId),
+    // La cola de moderación: solo las viviendas en revisión, por antigüedad
+    index('homes_review_queue_idx')
+      .on(table.submittedAt, table.id)
+      .where(sql`${table.status} = 'in_review'`),
+  ],
 );
 
 /**
@@ -157,4 +164,23 @@ export const homePhotos = pgTable(
       sql`${table.status} = 'pending' OR ${table.position} IS NOT NULL`,
     ),
   ],
+);
+
+/**
+ * Acciones administrativas y sensibles (RF-93): solo inserción. La migración añade un disparador que
+ * rechaza `UPDATE` y `DELETE` y retira esos permisos (y `TRUNCATE`) al rol de la aplicación.
+ */
+export const auditLog = pgTable(
+  'audit_log',
+  {
+    id: bigint('id', { mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
+    actorId: uuid('actor_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
+    action: text('action').notNull(),
+    entity: text('entity').notNull(),
+    entityId: uuid('entity_id').notNull(),
+    at: timestamp('at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index('audit_log_entity_idx').on(table.entity, table.entityId)],
 );

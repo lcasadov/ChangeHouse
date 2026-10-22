@@ -1,6 +1,7 @@
 import { createContext, type ReactNode, useContext } from 'react';
 
 import type { AccountApi } from '../account/account-api';
+import type { AdminApi } from '../admin/admin-api';
 import type { AuthService, SocialSignIn } from '../auth/auth-service';
 import type { AddressSuggestions } from '../homes/address-suggestions';
 import type { HomesApi } from '../homes/homes-api';
@@ -12,6 +13,8 @@ export interface AppServices {
   auth: AuthService;
   accountApi: AccountApi;
   homesApi: HomesApi;
+  /** La cola de moderación y las decisiones del equipo de administración. */
+  adminApi: AdminApi;
   /** Autocompletado de direcciones del alta de viviendas (Google Places o sugerencias de prueba). */
   addressSuggestions: AddressSuggestions;
   /** La galería del dispositivo, de donde se eligen las fotos de la vivienda. */

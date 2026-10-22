@@ -5,7 +5,8 @@ import { useTranslation } from 'react-i18next';
 import { Platform } from 'react-native';
 
 import { useBreakpoint } from '../../ui';
-import { navigationLayoutFor, TABS } from './tabs';
+import { useIsAdmin } from '../admin/use-is-admin';
+import { hiddenTabRoute, navigationLayoutFor, tabsFor } from './tabs';
 
 /**
  * Navegación principal: pestañas inferiores y, en web ancha (`expanded`), barra lateral
@@ -15,6 +16,7 @@ export function AppTabs() {
   const theme = useTheme();
   const { t } = useTranslation();
   const breakpoint = useBreakpoint();
+  const isAdmin = useIsAdmin();
   const sideNavigation = navigationLayoutFor(Platform.OS, breakpoint) === 'side';
 
   return (
@@ -41,7 +43,7 @@ export function AppTabs() {
         sceneStyle: { backgroundColor: theme.color.bg },
       }}
     >
-      {TABS.map(({ route, section, icon }) => (
+      {tabsFor(isAdmin).map(({ route, section, icon }) => (
         <Tabs.Screen
           key={route}
           name={route}
@@ -59,6 +61,7 @@ export function AppTabs() {
           }}
         />
       ))}
+      <Tabs.Screen name={hiddenTabRoute(isAdmin)} options={{ href: null }} />
     </Tabs>
   );
 }

@@ -110,6 +110,15 @@ export function toHomeView(home: Home, photos: readonly PhotoView[]): HomeView {
   };
 }
 
+/**
+ * Ficha completa para la administración: la del propietario, pero sin la dirección postal exacta
+ * (el admin no la necesita para moderar y no se descifra fuera de su propietario). En `address`
+ * va el barrio o zona.
+ */
+export function toAdminHomeView(home: Home, photos: readonly PhotoView[]): HomeView {
+  return { ...toHomeView(home, photos), address: home.location.areaName };
+}
+
 /** Las fotos listas de una vivienda como las ve el cliente; `publicUrl` resuelve su dirección pública. */
 export function toPhotoViews(
   photos: readonly HomePhoto[],

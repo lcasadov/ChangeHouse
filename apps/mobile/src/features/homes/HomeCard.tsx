@@ -2,10 +2,10 @@ import { borderWidth, useTheme } from '@changehouse/ui';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
-import { Badge, Button, Text } from '../../ui';
+import { Badge, Button, Notice, Text } from '../../ui';
 import { useFocusRing } from '../../ui/useFocusRing';
 import { formatEuros } from './home-form';
-import { primaryActionOf, STATUS_PRESENTATION } from './home-status';
+import { primaryActionOf, rejectionOf, STATUS_PRESENTATION } from './home-status';
 import { HomeCover } from './HomeCover';
 import type { Home } from './homes-api';
 
@@ -35,7 +35,8 @@ export function HomeCard({ home, onOpen, onPrimary }: Readonly<HomeCardProps>) {
   const { tone, icon } = STATUS_PRESENTATION[home.status];
   const statusLabel = t(`homes.status.${home.status}`);
   const action = primaryActionOf(home);
-  const actionLabel = t(`homes.actions.${action.kind}`);
+  const rejection = rejectionOf(home);
+  const actionLabel = rejection ? t('homes.rejection.action') : t(`homes.actions.${action.kind}`);
   const hasValue = home.valueMinCents !== null && home.valueMaxCents !== null;
 
   return (
@@ -70,10 +71,17 @@ export function HomeCard({ home, onOpen, onPrimary }: Readonly<HomeCardProps>) {
             : t('homes.card.noValue')}
         </Text>
       </Pressable>
+      {rejection ? (
+        <Notice tone="warning">{t('homes.rejection.notice', { reason: rejection })}</Notice>
+      ) : null}
       <Button
         variant={action.kind === 'view' ? 'secondary' : 'primary'}
         label={actionLabel}
-        accessibilityLabel={t('homes.card.action', { action: actionLabel, title })}
+        accessibilityLabel={
+          rejection
+            ? t('homes.rejection.actionLabel', { title })
+            : t('homes.card.action', { action: actionLabel, title })
+        }
         onPress={onPrimary}
       />
     </View>

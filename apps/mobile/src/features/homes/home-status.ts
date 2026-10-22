@@ -31,3 +31,12 @@ export function primaryActionOf(home: Home): PrimaryAction {
   const step = firstIncompleteStep(home);
   return step === REVIEW_STEP ? { kind: 'submit', step } : { kind: 'continue', step };
 }
+
+/**
+ * El motivo con el que el equipo rechazó la vivienda, mientras siga siendo un borrador. Al volver a
+ * enviarla a revisión el motivo se conserva en la API pero ya no hay nada que corregir.
+ */
+export function rejectionOf(home: Home): string | null {
+  const reason = home.moderationNote?.trim();
+  return home.status === 'draft' && reason ? reason : null;
+}
