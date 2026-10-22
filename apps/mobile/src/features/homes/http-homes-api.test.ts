@@ -1,6 +1,7 @@
 import { createApiClient } from '../../api/client';
 import { FakeBackend } from '../../test-support/fake-backend';
 import { completeHome, draftHome, readyPhotos } from '../../test-support/fake-homes';
+import { problem } from '../../test-support/http-responses';
 import { type Home, HomesApiError } from './homes-api';
 import { createHttpHomesApi } from './http-homes-api';
 
@@ -152,6 +153,21 @@ describe('update', () => {
     });
   });
 
+  it('Scenario: Valor por encima del máximo legal - es above-legal-price con el campo señalado (422)', async () => {
+    const home = draftHome();
+    const backend = new FakeBackend({ homes: [home] });
+    jest.spyOn(backend.homes, 'respond').mockReturnValueOnce(
+      problem(422, {
+        code: 'VALUE_ABOVE_VPP_MAX_LEGAL_PRICE',
+        errors: [{ field: 'valueMaxCents', message: 'required' }],
+      }),
+    );
+
+    const failure = await failureOf(setup(backend).update(home.id, { valueMaxCents: 1 }));
+
+    expect(failure).toMatchObject({ kind: 'above-legal-price', fields: ['valueMaxCents'] });
+  });
+
   it('una vivienda en operación es conflict (409)', async () => {
     const home = draftHome({ status: 'in_operation' });
 
@@ -187,6 +203,21 @@ describe('submit', () => {
       kind: 'incomplete',
       fields: ['valueMinCents', 'valueMaxCents'],
     });
+  });
+
+  it('Scenario: VPP sin fecha de calificación - el 400 de la API es incomplete con el campo de la fecha', async () => {
+    const home = completeHome({ regime: 'VPPL' });
+    const backend = new FakeBackend({ homes: [home] });
+    jest.spyOn(backend.homes, 'respond').mockReturnValueOnce(
+      problem(400, {
+        code: 'VPP_QUALIFICATION_DATE_REQUIRED',
+        errors: [{ field: 'vppQualificationDate', message: 'required' }],
+      }),
+    );
+
+    const failure = await failureOf(setup(backend).submit(home.id));
+
+    expect(failure).toMatchObject({ kind: 'incomplete', fields: ['vppQualificationDate'] });
   });
 
   it('una vivienda que ya no es borrador es conflict (409)', async () => {

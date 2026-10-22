@@ -236,6 +236,53 @@ describe('Ver el detalle', () => {
     expect(screen.queryByText(es.homes.summary.address)).toBeNull();
   });
 
+  it('Scenario: Detalle de una VPPL - quien cumple los requisitos ve el aviso con el precio máximo legal y los requisitos', async () => {
+    const card = discoveryCard({
+      ...withArea('Lavapiés'),
+      regime: 'VPPL',
+      vppMaxLegalPriceCents: 30_000_000,
+    });
+    await open({ profile: { ...OWNER, meetsVppRequirements: true }, cards: [card] });
+
+    await fireEvent.press(await cardWith('Lavapiés'));
+    await screen.findByRole('header', { name: 'Piso en Lavapiés' });
+
+    const v = es.homes.vpp;
+    expect(screen.getByText(v.title.replace('{{regime}}', es.homes.regime.VPPL))).toBeTruthy();
+    expect(screen.getByText(v.maxLegalPrice.replace('{{amount}}', '300.000 €'))).toBeTruthy();
+    expect(screen.getByText(v.authorization)).toBeTruthy();
+    expect(screen.getByText(v.requirements)).toBeTruthy();
+    expect(screen.getByText(v.rightOfFirstRefusal)).toBeTruthy();
+  });
+
+  it('Scenario: Detalle de una VPPL - abierta por su dirección web, el aviso usa la forma pública de la API', async () => {
+    const card = discoveryCard({
+      ...withArea('Chamberí'),
+      regime: 'VPPL',
+      vppMaxLegalPriceCents: 30_000_000,
+    });
+    await open({
+      profile: { ...OWNER, meetsVppRequirements: true },
+      cards: [card],
+      url: `/discover/${card.id}`,
+    });
+
+    await screen.findByRole('header', { name: 'Piso en Chamberí' });
+
+    expect(
+      screen.getByText(es.homes.vpp.maxLegalPrice.replace('{{amount}}', '300.000 €')),
+    ).toBeTruthy();
+  });
+
+  it('el detalle de una vivienda libre no muestra el aviso de vivienda protegida', async () => {
+    await open({ cards: [discoveryCard(withArea('Lavapiés'))] });
+
+    await fireEvent.press(await cardWith('Lavapiés'));
+    await screen.findByRole('header', { name: 'Piso en Lavapiés' });
+
+    expect(screen.queryByText(es.homes.vpp.authorization)).toBeNull();
+  });
+
   it('el detalle repite la compensación estimada de la tarjeta', async () => {
     await open({
       cards: [discoveryCard({ compensation: { kind: 'receive', amountCents: 700_000 } })],

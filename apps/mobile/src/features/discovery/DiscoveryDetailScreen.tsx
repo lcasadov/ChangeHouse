@@ -10,6 +10,7 @@ import { Badge, EmptyState, Screen, Text } from '../../ui';
 import { useFocusRing } from '../../ui/useFocusRing';
 import { FEATURE_FLAGS } from '../homes/home-form';
 import { useHomeTitle } from '../homes/HomeCard';
+import { VppNotice } from '../homes/VppNotice';
 import { LoadingView } from '../session/LoadingView';
 import { AreaCard } from './AreaCard';
 import { factsOf } from './card-summary';
@@ -139,6 +140,7 @@ function Detail({ home, compensation }: Readonly<DetailProps>) {
               </Text>
             ))}
           </View>
+          <VppNotice regime={home.regime} maxLegalPriceCents={home.vppMaxLegalPriceCents} />
           {lines.length > 0 || extras.length > 0 ? (
             <View style={{ gap: theme.space[3] }}>
               <Text variant="heading" accessibilityRole="header">

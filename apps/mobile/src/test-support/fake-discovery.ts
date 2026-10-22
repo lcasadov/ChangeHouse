@@ -36,6 +36,7 @@ export function discoveryCard(
     yearBuilt: 1998,
     valueMinCents: 21_000_000,
     valueMaxCents: 23_000_000,
+    vppMaxLegalPriceCents: null,
     location: {
       visibility: 'area',
       point: { lat: 40.4168, lng: -3.7038 },

@@ -475,8 +475,8 @@ código):
 | Restricción | Regla |
 |---|---|
 | `CHECK (value_min_cents > 0 AND value_min_cents <= value_max_cents)` | RF-12 |
-| `CHECK (regime = 'libre' OR vpp_max_legal_price_cents IS NULL OR value_max_cents <= vpp_max_legal_price_cents)` | RN-06 |
-| `CHECK (regime = 'libre' OR vpp_qualification_date IS NOT NULL)` | RF-14 ⚠️ SUPUESTO: obligatoria en VPP |
+| `homes_value_max_within_vpp_max_legal_price`: `CHECK (regime = 'libre' OR vpp_max_legal_price_cents IS NULL OR value_max_cents <= vpp_max_legal_price_cents)` | RN-06 (el dominio responde antes 422 `VALUE_ABOVE_VPP_MAX_LEGAL_PRICE`) |
+| `homes_vpp_qualification_date_required`: `CHECK (regime = 'libre' OR status = 'draft' OR vpp_qualification_date IS NOT NULL)` | RF-14: obligatoria en VPP fuera del borrador, que la admite vacía mientras el asistente guarda el avance (el dominio responde antes 400 `VPP_QUALIFICATION_DATE_REQUIRED`) |
 | `CHECK (from_home_id <> to_home_id)` en `likes` y `dismissals` | Sin auto-likes |
 | `UNIQUE (cycle_key)` en `matches` | Sin matches duplicados del mismo ciclo |
 | `CHECK (type IN (2,3))` en `matches` | RN-05 |

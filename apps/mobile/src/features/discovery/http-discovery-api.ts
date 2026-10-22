@@ -93,6 +93,7 @@ function publicOf(home: PublicHome): PublicHome {
     builtM2: home.builtM2,
     bedrooms: home.bedrooms,
     bathrooms: home.bathrooms,
+    vppMaxLegalPriceCents: home.vppMaxLegalPriceCents,
     ...(home.floor === undefined ? {} : { floor: home.floor }),
     ...(home.hasLift === undefined ? {} : { hasLift: home.hasLift }),
     ...(home.garage === undefined ? {} : { garage: home.garage }),

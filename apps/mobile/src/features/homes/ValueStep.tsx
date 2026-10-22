@@ -1,4 +1,4 @@
-import type { HomePatch } from '@changehouse/shared';
+import { type HomePatch, isProtectedRegime } from '@changehouse/shared';
 import { useTheme } from '@changehouse/ui';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
@@ -6,19 +6,36 @@ import { View } from 'react-native';
 
 import { Text } from '../../ui';
 import { CheckControl, MoneyControl } from './form-fields';
-import { valueDefaults, valueResolver, type ValueValues } from './home-form';
+import {
+  formatEuros,
+  type ValueContext,
+  valueDefaults,
+  valueResolver,
+  type ValueValues,
+} from './home-form';
 import { StepActions } from './StepActions';
 import type { StepProps } from './steps';
 import { useUpdateHome } from './use-homes';
 import { useStepSubmit } from './use-step-submit';
 
-/** Paso 3, valor y cargas: el rango en euros (se guarda en céntimos), la hipoteca y si es la vivienda habitual. */
+/** El tope del valor máximo: el precio máximo legal de una vivienda protegida, si se conoce (RN-06). */
+function legalCapOf(home: StepProps['home']): number | null {
+  if (!home || !isProtectedRegime(home.regime)) return null;
+  return home.vppMaxLegalPriceCents ?? null;
+}
+
+/**
+ * Paso 5, valor y cargas: el rango en euros (se guarda en céntimos), la hipoteca y si es la
+ * vivienda habitual. En una vivienda protegida, el máximo muestra el tope legal y no lo supera.
+ */
 export function ValueStep({ home, onSaved, onBack, onExit }: Readonly<StepProps>) {
   const { t } = useTranslation();
   const theme = useTheme();
   const update = useUpdateHome(home?.id ?? '');
-  const form = useForm<ValueValues, unknown, HomePatch>({
+  const legalCap = legalCapOf(home);
+  const form = useForm<ValueValues, ValueContext, HomePatch>({
     resolver: valueResolver,
+    context: { maxLegalPriceCents: legalCap },
     defaultValues: valueDefaults(home),
     mode: 'onBlur',
     reValidateMode: 'onChange',
@@ -29,10 +46,17 @@ export function ValueStep({ home, onSaved, onBack, onExit }: Readonly<StepProps>
       onSaved(await update.mutateAsync(patch));
     },
     (error) => {
-      if (error.kind !== 'invalid-value-range') return false;
-      // El servidor tiene la última palabra sobre el rango, aunque el formulario lo diera por bueno
-      form.setError('valueMax', { type: 'range' });
-      return true;
+      // El servidor tiene la última palabra sobre el rango y el tope legal, aunque el formulario
+      // los diera por buenos
+      if (error.kind === 'invalid-value-range') {
+        form.setError('valueMax', { type: 'range' });
+        return true;
+      }
+      if (error.kind === 'above-legal-price') {
+        form.setError('valueMax', { type: 'aboveLegalPrice' });
+        return true;
+      }
+      return false;
     },
   );
   const control = form.control;
@@ -41,7 +65,14 @@ export function ValueStep({ home, onSaved, onBack, onExit }: Readonly<StepProps>
     <View style={{ gap: theme.space[4] }}>
       <Text tone="textMuted">{t('homes.form.valueHint')}</Text>
       <MoneyControl control={control} name="valueMin" label={t('homes.form.valueMin')} />
-      <MoneyControl control={control} name="valueMax" label={t('homes.form.valueMax')} />
+      <MoneyControl
+        control={control}
+        name="valueMax"
+        label={t('homes.form.valueMax')}
+        {...(legalCap === null
+          ? {}
+          : { hint: t('homes.form.valueMaxLegalHint', { amount: formatEuros(legalCap) }) })}
+      />
       <MoneyControl
         control={control}
         name="mortgage"

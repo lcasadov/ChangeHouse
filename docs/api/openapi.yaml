@@ -214,7 +214,10 @@ paths:
         El borrador nace con el tipo y la dirección (primer paso del asistente); el resto de
         campos de `HomeInput` es opcional y se completa con `updateHome`. La completitud se
         exige al enviar (`submitHome`). El servidor resuelve el `placeId` (punto exacto, barrio
-        o zona y su centro); si no puede, responde 422 con `code: ADDRESS_NOT_RESOLVED`.
+        o zona y su centro); si no puede, responde 422 con `code: ADDRESS_NOT_RESOLVED`. En una
+        vivienda protegida (`VPPB`, `VPPL`, `VPO`) con `vppMaxLegalPriceCents`, un
+        `valueMaxCents` mayor responde 422 con `code: VALUE_ABOVE_VPP_MAX_LEGAL_PRICE` y
+        `errors` en `valueMaxCents` (RN-06).
       x-roles: [owner, seeker]
       requestBody:
         required: true
@@ -267,6 +270,11 @@ paths:
       description: |
         Una vivienda `published` que cambia datos relevantes vuelve a `in_review`
         (moderación previa, RF-18). No se puede modificar en `in_operation` ni `closed`.
+        En una vivienda protegida (`VPPB`, `VPPL`, `VPO`), un `valueMaxCents` mayor que su
+        `vppMaxLegalPriceCents` responde 422 con `code: VALUE_ABOVE_VPP_MAX_LEGAL_PRICE` y
+        `errors` en `valueMaxCents` (RN-06). Fuera de `draft`, una vivienda protegida sin
+        `vppQualificationDate` responde 400 con `code: VPP_QUALIFICATION_DATE_REQUIRED` y
+        `errors` en `vppQualificationDate` (RF-14).
       x-roles: [resourceOwner]
       requestBody:
         required: true
@@ -296,7 +304,9 @@ paths:
         `hasLift`, `garage`, `storageRoom`, `valueMinCents`, `valueMaxCents`, `isPrimaryResidence`);
         si faltan, 422 con `code: HOME_INCOMPLETE` y `errors` con cada campo. La exigencia de al
         menos 3 fotos procesadas (RF-11); si faltan, el mismo 422 incluye `photos` entre los
-        `errors`.
+        `errors`. Una vivienda protegida (`VPPB`, `VPPL`, `VPO`) sin `vppQualificationDate`
+        responde antes 400 con `code: VPP_QUALIFICATION_DATE_REQUIRED` y `errors` en
+        `vppQualificationDate` (RF-14).
       x-roles: [resourceOwner]
       responses:
         '200':
@@ -304,6 +314,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Home' }
+        '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
@@ -1427,6 +1438,9 @@ components:
         Solo `type` y `address` son obligatorios al crear el borrador; `regime` es `libre` por
         defecto. Los demás son obligatorios para enviar a revisión (`submitHome`), no para guardar.
         Si hay rango, `valueMinCents` > 0 y `valueMinCents` <= `valueMaxCents` (422 en otro caso).
+        Una vivienda protegida (`VPPB`, `VPPL`, `VPO`) exige `vppQualificationDate` para salir del
+        borrador (400 `VPP_QUALIFICATION_DATE_REQUIRED`) y, si declara `vppMaxLegalPriceCents`,
+        `valueMaxCents` <= `vppMaxLegalPriceCents` (422 `VALUE_ABOVE_VPP_MAX_LEGAL_PRICE`).
       required: [type, address]
       properties:
         type: { $ref: '#/components/schemas/HomeType' }
@@ -1490,7 +1504,7 @@ components:
       description: |
         Forma pública de una vivienda. Sin dirección postal exacta ni datos del propietario.
         En un borrador (solo la ve su propietario) los datos aún sin rellenar son `null`.
-      required: [id, type, regime, usefulM2, builtM2, bedrooms, bathrooms, valueMinCents, valueMaxCents, location, photos]
+      required: [id, type, regime, usefulM2, builtM2, bedrooms, bathrooms, valueMinCents, valueMaxCents, vppMaxLegalPriceCents, location, photos]
       properties:
         id: { type: string, format: uuid }
         type: { $ref: '#/components/schemas/HomeType' }
@@ -1508,6 +1522,12 @@ components:
         yearBuilt: { type: [integer, 'null'] }
         valueMinCents: { type: [integer, 'null'], minimum: 0 }
         valueMaxCents: { type: [integer, 'null'], minimum: 0 }
+        vppMaxLegalPriceCents:
+          type: [integer, 'null']
+          minimum: 0
+          description: >-
+            Precio máximo legal de una vivienda protegida, si se conoce: tope de `valueMaxCents` y
+            dato del aviso de vivienda protegida (RN-06). `null` si no se conoce o es libre.
         location:
           type: object
           description: Punto exacto si el propietario eligió `exact`; centro del barrio o zona si eligió `area`.
@@ -1551,7 +1571,6 @@ components:
             mortgageOutstandingCents: { type: [integer, 'null'], minimum: 0 }
             vppQualificationDate: { type: [string, 'null'], format: date }
             vppProtectionEnd: { type: [string, 'null'], format: date }
-            vppMaxLegalPriceCents: { type: [integer, 'null'], minimum: 0 }
             address:
               type: string
               description: >-
