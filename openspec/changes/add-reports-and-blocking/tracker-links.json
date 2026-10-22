@@ -1,0 +1,78 @@
+{
+  "tracker": "github-issues",
+  "change": "add-reports-and-blocking",
+  "sprint": {
+    "path": "Sprint en curso",
+    "created": false
+  },
+  "epic": {
+    "capability": "moderation",
+    "id": 125,
+    "reused": true
+  },
+  "related_epics": [],
+  "feature": {
+    "id": 286,
+    "reused": false
+  },
+  "stories": [
+    {
+      "key": "Denunciar",
+      "id": 287,
+      "reused": false,
+      "prio": "P1"
+    },
+    {
+      "key": "Bloquear a un usuario",
+      "id": 288,
+      "reused": false,
+      "prio": "P1"
+    },
+    {
+      "key": "Revisión de denuncias",
+      "id": 289,
+      "reused": false,
+      "prio": "P1"
+    }
+  ],
+  "tasks": [
+    {
+      "key": "B1",
+      "id": 290,
+      "parent": 287,
+      "state": "open"
+    },
+    {
+      "key": "T1",
+      "id": 291,
+      "parent": 288,
+      "state": "open"
+    },
+    {
+      "key": "B2",
+      "id": 292,
+      "parent": 289,
+      "state": "open"
+    },
+    {
+      "key": "T2",
+      "id": 293,
+      "parent": 287,
+      "state": "open"
+    },
+    {
+      "key": "F1",
+      "id": 294,
+      "parent": 289,
+      "state": "open"
+    },
+    {
+      "key": "V1",
+      "id": 295,
+      "parent": 287,
+      "state": "open"
+    }
+  ],
+  "bugs": [],
+  "pending": []
+}
