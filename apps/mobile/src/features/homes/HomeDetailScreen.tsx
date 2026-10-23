@@ -6,6 +6,7 @@ import { View } from 'react-native';
 import { Badge, Button, FormScreen, Notice, Text } from '../../ui';
 import { HomePreferences } from '../search/HomePreferences';
 import { LoadingView } from '../session/LoadingView';
+import { AvailabilityAction } from './AvailabilityAction';
 import { homeRoutes } from './home-routes';
 import { rejectionOf, STATUS_PRESENTATION } from './home-status';
 import { useHomeTitle } from './HomeCard';
@@ -15,8 +16,13 @@ import { HomeSummary } from './HomeSummary';
 import { SubmitAction } from './SubmitAction';
 import { useHome } from './use-homes';
 
-/** Estados en los que el propietario puede seguir cambiando las fotos sin pasar por el asistente. */
-const MANAGEABLE_PHOTOS = new Set<Home['status']>(['published', 'paused']);
+/**
+ * Estados a la vista (o pausados): se pueden pausar o reactivar, editar sus datos desde el tipo y la
+ * dirección (un cambio relevante la devuelve a revisión) y gestionar sus fotos.
+ */
+const LISTED = new Set<Home['status']>(['published', 'paused']);
+/** Primer paso de datos del asistente: la edición de una vivienda publicada empieza aquí. */
+const FIRST_DATA_STEP = 2;
 
 function HomeDetail({ home }: Readonly<{ home: Home }>) {
   const { t } = useTranslation();
@@ -72,14 +78,24 @@ function HomeDetail({ home }: Readonly<{ home: Home }>) {
           />
         </View>
       ) : null}
-      {MANAGEABLE_PHOTOS.has(home.status) ? (
-        <Button
-          variant="secondary"
-          label={t('homes.detail.managePhotos')}
-          onPress={() => {
-            router.push(homeRoutes.edit(home.id, 1));
-          }}
-        />
+      {LISTED.has(home.status) ? (
+        <View style={{ gap: theme.space[3] }}>
+          <AvailabilityAction home={home} />
+          <Button
+            variant="secondary"
+            label={t('homes.detail.edit')}
+            onPress={() => {
+              router.push(homeRoutes.edit(home.id, FIRST_DATA_STEP));
+            }}
+          />
+          <Button
+            variant="secondary"
+            label={t('homes.detail.managePhotos')}
+            onPress={() => {
+              router.push(homeRoutes.edit(home.id, 1));
+            }}
+          />
+        </View>
       ) : null}
       <HomePreferences homeId={home.id} />
     </FormScreen>

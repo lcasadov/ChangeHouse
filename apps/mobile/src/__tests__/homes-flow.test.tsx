@@ -676,13 +676,13 @@ describe('Detalle de la vivienda', () => {
     expect(await stepBar(3)).toBeTruthy();
   });
 
-  it('una casa publicada se consulta sin acciones de envío', async () => {
+  it('una casa publicada se consulta sin acciones de envío, pero se puede editar', async () => {
     await openHomes({ homes: [completeHome({ status: 'published', moderationNote: null })] });
     await fireEvent.press(await screen.findByRole('button', { name: cardAction(h.actions.view) }));
 
     expect(await screen.findByText(h.detail.statusNote.published)).toBeTruthy();
     expect(screen.queryByRole('button', { name: h.submit.action })).toBeNull();
-    expect(screen.queryByRole('button', { name: h.detail.edit })).toBeNull();
+    expect(button(h.detail.edit)).toBeTruthy();
   });
 
   it('un borrador se puede seguir editando desde el detalle', async () => {

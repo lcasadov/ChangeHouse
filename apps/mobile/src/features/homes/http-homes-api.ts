@@ -106,6 +106,22 @@ export function createHttpHomesApi(client: ApiClient): HomesApi {
       throw failureOf(response.status, error);
     },
 
+    async pause(homeId: string): Promise<Home> {
+      const { data, error, response } = await request(() =>
+        client.POST('/homes/{homeId}/pause', pathOf(homeId)),
+      );
+      if (data) return data;
+      throw failureOf(response.status, error);
+    },
+
+    async resume(homeId: string): Promise<Home> {
+      const { data, error, response } = await request(() =>
+        client.POST('/homes/{homeId}/resume', pathOf(homeId)),
+      );
+      if (data) return data;
+      throw failureOf(response.status, error);
+    },
+
     async createPhotoUpload(homeId: string, contentType: PhotoContentType): Promise<PhotoUpload> {
       const { data, error, response } = await request(() =>
         client.POST('/homes/{homeId}/photos', { ...pathOf(homeId), body: { contentType } }),

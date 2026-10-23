@@ -18,7 +18,7 @@ export type HomesApiErrorKind =
   | 'unauthorized'
   /** La vivienda no existe o no es de esta persona (404). */
   | 'not-found'
-  /** La vivienda ya no admite el cambio: en operación, cerrada o ya enviada (409). */
+  /** La vivienda ya no admite el cambio: en operación, cerrada, ya enviada o en otro estado (409). */
   | 'conflict'
   /** El servidor rechaza los datos (400). */
   | 'invalid'
@@ -61,6 +61,10 @@ export interface HomesApi {
   update: (homeId: string, patch: HomePatch) => Promise<Home>;
   /** Envía el borrador a revisión (`submitHome`). */
   submit: (homeId: string) => Promise<Home>;
+  /** Pausa una vivienda publicada (`pauseHome`). */
+  pause: (homeId: string) => Promise<Home>;
+  /** Reactiva una vivienda pausada (`resumeHome`). */
+  resume: (homeId: string) => Promise<Home>;
   /** Pide la URL firmada para subir una foto (`createHomePhotoUpload`). */
   createPhotoUpload: (homeId: string, contentType: PhotoContentType) => Promise<PhotoUpload>;
   /** Confirma la subida: la API procesa la foto y la hace visible (`completeHomePhotoUpload`). */

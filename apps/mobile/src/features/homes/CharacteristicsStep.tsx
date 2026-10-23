@@ -23,7 +23,13 @@ import { useUpdateHome } from './use-homes';
 import { useStepSubmit } from './use-step-submit';
 
 /** Paso 2, características: superficies, estancias, planta, extras, certificado y año. Todo se puede dejar para después. */
-export function CharacteristicsStep({ home, onSaved, onBack, onExit }: Readonly<StepProps>) {
+export function CharacteristicsStep({
+  home,
+  onSaved,
+  onBack,
+  onExit,
+  confirmSave,
+}: Readonly<StepProps>) {
   const { t } = useTranslation();
   const theme = useTheme();
   const update = useUpdateHome(home?.id ?? '');
@@ -34,6 +40,7 @@ export function CharacteristicsStep({ home, onSaved, onBack, onExit }: Readonly<
     reValidateMode: 'onChange',
   });
   const { submit, saving, failure } = useStepSubmit(form, async (patch) => {
+    if (confirmSave && !(await confirmSave(patch))) return;
     onSaved(await update.mutateAsync(patch));
   });
   const control = form.control;

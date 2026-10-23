@@ -93,3 +93,21 @@ export class HomeMinPhotosError extends DomainError {
     this.name = 'HomeMinPhotosError';
   }
 }
+
+export class HomeNotPausableError extends DomainError {
+  readonly code = 'HOME_NOT_PAUSABLE';
+  override readonly kind: DomainErrorKind = 'conflict';
+  constructor() {
+    super('Solo una vivienda publicada se puede pausar');
+    this.name = 'HomeNotPausableError';
+  }
+}
+
+export class HomeNotResumableError extends DomainError {
+  readonly code = 'HOME_NOT_RESUMABLE';
+  override readonly kind: DomainErrorKind = 'conflict';
+  constructor() {
+    super('Solo una vivienda pausada se puede reactivar');
+    this.name = 'HomeNotResumableError';
+  }
+}

@@ -73,6 +73,26 @@ export function useSubmitHome(homeId: string) {
   });
 }
 
+/** Pausa una vivienda publicada: deja de verse en Explorar y conserva sus matches. */
+export function usePauseHome(homeId: string) {
+  const { homesApi } = useServices();
+  const remember = useRememberHome();
+  return useMutation<Home, Error, void>({
+    mutationFn: () => homesApi.pause(homeId),
+    onSuccess: remember,
+  });
+}
+
+/** Reactiva una vivienda pausada. */
+export function useResumeHome(homeId: string) {
+  const { homesApi } = useServices();
+  const remember = useRememberHome();
+  return useMutation<Home, Error, void>({
+    mutationFn: () => homesApi.resume(homeId),
+    onSuccess: remember,
+  });
+}
+
 /** Cambia las fotos de una vivienda en la caché y marca la lista como desactualizada. */
 function useEditPhotos() {
   const queryClient = useQueryClient();

@@ -159,8 +159,15 @@ export interface paths {
     head?: never;
     /**
      * Modifica una vivienda propia
-     * @description Una vivienda `published` que cambia datos relevantes vuelve a `in_review`
-     *     (moderación previa, RF-18). No se puede modificar en `in_operation` ni `closed`.
+     * @description Una vivienda `published` o `paused` que cambia datos relevantes vuelve a `in_review`
+     *     (moderación previa, RF-18), con `submittedAt` y la fecha de cambio relevante en ese
+     *     momento; deja de aparecer en el descubrimiento y conserva sus matches abiertos. Son
+     *     relevantes el rango de valor, el tipo, la dirección, las superficies, los dormitorios, los
+     *     baños, la planta, el ascensor, el garaje, el trastero, las características (`features`),
+     *     el régimen y los datos VPP; también las fotos (`completeHomePhotoUpload`,
+     *     `deleteHomePhoto`). `locationVisibility`, `energyRating`, `yearBuilt`,
+     *     `isPrimaryResidence` y `mortgageOutstandingCents` no lo son. No se puede modificar en
+     *     `in_operation` ni `closed` (409 `HOME_NOT_EDITABLE`).
      */
     patch: operations['updateHome'];
     trace?: never;
@@ -202,7 +209,12 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Pausa una vivienda publicada (`published` → `paused`) */
+    /**
+     * Pausa una vivienda publicada (`published` → `paused`, RF-17)
+     * @description Mientras está pausada no aparece en el descubrimiento ni forma matches nuevos, pero
+     *     conserva sus matches abiertos, sus me gusta y su fecha de publicación, y su propietario
+     *     sigue siendo `owner`. Si no está `published`: 409 con `code: HOME_NOT_PAUSABLE`.
+     */
     post: operations['pauseHome'];
     delete?: never;
     options?: never;
@@ -221,7 +233,12 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Reactiva una vivienda pausada (`paused` → `published`) */
+    /**
+     * Reactiva una vivienda pausada (`paused` → `published`, RF-17)
+     * @description Vuelve a aparecer en el descubrimiento sin pasar por moderación: un cambio relevante
+     *     durante la pausa ya la habría devuelto a `in_review`. Si no está `paused`: 409 con
+     *     `code: HOME_NOT_RESUMABLE`.
+     */
     post: operations['resumeHome'];
     delete?: never;
     options?: never;
@@ -273,7 +290,9 @@ export interface paths {
      *     solo entonces la foto pasa a `ready` y aparece en `photos` de la vivienda. Es idempotente
      *     sobre una foto ya `ready`. Si el fichero no es una imagen válida: 422 con
      *     `code: INVALID_IMAGE`, el fichero se elimina y la foto se descarta. Si la subida aún no se
-     *     ha hecho: 422 con `code: PHOTO_NOT_UPLOADED` y la foto sigue `pending`.
+     *     ha hecho: 422 con `code: PHOTO_NOT_UPLOADED` y la foto sigue `pending`. Una foto nueva en
+     *     una vivienda `published` o `paused` es un cambio relevante: la vivienda vuelve a
+     *     `in_review` (RF-18).
      */
     post: operations['completeHomePhotoUpload'];
     delete?: never;
@@ -297,7 +316,9 @@ export interface paths {
     post?: never;
     /**
      * Elimina una foto
-     * @description Elimina también los ficheros. Sirve para fotos `pending` y `ready`.
+     * @description Elimina también los ficheros. Sirve para fotos `pending` y `ready`. Borrar una foto
+     *     `ready` de una vivienda `published` o `paused` es un cambio relevante: la vivienda vuelve
+     *     a `in_review` (RF-18).
      */
     delete: operations['deleteHomePhoto'];
     options?: never;

@@ -13,7 +13,7 @@ import { useUpdateHome } from './use-homes';
 import { useStepSubmit } from './use-step-submit';
 
 /** Paso 3, valor y cargas: el rango en euros (se guarda en céntimos), la hipoteca y si es la vivienda habitual. */
-export function ValueStep({ home, onSaved, onBack, onExit }: Readonly<StepProps>) {
+export function ValueStep({ home, onSaved, onBack, onExit, confirmSave }: Readonly<StepProps>) {
   const { t } = useTranslation();
   const theme = useTheme();
   const update = useUpdateHome(home?.id ?? '');
@@ -26,6 +26,7 @@ export function ValueStep({ home, onSaved, onBack, onExit }: Readonly<StepProps>
   const { submit, saving, failure } = useStepSubmit(
     form,
     async (patch) => {
+      if (confirmSave && !(await confirmSave(patch))) return;
       onSaved(await update.mutateAsync(patch));
     },
     (error) => {

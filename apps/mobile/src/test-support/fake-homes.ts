@@ -18,7 +18,28 @@ const REQUIRED_TO_SUBMIT = [
 ] as const;
 
 const NOT_EDITABLE = new Set<Home['status']>(['in_operation', 'closed']);
-const HOME_PATH = /^\/homes\/([^/]+)(?:\/(submit|photos)(?:\/([^/]+?)(\/complete)?)?)?$/;
+/** Estados en los que un cambio relevante (ficha o fotos) devuelve la vivienda a revisión. */
+const RESUBMIT_ON_CHANGE = new Set<Home['status']>(['published', 'paused']);
+/** Datos relevantes de la ficha (`updateHome` en `docs/api/openapi.yaml`); las fotos también lo son. */
+const RELEVANT = [
+  'type',
+  'regime',
+  'usefulM2',
+  'builtM2',
+  'bedrooms',
+  'bathrooms',
+  'floor',
+  'hasLift',
+  'garage',
+  'storageRoom',
+  'valueMinCents',
+  'valueMaxCents',
+  'vppQualificationDate',
+  'vppProtectionEnd',
+  'vppMaxLegalPriceCents',
+] as const;
+const HOME_PATH =
+  /^\/homes\/([^/]+)(?:\/(submit|pause|resume|photos)(?:\/([^/]+?)(\/complete)?)?)?$/;
 
 const MAX_PHOTOS = 20;
 const MIN_PHOTOS = 3;
@@ -137,6 +158,8 @@ export class FakeHomes {
     const home = this.homes.find((candidate) => candidate.id === match?.[1]);
     if (!match || !home) return problem(404);
     if (match[2] === 'submit') return this.submit(home);
+    if (match[2] === 'pause') return this.transition(home, 'published', 'paused');
+    if (match[2] === 'resume') return this.transition(home, 'paused', 'published');
     if (match[2] === 'photos') return this.photos(method, home, match[3], match[4] !== undefined);
     return method === 'PATCH'
       ? this.update(home, body as Partial<Home> & Partial<HomeInput>)
@@ -192,6 +215,7 @@ export class FakeHomes {
       position: photos.length + 1,
     };
     home.photos = [...photos, photo];
+    this.resubmitOnChange(home);
     return json(200, photo);
   }
 
@@ -209,6 +233,7 @@ export class FakeHomes {
     home.photos = photos
       .filter((photo) => photo.id !== photoId)
       .map((photo, index) => ({ ...photo, position: index + 1 }));
+    this.resubmitOnChange(home);
     return new Response(null, { status: 204 });
   }
 
@@ -253,8 +278,24 @@ export class FakeHomes {
     }
     if (locationVisibility) location = { ...location, visibility: locationVisibility };
 
+    const relevant =
+      formatted !== home.address ||
+      JSON.stringify(rest.features ?? home.features) !== JSON.stringify(home.features) ||
+      RELEVANT.some((key) => key in rest && rest[key] !== home[key]);
     Object.assign(home, rest, { address: formatted, location });
+    if (relevant) this.resubmitOnChange(home);
     return json(200, home);
+  }
+
+  /** Pausar (`published` → `paused`) y reactivar (`paused` → `published`); otro estado, 409. */
+  private transition(home: Home, from: Home['status'], to: Home['status']): Response {
+    if (home.status !== from) return problem(409);
+    home.status = to;
+    return json(200, home);
+  }
+
+  private resubmitOnChange(home: Home): void {
+    if (RESUBMIT_ON_CHANGE.has(home.status)) home.status = 'in_review';
   }
 
   private submit(home: Home): Response {

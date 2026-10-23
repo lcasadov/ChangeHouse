@@ -40,6 +40,10 @@ export const policy: Policy = {
   createHome: { kind: 'roles', roles: HOME_OWNER_ROLES },
   updateHome: { kind: 'roles', roles: HOME_OWNER_ROLES },
   submitHome: { kind: 'roles', roles: HOME_OWNER_ROLES },
+  // Pausar y reactivar: mismos roles que el resto de la vivienda; un seeker solo tiene borradores o
+  // viviendas en revisión, y pausarlos es un conflicto de estado (409) que resuelve el caso de uso
+  pauseHome: { kind: 'roles', roles: HOME_OWNER_ROLES },
+  resumeHome: { kind: 'roles', roles: HOME_OWNER_ROLES },
   // Fotos: mismas reglas que la vivienda a la que pertenecen (la propiedad la resuelve el caso de uso)
   createHomePhotoUpload: { kind: 'roles', roles: HOME_OWNER_ROLES },
   completeHomePhotoUpload: { kind: 'roles', roles: HOME_OWNER_ROLES },

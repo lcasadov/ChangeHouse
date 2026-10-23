@@ -72,6 +72,8 @@ const HOMES_REQUESTS: Record<string, RequestTemplate> = {
   getHome: { method: 'GET', url: `/v1/homes/${MISSING_ID}` },
   updateHome: { method: 'PATCH', url: `/v1/homes/${MISSING_ID}`, payload: () => ({ bedrooms: 2 }) },
   submitHome: { method: 'POST', url: `/v1/homes/${MISSING_ID}/submit` },
+  pauseHome: { method: 'POST', url: `/v1/homes/${MISSING_ID}/pause` },
+  resumeHome: { method: 'POST', url: `/v1/homes/${MISSING_ID}/resume` },
   createHomePhotoUpload: {
     method: 'POST',
     url: `/v1/homes/${MISSING_ID}/photos`,

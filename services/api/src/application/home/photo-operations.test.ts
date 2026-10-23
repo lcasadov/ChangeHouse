@@ -407,3 +407,48 @@ describe('cambio relevante de las fotos (descarte, RF-44)', () => {
     expect(env.homes.homes.get(HOME)?.relevantChangedAt).toBeNull();
   });
 });
+
+describe('las fotos de una vivienda publicada o pausada la devuelven a revisión', () => {
+  it.each(['published', 'paused'] as const)(
+    'confirmar una foto nueva de una vivienda %s la deja in_review con su fecha de envío',
+    async (status) => {
+      const env = setup(status);
+      const photoId = await uploaded(env, 'IMG:nueva');
+
+      await env.completePhotoUpload(OWNER, HOME, photoId);
+
+      expect(env.homes.homes.get(HOME)).toMatchObject({
+        status: 'in_review',
+        submittedAt: NOW,
+        relevantChangedAt: NOW,
+      });
+    },
+  );
+
+  it.each(['published', 'paused'] as const)(
+    'borrar una foto de una vivienda %s la deja in_review',
+    async (status) => {
+      const env = setup(status);
+      seedMany(env, 4);
+
+      await env.deletePhoto(OWNER, HOME, 'ready-home-1-4');
+
+      expect(env.homes.homes.get(HOME)).toMatchObject({ status: 'in_review', submittedAt: NOW });
+    },
+  );
+
+  it('una vivienda ya publicada que está en revisión solo anota el cambio y sigue en revisión', async () => {
+    const env = setup('in_review');
+    const home = env.homes.homes.get(HOME);
+    if (home) env.homes.homes.set(HOME, { ...home, publishedAt: NOW, submittedAt: null });
+    const photoId = await uploaded(env, 'IMG:nueva');
+
+    await env.completePhotoUpload(OWNER, HOME, photoId);
+
+    expect(env.homes.homes.get(HOME)).toMatchObject({
+      status: 'in_review',
+      submittedAt: null,
+      relevantChangedAt: NOW,
+    });
+  });
+});

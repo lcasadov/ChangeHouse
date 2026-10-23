@@ -7,7 +7,12 @@ import {
   InMemoryPhotoRepository,
   InMemoryPhotoStorage,
 } from '../../../test/fakes.js';
-import { HomeIncompleteError, HomeNotEditableError } from '../../domain/home/errors.js';
+import {
+  HomeIncompleteError,
+  HomeNotEditableError,
+  HomeNotPausableError,
+  HomeNotResumableError,
+} from '../../domain/home/errors.js';
 import type { Home, HomeLocation } from '../../domain/home/home.js';
 import type { HomePhoto } from '../../domain/home/photo.js';
 import { AddressNotResolvedError, HomeNotFoundError } from './errors.js';
@@ -434,5 +439,78 @@ describe('fotos en la ficha', () => {
     const view = await updateHome('user-1', 'home-1', { bedrooms: 2 });
 
     expect(view.photos).toHaveLength(3);
+  });
+});
+
+describe('pauseHome y resumeHome', () => {
+  it('Scenario: Pausar - el propietario pausa su vivienda publicada y la ficha devuelta y la guardada quedan paused', async () => {
+    const { createHome, pauseHome, homes, photos } = setup();
+    await createHome('user-1', { type: 'piso', address: ADDRESS, ...COMPLETE });
+    publish(homes, 'home-1');
+    addPhotos(photos, 'home-1', 3);
+
+    const view = await pauseHome('user-1', 'home-1');
+
+    expect(view.status).toBe('paused');
+    expect(view.photos).toHaveLength(3);
+    expect(homes.homes.get('home-1')?.status).toBe('paused');
+  });
+
+  it('Scenario: Reactivar - el propietario reactiva su vivienda pausada y vuelve a published', async () => {
+    const { createHome, resumeHome, homes } = setup();
+    await createHome('user-1', { type: 'piso', address: ADDRESS, ...COMPLETE });
+    publish(homes, 'home-1', { status: 'paused' });
+
+    const view = await resumeHome('user-1', 'home-1');
+
+    expect(view.status).toBe('published');
+    expect(homes.homes.get('home-1')?.status).toBe('published');
+  });
+
+  it('Scenario: Pausar un borrador - es un conflicto y sigue en draft', async () => {
+    const { createHome, pauseHome, resumeHome, homes } = setup();
+    await createHome('user-1', { type: 'piso', address: ADDRESS, ...COMPLETE });
+
+    await expect(pauseHome('user-1', 'home-1')).rejects.toBeInstanceOf(HomeNotPausableError);
+    await expect(resumeHome('user-1', 'home-1')).rejects.toBeInstanceOf(HomeNotResumableError);
+    expect(homes.homes.get('home-1')?.status).toBe('draft');
+  });
+
+  it('pausar o reactivar la vivienda de otro es un 404 y no la cambia', async () => {
+    const { createHome, pauseHome, resumeHome, homes } = setup();
+    await createHome('user-1', { type: 'piso', address: ADDRESS, ...COMPLETE });
+    publish(homes, 'home-1');
+
+    await expect(pauseHome('user-2', 'home-1')).rejects.toBeInstanceOf(HomeNotFoundError);
+    await expect(resumeHome('user-2', 'home-1')).rejects.toBeInstanceOf(HomeNotFoundError);
+    expect(homes.homes.get('home-1')?.status).toBe('published');
+  });
+});
+
+describe('vuelta a revisión al modificar', () => {
+  it('Scenario: Cambiar el valor de una vivienda publicada - se guarda en in_review con las fechas de envío y de cambio relevante', async () => {
+    const { createHome, updateHome, homes } = setup();
+    await createHome('user-1', { type: 'piso', address: ADDRESS, ...COMPLETE });
+    publish(homes, 'home-1');
+
+    const view = await updateHome('user-1', 'home-1', { valueMaxCents: 300_000_00 });
+
+    expect(view.status).toBe('in_review');
+    expect(homes.homes.get('home-1')).toMatchObject({
+      status: 'in_review',
+      submittedAt: NOW,
+      relevantChangedAt: NOW,
+    });
+  });
+
+  it('Scenario: Cambiar solo la visibilidad de la ubicación - sigue publicada', async () => {
+    const { createHome, updateHome, homes } = setup();
+    await createHome('user-1', { type: 'piso', address: ADDRESS, ...COMPLETE });
+    publish(homes, 'home-1');
+
+    const view = await updateHome('user-1', 'home-1', { locationVisibility: 'exact' });
+
+    expect(view.status).toBe('published');
+    expect(homes.homes.get('home-1')?.relevantChangedAt).toBeNull();
   });
 });

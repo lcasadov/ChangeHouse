@@ -1,6 +1,6 @@
 import type { HomeStatus } from '@changehouse/shared';
 
-import type { Home } from '../../domain/home/home.js';
+import type { Home, RelevantChange } from '../../domain/home/home.js';
 import type { ModerationCursor } from '../moderation/cursor.js';
 
 /**
@@ -24,9 +24,9 @@ export interface HomeRepository {
   findByIdForUpdate(id: string): Promise<Home | null>;
   /**
    * Anota un cambio relevante (fotos) sin reescribir el resto de la vivienda, para no pisar una
-   * edición concurrente de la ficha.
+   * edición concurrente de la ficha: la fecha y, si vuelve a revisión, el estado y la fecha de envío.
    */
-  markRelevantChange(id: string, at: Date): Promise<void>;
+  markRelevantChange(id: string, change: RelevantChange): Promise<void>;
   /** Las viviendas del propietario en cualquier estado, de la más antigua a la más reciente. */
   listByOwner(ownerId: string): Promise<Home[]>;
   /** Una página de viviendas para la administración. */
