@@ -5,7 +5,7 @@ Capacidades implementadas. Cada una se crea o amplía al archivar un change
 
 | Capacidad | Qué cubre | Change que la creó |
 |---|---|---|
-| [`landing`](landing/spec.md) | Web pública: propuesta de valor, páginas legales, consentimiento de cookies, accesibilidad y SEO | `2026-10-19-add-landing` |
+| [`landing`](landing/spec.md) | Web pública: propuesta de valor, páginas legales, consentimiento de cookies, accesibilidad, SEO y guías con feed RSS | `2026-10-19-add-landing` (ampliado por `add-landing-blog`) |
 | [`waitlist`](waitlist/spec.md) | Alta en la lista de espera con consentimiento, sin revelar inscripciones previas y con límite de peticiones | `2026-10-19-add-waitlist` |
 | [`api-errors`](api-errors/spec.md) | Formato único de error de la API (`Problem`) con identificador de correlación | `2026-10-19-add-waitlist` |
 | [`accounts`](accounts/spec.md) | Registro, acceso, verificación del email, recuperación de la contraseña, alta con consentimiento | `2026-10-19-add-authentication` |

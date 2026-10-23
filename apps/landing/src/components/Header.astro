@@ -12,9 +12,10 @@ import { es } from '../i18n/es';
       </svg>
       <span>{es.header.brand}</span>
     </a>
-    <a class="waitlist-link" href="/#lista-de-espera">
-      {es.header.waitlist}
-    </a>
+    <nav class="links" aria-label={es.header.navLabel}>
+      <a href={es.guides.path}>{es.header.guides}</a>
+      <a href="/#lista-de-espera">{es.header.waitlist}</a>
+    </nav>
   </div>
 </header>
 
@@ -25,9 +26,10 @@ import { es } from '../i18n/es';
 
   .bar {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: var(--space-4);
+    gap: var(--space-2) var(--space-4);
   }
 
   .brand {
@@ -56,7 +58,14 @@ import { es } from '../i18n/es';
     fill: var(--color-bg);
   }
 
-  .waitlist-link {
+  .links {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2) var(--space-4);
+  }
+
+  .links a {
     display: inline-flex;
     align-items: center;
     min-height: var(--touch-target);

@@ -1,0 +1,57 @@
+---
+import { getCollection } from 'astro:content';
+
+import GuideList from '../../components/GuideList.astro';
+import { es } from '../../i18n/es';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { publishedGuides } from '../../lib/guias';
+
+const guides = publishedGuides(await getCollection('guias'), import.meta.env.PROD);
+const text = es.guides;
+---
+
+<BaseLayout title={text.title} description={text.description}>
+  <link
+    slot="head"
+    rel="alternate"
+    type="application/rss+xml"
+    title={text.feedTitle}
+    href={text.feedPath}
+  />
+  <main id="contenido" class="container page">
+    <h1>{text.title}</h1>
+    <p class="lead">{text.lead}</p>
+    <GuideList guides={guides} />
+    <p class="feed">
+      <a href={text.feedPath}>{text.feedLabel}</a>
+    </p>
+  </main>
+</BaseLayout>
+
+<style>
+  .page {
+    max-width: calc(var(--content-max-reading) + var(--space-8));
+    padding-block: var(--space-6) var(--space-7);
+  }
+
+  h1 {
+    font-size: clamp(calc(var(--font-title-size) * 1.4), 9vw, calc(var(--font-display-size) * 1.6));
+    line-height: 1.05;
+  }
+
+  .lead {
+    margin-top: var(--space-4);
+    color: var(--color-text-muted);
+    font-size: calc(var(--font-body-size) * 1.125);
+  }
+
+  .feed {
+    margin-top: var(--space-6);
+  }
+
+  .feed a {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--touch-target);
+  }
+</style>

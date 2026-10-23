@@ -6,13 +6,14 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
-    "lint": "eslint .",
+    "lint": "astro sync && eslint .",
     "typecheck": "astro check",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@astrojs/rss": "4.0.19",
     "@astrojs/sitemap": "3.7.4",
     "@changehouse/shared": "workspace:*",
     "@changehouse/ui": "workspace:*",

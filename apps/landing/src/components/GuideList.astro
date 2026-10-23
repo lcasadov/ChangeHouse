@@ -1,0 +1,90 @@
+---
+import { es } from '../i18n/es';
+import { formatGuideDate, type GuideEntry, guidePath, isoDay } from '../lib/guias';
+
+interface Props {
+  guides: GuideEntry[];
+}
+
+const { guides } = Astro.props;
+const { guides: text } = es;
+---
+
+{guides.length === 0 ? (
+  <p class="empty" role="status">
+    {text.empty}
+  </p>
+) : (
+  <ul class="list" aria-label={text.listLabel}>
+    {guides.map(({ id, data }) => (
+      <li class="card">
+        <p class="meta">
+          <time datetime={isoDay(data.date)}>{formatGuideDate(data.date)}</time>
+          {data.draft && <span class="draft">{text.draftBadge}</span>}
+        </p>
+        <h2>
+          <a href={guidePath(id)}>{data.title}</a>
+        </h2>
+        <p class="summary">{data.description}</p>
+      </li>
+    ))}
+  </ul>
+)}
+
+<style>
+  .list {
+    display: grid;
+    gap: var(--space-5);
+    margin: var(--space-6) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .card {
+    padding: var(--space-5);
+    border: var(--border-thin) solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-surface);
+  }
+
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-3);
+    color: var(--color-text-muted);
+    font-size: var(--font-caption-size);
+    line-height: var(--font-caption-line-height);
+  }
+
+  .draft {
+    padding: var(--space-1) var(--space-3);
+    border: var(--border-thin) solid var(--color-warning);
+    border-radius: var(--radius-md);
+    color: var(--color-warning);
+    font-weight: var(--font-label-weight);
+  }
+
+  h2 {
+    margin-top: var(--space-2);
+    font-size: var(--font-title-size);
+    line-height: var(--font-title-line-height);
+  }
+
+  h2 a {
+    display: inline-block;
+    min-height: var(--touch-target);
+    color: var(--color-text);
+    text-decoration-color: var(--color-primary);
+  }
+
+  .summary {
+    margin-top: var(--space-2);
+    color: var(--color-text-muted);
+  }
+
+  .empty {
+    margin-top: var(--space-6);
+    color: var(--color-text-muted);
+  }
+</style>

@@ -1,0 +1,173 @@
+---
+import { es } from '../i18n/es';
+import {
+  articleJsonLd,
+  formatGuideDate,
+  type GuideEntry,
+  isoDay,
+  serializeJsonLd,
+  type TocItem,
+} from '../lib/guias';
+import BaseLayout from './BaseLayout.astro';
+
+interface Props {
+  guide: GuideEntry;
+  toc: TocItem[];
+  minutes: number;
+}
+
+const { guide, toc, minutes } = Astro.props;
+const { data } = guide;
+const text = es.guides;
+
+const base = Astro.site ?? Astro.url;
+const url = new URL(Astro.url.pathname.replace(/(.)\/$/, '$1'), base).href;
+const image = new URL(data.image, base).href;
+const jsonLd = serializeJsonLd(
+  articleJsonLd({ title: data.title, description: data.description, date: data.date, image, url }),
+);
+---
+
+<BaseLayout title={data.title} description={data.description} image={data.image} ogType="article">
+  <script slot="head" type="application/ld+json" set:html={jsonLd} />
+  <main id="contenido" class="container page">
+    <a class="back" href={text.path}>
+      {text.allGuides}
+    </a>
+    <article>
+      <header>
+        <h1>{data.title}</h1>
+        <p class="meta">
+          <time datetime={isoDay(data.date)}>{formatGuideDate(data.date)}</time>
+          <span>
+            {minutes} {text.readingTime}
+          </span>
+          {data.draft && <span class="draft">{text.draftBadge}</span>}
+        </p>
+      </header>
+
+      {toc.length > 0 && (
+        <nav class="toc" aria-label={text.tocLabel}>
+          <p class="toc-title">{text.tocTitle}</p>
+          <ol>
+            {toc.map((item) => (
+              <li>
+                <a href={`#${item.slug}`}>{item.text}</a>
+              </li>
+            ))}
+          </ol>
+        </nav>
+      )}
+
+      <div class="body">
+        <slot />
+      </div>
+
+      <section class="guide-cta" aria-labelledby="guide-cta-title">
+        <h2 id="guide-cta-title">{text.cta.title}</h2>
+        <p>{text.cta.text}</p>
+        <a class="button button-primary" href="/#lista-de-espera">
+          {text.cta.button}
+        </a>
+      </section>
+    </article>
+  </main>
+</BaseLayout>
+
+<style>
+  .page {
+    max-width: calc(var(--content-max-reading) + var(--space-8));
+    padding-block: var(--space-6) var(--space-7);
+  }
+
+  .back {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--touch-target);
+    font-weight: var(--font-label-weight);
+  }
+
+  h1 {
+    margin-top: var(--space-4);
+    font-size: clamp(calc(var(--font-title-size) * 1.4), 8vw, calc(var(--font-display-size) * 1.4));
+    line-height: 1.1;
+  }
+
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin-top: var(--space-3);
+    color: var(--color-text-muted);
+    font-size: var(--font-caption-size);
+    line-height: var(--font-caption-line-height);
+  }
+
+  .draft {
+    padding: var(--space-1) var(--space-3);
+    border: var(--border-thin) solid var(--color-warning);
+    border-radius: var(--radius-md);
+    color: var(--color-warning);
+    font-weight: var(--font-label-weight);
+  }
+
+  .toc {
+    margin-top: var(--space-5);
+    padding: var(--space-4) var(--space-5);
+    border: var(--border-thin) solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-surface-muted);
+  }
+
+  .toc-title {
+    font-weight: var(--font-label-weight);
+  }
+
+  .toc ol {
+    margin: var(--space-2) 0 0;
+    padding-left: var(--space-5);
+  }
+
+  .toc a {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--touch-target);
+  }
+
+  .body {
+    margin-top: var(--space-6);
+  }
+
+  .body :global(h2) {
+    margin-top: var(--space-6);
+    font-size: var(--font-title-size);
+    line-height: var(--font-title-line-height);
+  }
+
+  .body :global(p),
+  .body :global(ul),
+  .body :global(ol) {
+    margin-top: var(--space-3);
+  }
+
+  .body :global(li) {
+    margin-top: var(--space-2);
+  }
+
+  .guide-cta {
+    margin-top: var(--space-7);
+    padding: var(--space-6) var(--space-5);
+    border: var(--border-thick) solid var(--color-brand);
+    border-radius: var(--radius-lg);
+  }
+
+  .guide-cta h2 {
+    font-size: var(--font-title-size);
+    line-height: var(--font-title-line-height);
+  }
+
+  .guide-cta p {
+    margin-block: var(--space-3) var(--space-4);
+    color: var(--color-text-muted);
+  }
+</style>
