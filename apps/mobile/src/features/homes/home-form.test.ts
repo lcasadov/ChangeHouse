@@ -2,14 +2,20 @@ import { completeHome, draftHome, readyPhotos } from '../../test-support/fake-ho
 import {
   characteristicsDefaults,
   characteristicsResolver,
+  dateFieldText,
   decimalFieldText,
   errorKeyOf,
   euroFieldText,
   firstIncompleteStep,
   formatEuros,
   locationDefaults,
+  parseDate,
   parseDecimal,
   parseEuros,
+  regimeDefaults,
+  regimeResolver,
+  type RegimeValues,
+  sameAsSaved,
   stepOfFields,
   typeStepDefaults,
   typeStepResolver,
@@ -30,6 +36,15 @@ async function run<V>(
   values: V,
 ): Promise<Resolved> {
   return (await resolver(values, undefined, {} as never)) as Resolved;
+}
+
+/** Igual que `run`, con el contexto que el paso pasa a su resolver. */
+async function runWith<V, C>(
+  resolver: (values: V, context: C, options: never) => unknown,
+  values: V,
+  context: C,
+): Promise<Resolved> {
+  return (await resolver(values, context, {} as never)) as Resolved;
 }
 
 describe('parseDecimal', () => {
@@ -89,8 +104,15 @@ describe('firstIncompleteStep', () => {
     expect(firstIncompleteStep(completeHome({ photos: readyPhotos(2) }))).toBe(1);
   });
 
-  it('con 3 fotos y solo el tipo y la dirección continúa en las características', () => {
-    expect(firstIncompleteStep(draftHome({ photos: readyPhotos(3) }))).toBe(3);
+  it('con 3 fotos y solo el tipo y la dirección continúa en las características: «Libre» no pide nada más', () => {
+    expect(firstIncompleteStep(draftHome({ photos: readyPhotos(3) }))).toBe(4);
+  });
+
+  it('Scenario: VPP sin fecha de calificación - una protegida sin fecha continúa en el paso de régimen', () => {
+    expect(firstIncompleteStep(completeHome({ regime: 'VPPL' }))).toBe(3);
+    expect(
+      firstIncompleteStep(completeHome({ regime: 'VPPL', vppQualificationDate: '2015-03-10' })),
+    ).toBe(7);
   });
 
   it('con las características guardadas continúa en el valor', () => {
@@ -105,27 +127,31 @@ describe('firstIncompleteStep', () => {
       storageRoom: false,
     });
 
-    expect(firstIncompleteStep(home)).toBe(4);
+    expect(firstIncompleteStep(home)).toBe(5);
   });
 
   it('con todo guardado salta a la revisión', () => {
-    expect(firstIncompleteStep(completeHome())).toBe(6);
+    expect(firstIncompleteStep(completeHome())).toBe(7);
   });
 
   it('un rango a medias sigue en el paso de valor', () => {
-    expect(firstIncompleteStep(completeHome({ valueMaxCents: null }))).toBe(4);
+    expect(firstIncompleteStep(completeHome({ valueMaxCents: null }))).toBe(5);
   });
 });
 
 describe('stepOfFields', () => {
   it('devuelve el paso más temprano que contiene alguno de los campos', () => {
-    expect(stepOfFields(['valueMinCents', 'bedrooms'])).toBe(3);
-    expect(stepOfFields(['isPrimaryResidence', 'valueMaxCents'])).toBe(4);
+    expect(stepOfFields(['valueMinCents', 'bedrooms'])).toBe(4);
+    expect(stepOfFields(['isPrimaryResidence', 'valueMaxCents'])).toBe(5);
     expect(stepOfFields(['valueMaxCents', 'photos'])).toBe(1);
   });
 
+  it('Scenario: VPP sin fecha de calificación - la fecha de calificación se rellena en el paso de régimen', () => {
+    expect(stepOfFields(['vppQualificationDate'])).toBe(3);
+  });
+
   it('un campo desconocido lleva a la revisión', () => {
-    expect(stepOfFields(['otraCosa'])).toBe(6);
+    expect(stepOfFields(['otraCosa'])).toBe(7);
   });
 });
 
@@ -304,6 +330,184 @@ describe('paso 3: valor y cargas', () => {
   });
 });
 
+describe('valor y tope legal de una vivienda protegida', () => {
+  const blank = valueDefaults();
+
+  it('Scenario: Valor por encima del máximo legal - un máximo por encima del precio máximo legal es un error junto al máximo y no se guarda', async () => {
+    const result = await runWith(
+      valueResolver,
+      { ...blank, valueMin: '150000', valueMax: '200000' },
+      { maxLegalPriceCents: 18_000_000 },
+    );
+
+    expect(result.errors).toEqual({ valueMax: { type: 'aboveLegalPrice' } });
+    expect(result.values).toEqual({});
+  });
+
+  it('Scenario: Valor por encima del máximo legal - un máximo igual al precio máximo legal se acepta', async () => {
+    const result = await runWith(
+      valueResolver,
+      { ...blank, valueMin: '150000', valueMax: '180000' },
+      { maxLegalPriceCents: 18_000_000 },
+    );
+
+    expect(result.errors).toEqual({});
+  });
+
+  it('sin precio máximo legal no hay tope', async () => {
+    const result = await runWith(
+      valueResolver,
+      { ...blank, valueMin: '150000', valueMax: '900000' },
+      { maxLegalPriceCents: null },
+    );
+
+    expect(result.errors).toEqual({});
+  });
+});
+
+describe('fechas escritas a mano (dd/mm/aaaa)', () => {
+  it.each([
+    ['', undefined],
+    ['  ', undefined],
+    ['10/03/2015', '2015-03-10'],
+    [' 1/3/2015 ', '2015-03-01'],
+  ] as const)('«%s» es %s', (text, expected) => {
+    expect(parseDate(text)).toBe(expected);
+  });
+
+  it.each(['2015-03-10', '31/02/2015', '10/13/2015', 'ayer', '10/03/15'])(
+    '«%s» no es una fecha válida',
+    (text) => {
+      expect(parseDate(text)).toBeNull();
+    },
+  );
+
+  it('una fecha guardada se muestra como dd/mm/aaaa, y vacía si no hay', () => {
+    expect(dateFieldText('2015-03-10')).toBe('10/03/2015');
+    expect(dateFieldText(null)).toBe('');
+    expect(dateFieldText(undefined)).toBe('');
+  });
+});
+
+describe('paso 3: régimen', () => {
+  const libre: RegimeValues = {
+    regime: 'libre',
+    qualificationDate: '',
+    protectionEnd: '',
+    maxLegalPrice: '',
+  };
+  const noValue = { valueMaxCents: null };
+
+  it('parte de «Libre» y recupera los datos de protección guardados', () => {
+    expect(regimeDefaults()).toEqual(libre);
+    expect(
+      regimeDefaults(
+        draftHome({
+          regime: 'VPO',
+          vppQualificationDate: '2010-01-01',
+          vppProtectionEnd: '2040-01-01',
+          vppMaxLegalPriceCents: 18_000_000,
+        }),
+      ),
+    ).toEqual({
+      regime: 'VPO',
+      qualificationDate: '01/01/2010',
+      protectionEnd: '01/01/2040',
+      maxLegalPrice: '180.000',
+    });
+  });
+
+  it('Scenario: Vivienda libre - solo guarda el régimen, sin datos de protección aunque se hubieran escrito', async () => {
+    const result = await runWith(
+      regimeResolver,
+      { ...libre, qualificationDate: 'lo que sea', maxLegalPrice: 'mucho' },
+      noValue,
+    );
+
+    expect(result).toEqual({ values: { regime: 'libre' }, errors: {} });
+  });
+
+  it('Scenario: VPP sin fecha de calificación - una VPPL sin fecha es un error junto al campo y no se guarda', async () => {
+    const result = await runWith(regimeResolver, { ...libre, regime: 'VPPL' }, noValue);
+
+    expect(result.errors).toEqual({ qualificationDate: { type: 'required' } });
+    expect(result.values).toEqual({});
+  });
+
+  it('Scenario: VPP sin fecha de calificación - con la fecha guarda el régimen y los datos de protección indicados', async () => {
+    const result = await runWith(
+      regimeResolver,
+      {
+        regime: 'VPPL',
+        qualificationDate: '10/03/2015',
+        protectionEnd: '10/03/2045',
+        maxLegalPrice: '300.000',
+      },
+      noValue,
+    );
+
+    expect(result).toEqual({
+      values: {
+        regime: 'VPPL',
+        vppQualificationDate: '2015-03-10',
+        vppProtectionEnd: '2045-03-10',
+        vppMaxLegalPriceCents: 30_000_000,
+      },
+      errors: {},
+    });
+  });
+
+  it('el fin de la protección y el precio máximo legal son opcionales', async () => {
+    const result = await runWith(
+      regimeResolver,
+      { ...libre, regime: 'VPPB', qualificationDate: '10/03/2015' },
+      noValue,
+    );
+
+    expect(result.values).toEqual({ regime: 'VPPB', vppQualificationDate: '2015-03-10' });
+  });
+
+  it('una fecha o un importe no válidos se señalan junto a su campo', async () => {
+    const result = await runWith(
+      regimeResolver,
+      {
+        regime: 'VPO',
+        qualificationDate: '31/02/2015',
+        protectionEnd: 'nunca',
+        maxLegalPrice: '0',
+      },
+      noValue,
+    );
+
+    expect(result.errors).toEqual({
+      qualificationDate: { type: 'invalid' },
+      protectionEnd: { type: 'invalid' },
+      maxLegalPrice: { type: 'invalid' },
+    });
+  });
+
+  it('Scenario: Valor por encima del máximo legal - un precio máximo legal por debajo del valor máximo ya indicado se señala junto al campo', async () => {
+    const result = await runWith(
+      regimeResolver,
+      { ...libre, regime: 'VPO', qualificationDate: '01/01/2010', maxLegalPrice: '180.000' },
+      { valueMaxCents: 20_000_000 },
+    );
+
+    expect(result.errors).toEqual({ maxLegalPrice: { type: 'belowValue' } });
+  });
+
+  it('un paso sin cambios respecto a lo guardado no necesita guardarse', () => {
+    const saved = draftHome({ regime: 'VPPL', vppQualificationDate: '2015-03-10' });
+
+    expect(sameAsSaved(draftHome(), { regime: 'libre' })).toBe(true);
+    expect(sameAsSaved(saved, { regime: 'VPPL', vppQualificationDate: '2015-03-10' })).toBe(true);
+    expect(sameAsSaved(saved, { regime: 'VPPL', vppQualificationDate: '2016-03-10' })).toBe(false);
+    expect(sameAsSaved(draftHome(), { regime: 'VPO', vppQualificationDate: '2010-01-01' })).toBe(
+      false,
+    );
+  });
+});
+
 describe('paso 4: ubicación visible', () => {
   it('por defecto muestra solo el barrio o zona', () => {
     expect(locationDefaults(undefined)).toEqual({ locationVisibility: 'area' });
@@ -325,6 +529,15 @@ describe('errorKeyOf', () => {
 
   it('una dirección que el servidor no resuelve tiene su propio texto', () => {
     expect(errorKeyOf('address', 'unresolved')).toBe('addressNotResolved');
+  });
+
+  it('los errores del régimen y del tope legal tienen su propio texto', () => {
+    expect(errorKeyOf('qualificationDate', 'required')).toBe('qualificationDateRequired');
+    expect(errorKeyOf('qualificationDate', 'invalid')).toBe('date');
+    expect(errorKeyOf('protectionEnd', 'invalid')).toBe('date');
+    expect(errorKeyOf('maxLegalPrice', 'invalid')).toBe('maxLegalPrice');
+    expect(errorKeyOf('maxLegalPrice', 'belowValue')).toBe('maxLegalPriceBelowValue');
+    expect(errorKeyOf('valueMax', 'aboveLegalPrice')).toBe('valueAboveLegalPrice');
   });
 
   it('el resto de errores usan el texto del campo', () => {

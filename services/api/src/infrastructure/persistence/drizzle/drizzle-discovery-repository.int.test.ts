@@ -192,6 +192,7 @@ describe('DrizzleDiscoveryRepository: compatibilidad en los dos sentidos', () =>
         yearBuilt: null,
         valueMinCents: euros(220_000),
         valueMaxCents: euros(240_000),
+        vppMaxLegalPriceCents: null,
         locationVisibility: 'area',
         location: {
           exact: POINTS.leganes,
@@ -444,8 +445,9 @@ describe('DrizzleDiscoveryRepository: rendimiento (RNF-20)', () => {
     await sql`
       INSERT INTO homes (id, owner_id, type, status, regime, useful_m2, built_m2, bedrooms, bathrooms,
                          has_lift, garage, storage_room, value_min_cents, value_max_cents,
-                         is_primary_residence, exact_address, exact_location, approx_location,
-                         area_name, municipality, municipality_normalized, published_at)
+                         is_primary_residence, vpp_qualification_date, exact_address,
+                         exact_location, approx_location, area_name, municipality,
+                         municipality_normalized, published_at)
       SELECT ('0199c1a2-0000-7000-a000-' || lpad(to_hex(g), 12, '0'))::uuid,
              ('0199c1a2-0000-7000-9000-' || lpad(to_hex(1 + g % ${OWNERS}), 12, '0'))::uuid,
              (ARRAY['piso','atico','duplex','estudio','chalet']::home_type[])[1 + g % 5],
@@ -453,6 +455,8 @@ describe('DrizzleDiscoveryRepository: rendimiento (RNF-20)', () => {
              CASE WHEN g % 25 = 0 THEN 'VPPB'::home_regime ELSE 'libre'::home_regime END,
              50 + g % 100, 60 + g % 100, 1 + g % 5, 1 + g % 3, g % 2 = 0, g % 3 = 0, g % 4 = 0,
              (150000 + (g % 200) * 1000) * 100, (170000 + (g % 200) * 1000) * 100, true,
+             -- Una VPP publicada lleva su fecha de calificación (RF-14)
+             CASE WHEN g % 25 = 0 THEN date '2010-01-01' END,
              '\\x00'::bytea,
              ST_SetSRID(ST_MakePoint(-4.2 + (g % 997) / 997.0, 40.0 + (g % 991) / 991.0), 4326)::geography,
              ST_SetSRID(ST_MakePoint(-4.2 + (g % 997) / 997.0 + 0.001, 40.0 + (g % 991) / 991.0), 4326)::geography,

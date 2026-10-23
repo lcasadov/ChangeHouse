@@ -18,7 +18,32 @@ export const es = {
   header: {
     brand: 'ChangeHouse',
     brandLabel: 'ChangeHouse, ir al inicio',
+    navLabel: 'Principal',
     waitlist: 'Lista de espera',
+    guides: 'Guías',
+  },
+  guides: {
+    path: '/guias',
+    feedPath: '/guias/rss.xml',
+    title: 'Guías',
+    lead: 'Respuestas claras sobre la permuta de viviendas, las cadenas de tres y los impuestos.',
+    description:
+      'Guías de ChangeHouse sobre la permuta de viviendas: cómo funciona, las cadenas de tres y nociones fiscales orientativas.',
+    feedTitle: 'Guías de ChangeHouse',
+    feedLabel: 'Suscribirse por RSS',
+    listLabel: 'Listado de guías',
+    empty: 'Estamos preparando las primeras guías. Vuelve pronto.',
+    draftBadge: 'Borrador',
+    readMore: 'Leer la guía',
+    allGuides: 'Todas las guías',
+    readingTime: 'min de lectura',
+    tocLabel: 'Índice de secciones',
+    tocTitle: 'En esta guía',
+    cta: {
+      title: '¿Quieres cambiar de casa sin vender primero?',
+      text: 'Apúntate a la lista de espera y te avisaremos cuando ChangeHouse llegue a Madrid.',
+      button: 'Apúntate a la lista de espera',
+    },
   },
   hero: {
     eyebrow: 'Permuta de viviendas · Madrid',

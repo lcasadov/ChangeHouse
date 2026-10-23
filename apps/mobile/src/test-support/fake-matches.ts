@@ -78,6 +78,79 @@ export function fakeMatch({
   };
 }
 
+export interface FakeChainMatchOptions {
+  id?: string;
+  /** Mi vivienda: la que entrego. */
+  mineHomeId: string;
+  /** La vivienda que recibo (la de B). */
+  fromHomeId: string;
+  /** La vivienda que recibe la mía (la de C), a quien entrego. */
+  toHomeId: string;
+  /** Lo que corresponde a [yo, B, C]; positivo si paga. Debe sumar 0 (RN-04). */
+  compensationsCents?: readonly [number, number, number];
+  createdAt?: string;
+  status?: Match['status'];
+  names?: readonly [string, string, string];
+}
+
+const DEFAULT_CHAIN_COMPENSATIONS = [600_000, -200_000, -400_000] as const;
+const DEFAULT_CHAIN_NAMES = ['Ana', 'Beto', 'Carla'] as const;
+
+/**
+ * Un match en cadena de tres (`type` 3) con la forma de la API: yo (A) recibo la casa de B, B recibe
+ * la de C y C recibe la mía. Los participantes van ordenados por identificador de vivienda, **no**
+ * en el orden del ciclo: la app lo reconstruye con `givesHomeId` y `receivesHomeId`.
+ */
+export function fakeChainMatch({
+  id,
+  mineHomeId,
+  fromHomeId,
+  toHomeId,
+  compensationsCents = DEFAULT_CHAIN_COMPENSATIONS,
+  createdAt = DEFAULT_CREATED_AT,
+  status = 'open',
+  names = DEFAULT_CHAIN_NAMES,
+}: FakeChainMatchOptions): Match {
+  sequence += 1;
+  const cycle = [
+    { homeId: mineHomeId, receivesHomeId: fromHomeId },
+    { homeId: fromHomeId, receivesHomeId: toHomeId },
+    { homeId: toHomeId, receivesHomeId: mineHomeId },
+  ];
+  const participants = cycle
+    .map(({ homeId, receivesHomeId }, index): Match['participants'][number] => ({
+      homeId,
+      displayName: names[index] ?? '',
+      givesHomeId: homeId,
+      receivesHomeId,
+      compensationCents: compensationsCents[index] ?? 0,
+      status: 'pending',
+    }))
+    .sort((a, b) => a.homeId.localeCompare(b.homeId));
+  return {
+    id: id ?? `0198f3a0-dddd-7000-8000-${String(sequence).padStart(12, '0')}`,
+    type: 3,
+    status,
+    createdAt,
+    participants,
+  };
+}
+
+/** El detalle de un match en cadena tal como lo ve un participante: con las tres viviendas, sin teléfonos. */
+export function fakeChainMatchDetail(options: FakeChainMatchOptions): MatchDetail {
+  const match = fakeChainMatch(options);
+  return {
+    ...match,
+    participants: match.participants.map((participant) => ({
+      ...participant,
+      exactAddress: `Calle de ${participant.displayName} 1, 28001 Madrid`,
+      phone: null,
+      sharesPhone: false,
+    })),
+    homes: match.participants.map((participant) => publicHomeOf(participant.givesHomeId)),
+  };
+}
+
 /** La forma pública de una vivienda, con las fotos: lo que `getMatch` devuelve en `homes`. */
 function publicHomeOf(id: string): HomePublic {
   const card: Partial<ReturnType<typeof discoveryCard>> = discoveryCard({ id });
@@ -121,6 +194,10 @@ interface PreparedFailure {
 export class FakeMatches {
   private readonly items: Match[];
   private readonly closing = new Map<string, number>();
+  private readonly closingChains = new Map<
+    string,
+    Omit<FakeChainMatchOptions, 'mineHomeId' | 'fromHomeId'>
+  >();
   private rejection: number | null = null;
   private actionFailure: PreparedFailure | null = null;
   private readonly phones = new Map<string, string>();
@@ -206,6 +283,7 @@ export class FakeMatches {
       bathrooms: own.bathrooms,
       valueMinCents: own.valueMinCents ?? 0,
       valueMaxCents: own.valueMaxCents ?? 0,
+      vppMaxLegalPriceCents: own.vppMaxLegalPriceCents ?? null,
       location: own.location,
       photos: own.photos ?? [],
     };
@@ -281,9 +359,30 @@ export class FakeMatches {
     this.closing.set(`${fromHomeId}>${targetHomeId}`, compensationCents);
   }
 
+  /** El «Me gusta» de `fromHomeId` a `targetHomeId` cierra una cadena de tres cuya tercera casa es `toHomeId`. */
+  closeChainOnLike(
+    fromHomeId: string,
+    targetHomeId: string,
+    options: Pick<FakeChainMatchOptions, 'toHomeId' | 'compensationsCents' | 'names'>,
+  ): void {
+    this.closingChains.set(`${fromHomeId}>${targetHomeId}`, options);
+  }
+
   /** Crea el match si ese «Me gusta» estaba preparado para cerrarlo; si no, `null`. */
   formFor(fromHomeId: string, targetHomeId: string): Match | null {
     const key = `${fromHomeId}>${targetHomeId}`;
+    const chain = this.closingChains.get(key);
+    if (chain) {
+      this.closingChains.delete(key);
+      const created = fakeChainMatch({
+        ...chain,
+        mineHomeId: fromHomeId,
+        fromHomeId: targetHomeId,
+        createdAt: this.nextCreatedAt(),
+      });
+      this.items.push(created);
+      return created;
+    }
     const compensationCents = this.closing.get(key);
     if (compensationCents === undefined) return null;
     this.closing.delete(key);

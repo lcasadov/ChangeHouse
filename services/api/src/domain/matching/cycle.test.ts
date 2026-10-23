@@ -8,6 +8,7 @@ import {
   type CycleHome,
   cycleKey,
   evaluateCycle,
+  homeIdsOfKey,
   MAX_CYCLE_LENGTH,
   MIN_CYCLE_LENGTH,
 } from './cycle.js';
@@ -112,6 +113,20 @@ describe('cycleKey', () => {
       fc.property(uuidList, uuidList, (first, second) => {
         const same = [...first].sort().join() === [...second].sort().join();
         expect(cycleKey(first) === cycleKey(second)).toBe(same);
+      }),
+    );
+  });
+});
+
+describe('homeIdsOfKey', () => {
+  it('devuelve las viviendas de una clave canónica, ordenadas', () => {
+    expect(homeIdsOfKey('a:b:c')).toEqual(['a', 'b', 'c']);
+  });
+
+  it('propiedad: es la inversa de cycleKey', () => {
+    fc.assert(
+      fc.property(uuidList, (ids) => {
+        expect(homeIdsOfKey(cycleKey(ids))).toEqual([...ids].sort());
       }),
     );
   });
@@ -248,6 +263,14 @@ describe('evaluateCycle', () => {
     ['de una sola vivienda', [cycleHome('a', 200_000)]],
     ['de más de tres viviendas', ['a', 'b', 'c', 'd'].map((id) => cycleHome(id, 200_000))],
     ['con una vivienda repetida', [cycleHome('a', 200_000), cycleHome('a', 200_000)]],
+    [
+      'con un mismo propietario en dos eslabones',
+      [
+        cycleHome('a', 200_000),
+        cycleHome('b', 200_000, {}, { ownerId: 'owner-a' }),
+        cycleHome('c', 200_000),
+      ],
+    ],
   ])('un ciclo %s no es válido', (_name, cycle) => {
     expect(evaluateCycle(cycle)).toEqual({ accepted: false, reason: 'invalid_cycle' });
   });

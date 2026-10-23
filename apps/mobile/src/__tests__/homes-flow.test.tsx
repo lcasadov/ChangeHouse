@@ -27,7 +27,7 @@ const checkbox = (name: string) => screen.getByRole('checkbox', { name });
 const field = (label: string) => screen.getByLabelText(label);
 const stepBar = (current: number) =>
   screen.findByRole('progressbar', {
-    name: h.wizard.step.replace('{{current}}', String(current)).replace('{{total}}', '6'),
+    name: h.wizard.step.replace('{{current}}', String(current)).replace('{{total}}', '7'),
   });
 const cardAction = (action: string, title = MALASANA_TITLE) =>
   h.card.action.replace('{{action}}', action).replace('{{title}}', title);
@@ -64,8 +64,8 @@ async function skipPhotos() {
   await stepBar(2);
 }
 
-/** Del estado vacío al segundo paso: crea el borrador con el piso de Malasaña. */
-async function startWizard(options: OpenOptions = {}) {
+/** Del estado vacío al paso de régimen: crea el borrador con el piso de Malasaña. */
+async function startRegime(options: OpenOptions = {}) {
   const opened = await openHomes(options);
   await fireEvent.press(await screen.findByRole('button', { name: h.empty.action }));
   await stepBar(1);
@@ -74,6 +74,14 @@ async function startWizard(options: OpenOptions = {}) {
   await chooseAddress('pez', MALASANA?.formatted ?? '');
   await fireEvent.press(button(h.wizard.next));
   await stepBar(3);
+  return opened;
+}
+
+/** Del estado vacío a las características: el borrador de Malasaña, vivienda libre. */
+async function startWizard(options: OpenOptions = {}) {
+  const opened = await startRegime(options);
+  await fireEvent.press(button(h.wizard.next));
+  await stepBar(4);
   return opened;
 }
 
@@ -188,7 +196,7 @@ describe('Asistente de alta', () => {
 
     expect(await screen.findByText(h.status.draft)).toBeTruthy();
     await fireEvent.press(button(cardAction(h.actions.continue)));
-    expect(await stepBar(3)).toBeTruthy();
+    expect(await stepBar(4)).toBeTruthy();
   });
 
   it('guarda las características en el segundo paso y al reabrir el borrador continúa en el tercero con los datos guardados', async () => {
@@ -202,7 +210,7 @@ describe('Asistente de alta', () => {
     await fireEvent.press(checkbox(h.features.terrace));
     await fireEvent.press(radio('C'));
     await fireEvent.press(button(h.wizard.next));
-    await stepBar(4);
+    await stepBar(5);
 
     const [patch, ...others] = backend.requests.filter((request) => request.method === 'PATCH');
     expect(others).toEqual([]);
@@ -225,10 +233,10 @@ describe('Asistente de alta', () => {
     await fireEvent.press(
       await screen.findByRole('button', { name: cardAction(h.actions.continue) }),
     );
-    await stepBar(4);
+    await stepBar(5);
 
     await fireEvent.press(button(h.wizard.back));
-    await stepBar(3);
+    await stepBar(4);
     expect(field(h.form.usefulM2).props.value).toBe('80,5');
     expect(field(h.form.bedrooms).props.value).toBe('3');
     expect(checkbox(h.form.hasLift).props.accessibilityState).toMatchObject({ checked: true });
@@ -245,7 +253,7 @@ describe('Asistente de alta', () => {
     expect(await screen.findByText(h.errors.bedrooms)).toBeTruthy();
     expect(screen.getByRole('alert', { name: h.errors.bedrooms })).toBeTruthy();
     expect(backend.requests.filter((request) => request.method === 'PATCH')).toHaveLength(0);
-    expect(await stepBar(3)).toBeTruthy();
+    expect(await stepBar(4)).toBeTruthy();
   });
 
   it('el primer paso exige elegir tipo y dirección sin llamar a la API', async () => {
@@ -308,6 +316,8 @@ describe('Asistente de alta', () => {
   it('cambiar la dirección de un borrador la actualiza en el primer paso', async () => {
     const { backend } = await startWizard();
     await fireEvent.press(button(h.wizard.back));
+    await stepBar(3);
+    await fireEvent.press(button(h.wizard.back));
     await stepBar(2);
     expect(radio(h.type.piso).props.accessibilityState).toMatchObject({ checked: true });
 
@@ -335,7 +345,7 @@ describe('Asistente de alta', () => {
     await fireEvent.press(
       await screen.findByRole('button', { name: cardAction(h.actions.continue) }),
     );
-    await stepBar(4);
+    await stepBar(5);
 
     await fireEvent.changeText(field(h.form.valueMin), '300000');
     await fireEvent.changeText(field(h.form.valueMax), '250000');
@@ -344,13 +354,13 @@ describe('Asistente de alta', () => {
     expect(await screen.findByText(h.errors.valueRange)).toBeTruthy();
     expect(screen.getByRole('alert', { name: h.errors.valueRange })).toBeTruthy();
     expect(backend.requests.filter((request) => request.method === 'PATCH')).toHaveLength(0);
-    expect(await stepBar(4)).toBeTruthy();
+    expect(await stepBar(5)).toBeTruthy();
     expect(backend.homes.all()[0]?.valueMinCents).toBeNull();
 
     // Corregido, se guarda en céntimos
     await fireEvent.changeText(field(h.form.valueMax), '350.000');
     await fireEvent.press(button(h.wizard.next));
-    await stepBar(5);
+    await stepBar(6);
     expect(backend.homes.all()[0]).toMatchObject({
       valueMinCents: 30_000_000,
       valueMaxCents: 35_000_000,
@@ -362,7 +372,7 @@ describe('Asistente de alta', () => {
     await fireEvent.press(
       await screen.findByRole('button', { name: cardAction(h.actions.continue) }),
     );
-    await stepBar(4);
+    await stepBar(5);
 
     await fireEvent.changeText(field(h.form.valueMin), '250000');
     expect(
@@ -380,7 +390,7 @@ describe('Asistente de alta', () => {
     await fireEvent.press(
       await screen.findByRole('button', { name: cardAction(h.actions.continue) }),
     );
-    await stepBar(4);
+    await stepBar(5);
     jest.spyOn(backend.homes, 'respond').mockReturnValueOnce(
       problem(422, {
         code: 'INVALID_VALUE_RANGE',
@@ -393,7 +403,7 @@ describe('Asistente de alta', () => {
     await fireEvent.press(button(h.wizard.next));
 
     expect(await screen.findByText(h.errors.valueRange)).toBeTruthy();
-    expect(await stepBar(4)).toBeTruthy();
+    expect(await stepBar(5)).toBeTruthy();
   });
 
   it('Scenario: Ubicación por zona por defecto - el barrio está elegido y se guarda sin cambiarlo', async () => {
@@ -401,9 +411,9 @@ describe('Asistente de alta', () => {
     await fireEvent.press(
       await screen.findByRole('button', { name: cardAction(h.actions.submit) }),
     );
-    await stepBar(6);
+    await stepBar(7);
     await fireEvent.press(button(h.wizard.back));
-    await stepBar(5);
+    await stepBar(6);
 
     expect(radio(h.location.area).props.accessibilityState).toMatchObject({ checked: true });
     expect(radio(h.location.exact).props.accessibilityState).toMatchObject({ checked: false });
@@ -413,7 +423,7 @@ describe('Asistente de alta', () => {
     expect(screen.getByText(h.location.privacy)).toBeTruthy();
 
     await fireEvent.press(button(h.wizard.next));
-    await stepBar(6);
+    await stepBar(7);
 
     expect(backend.requests.filter((request) => request.method === 'PATCH')).toMatchObject([
       { body: { locationVisibility: 'area' } },
@@ -425,9 +435,9 @@ describe('Asistente de alta', () => {
     await fireEvent.press(
       await screen.findByRole('button', { name: cardAction(h.actions.submit) }),
     );
-    await stepBar(6);
+    await stepBar(7);
     await fireEvent.press(button(h.wizard.back));
-    await stepBar(5);
+    await stepBar(6);
 
     await fireEvent.press(radio(h.location.exact));
 
@@ -438,7 +448,7 @@ describe('Asistente de alta', () => {
       screen.queryByText(h.location.areaExplanation.replace('{{area}}', 'Malasaña')),
     ).toBeNull();
     await fireEvent.press(button(h.wizard.next));
-    await stepBar(6);
+    await stepBar(7);
     expect(backend.homes.all()[0]?.location.visibility).toBe('exact');
   });
 
@@ -450,11 +460,11 @@ describe('Asistente de alta', () => {
     await fireEvent.press(button(h.wizard.next));
 
     expect(await screen.findByText(h.errors.network)).toBeTruthy();
-    expect(await stepBar(3)).toBeTruthy();
+    expect(await stepBar(4)).toBeTruthy();
     expect(field(h.form.bedrooms).props.value).toBe('3');
 
     await fireEvent.press(button(h.wizard.next));
-    await stepBar(4);
+    await stepBar(5);
     expect(screen.queryByText(h.errors.network)).toBeNull();
   });
 
@@ -487,7 +497,7 @@ describe('Asistente de alta', () => {
     await fireEvent.press(button(h.wizard.next));
     await fireEvent.press(button(h.wizard.next));
     release();
-    await stepBar(4);
+    await stepBar(5);
 
     expect(backend.requests.filter((request) => request.method === 'PATCH')).toHaveLength(1);
   });
@@ -510,7 +520,229 @@ describe('Asistente de alta', () => {
 
     expect(await screen.findByText(h.wizard.loadFailed)).toBeTruthy();
     await fireEvent.press(button(h.retry));
+    expect(await stepBar(4)).toBeTruthy();
+  });
+});
+
+describe('Régimen de protección', () => {
+  const protection = (name: string) => screen.queryByLabelText(name);
+  const legalCap = (amount: string) => h.form.valueMaxLegalHint.replace('{{amount}}', amount);
+
+  it('Scenario: Vivienda libre - «Libre» está elegido, no pide datos de protección y continúa sin guardar nada', async () => {
+    const { backend } = await startRegime();
+    expect(screen.getByRole('header', { name: h.wizard.steps.regime })).toBeTruthy();
+    expect(radio(h.regime.libre).props.accessibilityState).toMatchObject({ checked: true });
+    expect(protection(h.form.vppQualificationDate)).toBeNull();
+    expect(protection(h.form.vppMaxLegalPrice)).toBeNull();
+
+    await fireEvent.press(button(h.wizard.next));
+
+    expect(await stepBar(4)).toBeTruthy();
+    expect(backend.requests.filter((request) => request.method === 'PATCH')).toHaveLength(0);
+  });
+
+  it('Scenario: VPP sin fecha de calificación - con «VPPL» aparecen los campos de protección y sin fecha el error sale junto al campo', async () => {
+    const { backend } = await startRegime();
+
+    await fireEvent.press(radio(h.regime.VPPL));
+    expect(field(h.form.vppQualificationDate)).toBeTruthy();
+    expect(field(h.form.vppProtectionEnd)).toBeTruthy();
+    expect(field(h.form.vppMaxLegalPrice)).toBeTruthy();
+    await fireEvent.press(button(h.wizard.next));
+
+    expect(await screen.findByText(h.errors.qualificationDateRequired)).toBeTruthy();
+    expect(screen.getByRole('alert', { name: h.errors.qualificationDateRequired })).toBeTruthy();
+    expect(backend.requests.filter((request) => request.method === 'PATCH')).toHaveLength(0);
     expect(await stepBar(3)).toBeTruthy();
+
+    // Con la fecha se guarda el régimen y los datos de protección
+    await fireEvent.changeText(field(h.form.vppQualificationDate), '10/03/2015');
+    await fireEvent.changeText(field(h.form.vppMaxLegalPrice), '300000');
+    await fireEvent.press(button(h.wizard.next));
+    await stepBar(4);
+    expect(backend.requests.filter((request) => request.method === 'PATCH')).toMatchObject([
+      {
+        body: {
+          regime: 'VPPL',
+          vppQualificationDate: '2015-03-10',
+          vppMaxLegalPriceCents: 30_000_000,
+        },
+      },
+    ]);
+  });
+
+  it('Scenario: VPP sin fecha de calificación - si la API rechaza el envío (400) lleva al paso de régimen', async () => {
+    const home = completeHome({ regime: 'VPPL' });
+    const { backend } = await openHomes({ homes: [home] });
+    await fireEvent.press(
+      await screen.findByRole('link', { name: h.card.open.replace('{{title}}', MALASANA_TITLE) }),
+    );
+    await screen.findByRole('header', { name: MALASANA_TITLE });
+    jest.spyOn(backend.homes, 'respond').mockReturnValueOnce(
+      problem(400, {
+        code: 'VPP_QUALIFICATION_DATE_REQUIRED',
+        errors: [{ field: 'vppQualificationDate', message: 'required' }],
+      }),
+    );
+
+    await fireEvent.press(button(h.submit.action));
+
+    expect(
+      await screen.findByText(
+        h.submit.missing.replace('{{fields}}', h.fields.vppQualificationDate),
+      ),
+    ).toBeTruthy();
+    await fireEvent.press(button(h.submit.complete));
+    expect(await stepBar(3)).toBeTruthy();
+    expect(screen.getByRole('header', { name: h.wizard.steps.regime })).toBeTruthy();
+  });
+
+  it('Scenario: Valor por encima del máximo legal - el máximo muestra el tope legal y superarlo es un error junto al campo', async () => {
+    const home = completeHome({
+      regime: 'VPO',
+      vppQualificationDate: '2010-01-01',
+      vppMaxLegalPriceCents: 18_000_000,
+      valueMinCents: null,
+      valueMaxCents: null,
+    });
+    const { backend } = await openHomes({ homes: [home] });
+    await fireEvent.press(
+      await screen.findByRole('button', { name: cardAction(h.actions.continue) }),
+    );
+    await stepBar(5);
+    expect(screen.getByText(legalCap('180.000 €'))).toBeTruthy();
+
+    await fireEvent.changeText(field(h.form.valueMin), '150000');
+    await fireEvent.changeText(field(h.form.valueMax), '200000');
+    await fireEvent.press(button(h.wizard.next));
+
+    expect(await screen.findByText(h.errors.valueAboveLegalPrice)).toBeTruthy();
+    expect(screen.getByRole('alert', { name: h.errors.valueAboveLegalPrice })).toBeTruthy();
+    expect(backend.requests.filter((request) => request.method === 'PATCH')).toHaveLength(0);
+    expect(await stepBar(5)).toBeTruthy();
+  });
+
+  it('Scenario: Valor por encima del máximo legal - el rechazo de la API (422) se muestra junto al máximo', async () => {
+    const home = completeHome({
+      regime: 'VPO',
+      vppQualificationDate: '2010-01-01',
+      valueMinCents: null,
+      valueMaxCents: null,
+    });
+    const { backend } = await openHomes({ homes: [home] });
+    await fireEvent.press(
+      await screen.findByRole('button', { name: cardAction(h.actions.continue) }),
+    );
+    await stepBar(5);
+    jest.spyOn(backend.homes, 'respond').mockReturnValueOnce(
+      problem(422, {
+        code: 'VALUE_ABOVE_VPP_MAX_LEGAL_PRICE',
+        errors: [{ field: 'valueMaxCents', message: 'required' }],
+      }),
+    );
+
+    await fireEvent.changeText(field(h.form.valueMin), '150000');
+    await fireEvent.changeText(field(h.form.valueMax), '200000');
+    await fireEvent.press(button(h.wizard.next));
+
+    expect(await screen.findByText(h.errors.valueAboveLegalPrice)).toBeTruthy();
+    expect(await stepBar(5)).toBeTruthy();
+  });
+
+  it('Scenario: Valor por encima del máximo legal - un precio máximo legal por debajo del valor ya indicado se señala en el paso de régimen', async () => {
+    const home = completeHome({ regime: 'VPO', vppQualificationDate: '2010-01-01' });
+    const { backend } = await openHomes({ homes: [home] });
+    await fireEvent.press(
+      await screen.findByRole('button', { name: cardAction(h.actions.submit) }),
+    );
+    await stepBar(7);
+    for (const step of [6, 5, 4, 3]) {
+      await fireEvent.press(button(h.wizard.back));
+      await stepBar(step);
+    }
+
+    await fireEvent.changeText(field(h.form.vppMaxLegalPrice), '200000');
+    await fireEvent.press(button(h.wizard.next));
+
+    expect(await screen.findByText(h.errors.maxLegalPriceBelowValue)).toBeTruthy();
+    expect(backend.requests.filter((request) => request.method === 'PATCH')).toHaveLength(0);
+  });
+});
+
+describe('Régimen de protección: respuestas del servidor', () => {
+  it('Scenario: Valor por encima del máximo legal - si la API rechaza el precio máximo legal (422) se señala junto al campo y no avanza', async () => {
+    const { backend } = await startRegime();
+    jest.spyOn(backend.homes, 'respond').mockReturnValueOnce(
+      problem(422, {
+        code: 'VALUE_ABOVE_VPP_MAX_LEGAL_PRICE',
+        errors: [{ field: 'valueMaxCents', message: 'required' }],
+      }),
+    );
+
+    await fireEvent.press(radio(h.regime.VPO));
+    await fireEvent.changeText(field(h.form.vppQualificationDate), '01/01/2010');
+    await fireEvent.changeText(field(h.form.vppMaxLegalPrice), '180000');
+    await fireEvent.press(button(h.wizard.next));
+
+    expect(await screen.findByText(h.errors.maxLegalPriceBelowValue)).toBeTruthy();
+    expect(await stepBar(3)).toBeTruthy();
+  });
+
+  it('cualquier otro rechazo al guardar el régimen se explica como en los demás pasos', async () => {
+    const { backend } = await startRegime();
+    backend.failNext = 'network';
+
+    await fireEvent.press(radio(h.regime.VPPB));
+    await fireEvent.changeText(field(h.form.vppQualificationDate), '01/01/2010');
+    await fireEvent.press(button(h.wizard.next));
+
+    expect(await screen.findByText(h.errors.network)).toBeTruthy();
+    expect(await stepBar(3)).toBeTruthy();
+  });
+});
+
+describe('Aviso de vivienda protegida', () => {
+  it('Scenario: Detalle de una VPPL - la ficha del propietario muestra el aviso con el precio máximo legal y los requisitos', async () => {
+    const home = completeHome({
+      regime: 'VPPL',
+      vppQualificationDate: '2015-03-10',
+      vppMaxLegalPriceCents: 30_000_000,
+    });
+    await openHomes({ homes: [home] });
+    await fireEvent.press(
+      await screen.findByRole('link', { name: h.card.open.replace('{{title}}', MALASANA_TITLE) }),
+    );
+    await screen.findByRole('header', { name: MALASANA_TITLE });
+
+    expect(screen.getByText(h.vpp.title.replace('{{regime}}', h.regime.VPPL))).toBeTruthy();
+    expect(screen.getByText(h.vpp.maxLegalPrice.replace('{{amount}}', '300.000 €'))).toBeTruthy();
+    expect(screen.getByText(h.vpp.authorization)).toBeTruthy();
+    expect(screen.getByText(h.vpp.requirements)).toBeTruthy();
+    expect(screen.getByText(h.vpp.rightOfFirstRefusal)).toBeTruthy();
+    expect(screen.getByText(h.vpp.disclaimer)).toBeTruthy();
+  });
+
+  it('sin precio máximo legal conocido el aviso lo dice', async () => {
+    const home = completeHome({ regime: 'VPO', vppQualificationDate: '2010-01-01' });
+    await openHomes({ homes: [home] });
+    await fireEvent.press(
+      await screen.findByRole('link', { name: h.card.open.replace('{{title}}', MALASANA_TITLE) }),
+    );
+    await screen.findByRole('header', { name: MALASANA_TITLE });
+
+    expect(screen.getByText(h.vpp.title.replace('{{regime}}', h.regime.VPO))).toBeTruthy();
+    expect(screen.getByText(h.vpp.maxLegalPriceUnknown)).toBeTruthy();
+  });
+
+  it('Scenario: Vivienda libre - la ficha de una vivienda libre no muestra el aviso', async () => {
+    await openHomes({ homes: [completeHome()] });
+    await fireEvent.press(
+      await screen.findByRole('link', { name: h.card.open.replace('{{title}}', MALASANA_TITLE) }),
+    );
+    await screen.findByRole('header', { name: MALASANA_TITLE });
+
+    expect(screen.queryByText(h.vpp.authorization)).toBeNull();
+    expect(screen.getByText(h.regime.libre)).toBeTruthy();
   });
 });
 
@@ -520,7 +752,7 @@ describe('Envío a revisión', () => {
     await fireEvent.press(
       await screen.findByRole('button', { name: cardAction(h.actions.submit) }),
     );
-    await stepBar(6);
+    await stepBar(7);
     expect(screen.getByRole('header', { name: h.review.title })).toBeTruthy();
     // La revisión resume los datos, con la dirección completa
     expect(screen.getByText(MALASANA?.formatted ?? '')).toBeTruthy();
@@ -541,7 +773,7 @@ describe('Envío a revisión', () => {
     await fireEvent.press(
       await screen.findByRole('button', { name: cardAction(h.actions.submit) }),
     );
-    await stepBar(6);
+    await stepBar(7);
     const release = backend.hold();
 
     await fireEvent.press(button(h.submit.action));
@@ -564,12 +796,12 @@ describe('Envío a revisión', () => {
     await fireEvent.press(
       await screen.findByRole('button', { name: cardAction(h.actions.continue) }),
     );
-    await stepBar(4);
+    await stepBar(5);
     // Se avanza sin rellenar el valor: un borrador admite guardar a medias
     await fireEvent.press(button(h.wizard.next));
-    await stepBar(5);
-    await fireEvent.press(button(h.wizard.next));
     await stepBar(6);
+    await fireEvent.press(button(h.wizard.next));
+    await stepBar(7);
 
     await fireEvent.press(button(h.submit.action));
 
@@ -583,7 +815,7 @@ describe('Envío a revisión', () => {
 
     // Lleva al paso donde faltan
     await fireEvent.press(button(h.submit.complete));
-    expect(await stepBar(4)).toBeTruthy();
+    expect(await stepBar(5)).toBeTruthy();
   });
 
   it('un fallo de red, un conflicto o un error del servidor al enviar se explican', async () => {
@@ -591,7 +823,7 @@ describe('Envío a revisión', () => {
     await fireEvent.press(
       await screen.findByRole('button', { name: cardAction(h.actions.submit) }),
     );
-    await stepBar(6);
+    await stepBar(7);
 
     backend.failNext = 'network';
     await fireEvent.press(button(h.submit.action));
@@ -673,7 +905,7 @@ describe('Detalle de la vivienda', () => {
     ).toBeTruthy();
     await fireEvent.press(button(h.submit.complete));
 
-    expect(await stepBar(3)).toBeTruthy();
+    expect(await stepBar(4)).toBeTruthy();
   });
 
   it('una casa publicada se consulta sin acciones de envío', async () => {
@@ -694,7 +926,7 @@ describe('Detalle de la vivienda', () => {
 
     await fireEvent.press(button(h.detail.edit));
 
-    expect(await stepBar(3)).toBeTruthy();
+    expect(await stepBar(4)).toBeTruthy();
   });
 
   it('si no carga lo explica y permite reintentar', async () => {
@@ -721,7 +953,7 @@ describe.each(THEME_NAMES)('tema %s', (name) => {
     expect(styleOf(screen.getByText(h.status.draft)).color).toBe(color.textMuted);
 
     await fireEvent.press(button(cardAction(h.actions.continue)));
-    await stepBar(3);
+    await stepBar(4);
     expect(styleOf(screen.getByRole('header', { name: h.wizard.steps.features })).color).toBe(
       color.text,
     );

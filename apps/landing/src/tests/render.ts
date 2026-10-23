@@ -8,10 +8,12 @@ export async function renderDocument(
   component: AstroComponent,
   props: Record<string, unknown> = {},
   path = '/',
+  slots: Record<string, string> = {},
 ): Promise<Document> {
   const container = await AstroContainer.create();
   const html = await container.renderToString(component, {
     props,
+    slots,
     request: new Request(`https://changehouse.app${path}`),
   });
   return parseHTML(html).document;

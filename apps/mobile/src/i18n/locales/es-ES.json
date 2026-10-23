@@ -131,7 +131,11 @@
       "closed": "Cerrado",
       "expired": "Caducado"
     },
+    "chain": {
+      "label": "Cadena de 3"
+    },
     "row": {
+      "chainTitle": "{{first}} y {{second}}",
       "summary": "{{title}}. {{kind}}. {{compensation}}. {{status}}.",
       "summaryNoCompensation": "{{title}}. {{kind}}. {{status}}.",
       "unavailable": "Casa no disponible",
@@ -144,6 +148,11 @@
       "subtitle": "A los dos os gusta la casa del otro. Esta es la diferencia estimada.",
       "myHome": "Tu casa",
       "swap": "{{mine}} por {{theirs}}",
+      "chain": {
+        "subtitle": "A las tres personas os gusta la casa que recibiríais. Esta es la diferencia estimada.",
+        "swap": "A tu casa le llega la de {{from}}, la tuya va a {{to}}",
+        "thirdHome": "Otra casa"
+      },
       "view": "Ver match",
       "continue": "Seguir explorando"
     },
@@ -188,6 +197,18 @@
         "theirs": "La casa de {{name}}",
         "address": "Dirección: {{address}}",
         "photos": "Fotos de {{title}}"
+      },
+      "chain": {
+        "gives": {
+          "mine": "Tu casa va a {{name}}",
+          "toYou": "Su casa te llega a ti",
+          "other": "Su casa va a {{name}}"
+        },
+        "receives": {
+          "mine": "Recibes la casa de {{name}}",
+          "fromYou": "Recibe tu casa",
+          "other": "Recibe la casa de {{name}}"
+        }
       },
       "compensation": {
         "pay": "{{name}} paga {{amount}}",
@@ -236,7 +257,7 @@
     "title": "Mis casas",
     "empty": {
       "title": "Aún no has publicado ninguna casa",
-      "description": "Publica tu casa en seis pasos. Sin una casa publicada no puede haber matches.",
+      "description": "Publica tu casa en siete pasos. Sin una casa publicada no puede haber matches.",
       "action": "Publicar mi casa"
     },
     "add": "Añadir otra casa",
@@ -252,6 +273,12 @@
       "adosado": "Adosado",
       "pareado": "Pareado",
       "casa": "Casa"
+    },
+    "regime": {
+      "libre": "Libre",
+      "VPPB": "VPP básica (VPPB)",
+      "VPPL": "VPP de precio limitado (VPPL)",
+      "VPO": "Protección oficial (VPO)"
     },
     "status": {
       "draft": "Borrador",
@@ -279,6 +306,7 @@
       "steps": {
         "photos": "Fotos de tu casa",
         "type": "Tipo y dirección",
+        "regime": "Régimen de protección",
         "features": "Características",
         "value": "Valor y cargas",
         "location": "Ubicación visible"
@@ -297,6 +325,14 @@
       "addressSearching": "Buscando direcciones",
       "addressNoResults": "No encontramos esa dirección. Prueba con otra o revisa lo escrito.",
       "addressSearchFailed": "No hemos podido buscar direcciones. Comprueba tu conexión y vuelve a intentarlo.",
+      "regime": "Régimen de la vivienda",
+      "regimeHint": "Si tu casa es de protección pública, indícalo: tiene un precio máximo legal y solo puede pasar a quien cumple los requisitos de acceso.",
+      "vppQualificationDate": "Fecha de calificación definitiva",
+      "vppQualificationDateHint": "Figura en la cédula de calificación. Formato dd/mm/aaaa, por ejemplo 10/03/2015.",
+      "vppProtectionEnd": "Fin del plazo de protección (opcional)",
+      "vppProtectionEndHint": "Formato dd/mm/aaaa.",
+      "vppMaxLegalPrice": "Precio máximo legal (€, opcional)",
+      "vppMaxLegalPriceHint": "Si lo conoces, tu valor máximo no podrá superarlo.",
       "usefulM2": "Superficie útil (m²)",
       "builtM2": "Superficie construida (m²)",
       "bedrooms": "Dormitorios",
@@ -315,6 +351,7 @@
       "valueMax": "Valor máximo (€)",
       "valueHint": "Indica entre qué valores aceptarías cambiar tu casa.",
       "valuePreview": "Son {{amount}}",
+      "valueMaxLegalHint": "Máximo legal: {{amount}}",
       "mortgage": "Hipoteca pendiente (€)",
       "mortgageHint": "Opcional. Lo que te queda por pagar.",
       "isPrimaryResidence": "Es mi vivienda habitual"
@@ -356,6 +393,10 @@
       "address": "Dirección",
       "area": "Zona",
       "visibility": "Ubicación visible",
+      "regime": "Régimen",
+      "qualificationDate": "Fecha de calificación definitiva",
+      "protectionEnd": "Fin del plazo de protección",
+      "maxLegalPrice": "Precio máximo legal",
       "surfaces": "Superficies",
       "surfacesValue": "{{useful}} m² útiles, {{built}} m² construidos",
       "rooms": "Dormitorios y baños",
@@ -391,6 +432,7 @@
       "valueMinCents": "Valor mínimo",
       "valueMaxCents": "Valor máximo",
       "isPrimaryResidence": "Vivienda habitual",
+      "vppQualificationDate": "Fecha de calificación definitiva",
       "photos": "Fotos (mínimo 3)"
     },
     "errors": {
@@ -407,6 +449,11 @@
       "valueMax": "Indica un importe mayor que 0, por ejemplo 300.000.",
       "mortgage": "Indica un importe válido, por ejemplo 50.000, o déjalo vacío.",
       "valueRange": "El valor máximo debe ser igual o mayor que el mínimo.",
+      "qualificationDateRequired": "Indica la fecha de calificación definitiva: es obligatoria en una vivienda protegida.",
+      "date": "Indica una fecha válida con el formato dd/mm/aaaa, por ejemplo 10/03/2015.",
+      "maxLegalPrice": "Indica un importe mayor que 0, por ejemplo 180.000, o déjalo vacío.",
+      "maxLegalPriceBelowValue": "El precio máximo legal no puede ser menor que el valor máximo que has indicado. Revisa uno de los dos.",
+      "valueAboveLegalPrice": "El valor máximo no puede superar el precio máximo legal de tu vivienda protegida.",
       "network": "No hemos podido guardar tu casa. Comprueba tu conexión y vuelve a intentarlo.",
       "conflict": "Esta casa ya no se puede modificar.",
       "invalid": "Algún dato no es válido. Revisa el formulario y vuelve a intentarlo.",
@@ -428,6 +475,15 @@
       },
       "managePhotos": "Gestionar fotos",
       "photosTitle": "Fotos"
+    },
+    "vpp": {
+      "title": "Vivienda protegida: {{regime}}",
+      "maxLegalPrice": "Precio máximo legal: {{amount}}",
+      "maxLegalPriceUnknown": "Precio máximo legal: sin indicar.",
+      "authorization": "Para transmitirla hace falta el visado o la autorización de la administración autonómica.",
+      "requirements": "Quien la reciba debe cumplir los requisitos de acceso a vivienda protegida.",
+      "rightOfFirstRefusal": "Tanteo y retracto en permutas: pendiente de confirmar.",
+      "disclaimer": "Información orientativa: las reglas dependen de la normativa de cada comunidad autónoma."
     },
     "photos": {
       "intro": "Las casas con buenas fotos se descubren antes. La primera será la portada.",
@@ -503,6 +559,7 @@
       "phone": "Teléfono (opcional)",
       "phoneHint": "Solo lo ves tú; no se muestra a otras personas. Formato internacional, por ejemplo +34612345678.",
       "meetsVppRequirements": "Cumplo los requisitos de acceso a vivienda protegida (VPP)",
+      "meetsVppRequirementsHint": "Márcalo solo si cumples los requisitos de acceso de tu comunidad autónoma: así verás también viviendas protegidas, que solo puede recibir quien los cumple. Nadie más ve este dato.",
       "isOver65": "Tengo más de 65 años",
       "submit": "Guardar cambios"
     },

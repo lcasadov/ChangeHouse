@@ -366,6 +366,157 @@ describe('likeHome con match directo', () => {
   });
 });
 
+describe('likeHome con match en cadena', () => {
+  const EUR = 100;
+  const euros = (amount: number) => amount * EUR;
+  const THIRD = 'user-third';
+  const FOURTH = 'user-fourth';
+  const THIRD_HOME = 'home-third';
+  const FOURTH_HOME = 'home-fourth';
+  const OPEN = { maxToPayCents: euros(50_000), minToReceiveCents: 0, valueReferencePct: 50 };
+
+  /**
+   * A (mía, 200.000 €), B (de Beto, 210.000 €), C (de Carla, 230.000 €) y D (de Dani, 215.000 €),
+   * con límites amplios salvo los indicados. En la cadena A → B → C → A, Ana paga 10.000 €, Beto
+   * paga 20.000 € y Carla recibe 30.000 €.
+   */
+  function chainSetup(limits: Record<string, Partial<typeof OPEN>> = {}) {
+    const prepared = setup(undefined, [home(THIRD_HOME, THIRD), home(FOURTH_HOME, FOURTH)]);
+    const values = {
+      [MY_HOME]: 200_000,
+      [THEIR_HOME]: 210_000,
+      [THIRD_HOME]: 230_000,
+      [FOURTH_HOME]: 215_000,
+    };
+    for (const [id, value] of Object.entries(values)) {
+      const current = prepared.homes.homes.get(id);
+      if (!current) throw new Error(`falta ${id}`);
+      prepared.homes.homes.set(id, {
+        ...current,
+        valueMinCents: euros(value),
+        valueMaxCents: euros(value),
+      });
+      prepared.matching.terms.set(id, { ...OPEN, ...limits[id] });
+    }
+    return prepared;
+  }
+
+  const liked = (prepared: Prepared, from: string, to: string, at = '2026-10-19T09:00:00.000Z') =>
+    prepared.store.likes.push({ from, to, at: new Date(at) });
+
+  const likeB = (prepared: Prepared) =>
+    prepared.operations.likeHome(ME, { fromHomeId: MY_HOME, targetHomeId: THEIR_HOME });
+
+  it('Scenario: Cadena compatible - el me gusta que cierra A → B → C → A crea el match de tres, con suma 0', async () => {
+    const prepared = chainSetup();
+    liked(prepared, THEIR_HOME, THIRD_HOME);
+    liked(prepared, THIRD_HOME, MY_HOME);
+
+    const { match } = await likeB(prepared);
+
+    expect(match).toMatchObject({ id: 'match-1', type: 3, status: 'open' });
+    expect(match?.participants).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          homeId: MY_HOME,
+          receivesHomeId: THEIR_HOME,
+          compensationCents: euros(10_000),
+        }),
+        expect.objectContaining({
+          homeId: THEIR_HOME,
+          receivesHomeId: THIRD_HOME,
+          compensationCents: euros(20_000),
+        }),
+        expect.objectContaining({
+          homeId: THIRD_HOME,
+          receivesHomeId: MY_HOME,
+          compensationCents: -euros(30_000),
+        }),
+      ]),
+    );
+    const total = match?.participants.reduce((sum, p) => sum + p.compensationCents, 0);
+    expect(total).toBe(0);
+    expect(prepared.matching.saved.map((saved) => saved.cycle.cycleKey)).toEqual([
+      [MY_HOME, THEIR_HOME, THIRD_HOME].sort().join(':'),
+    ]);
+  });
+
+  it('Scenario: Un eslabón incompatible - si Carla no acepta recibir tan poco, no hay match', async () => {
+    const prepared = chainSetup({ [THIRD_HOME]: { minToReceiveCents: euros(40_000) } });
+    liked(prepared, THEIR_HOME, THIRD_HOME);
+    liked(prepared, THIRD_HOME, MY_HOME);
+
+    expect(await likeB(prepared)).toEqual({ liked: true, match: null });
+    expect(prepared.matching.saved).toEqual([]);
+  });
+
+  it('Scenario: Nunca más de tres - un ciclo de cuatro viviendas no forma match', async () => {
+    const prepared = chainSetup();
+    liked(prepared, THEIR_HOME, THIRD_HOME);
+    liked(prepared, THIRD_HOME, FOURTH_HOME);
+    liked(prepared, FOURTH_HOME, MY_HOME);
+
+    expect(await likeB(prepared)).toEqual({ liked: true, match: null });
+    expect(prepared.matching.saved).toEqual([]);
+  });
+
+  it('Scenario: Directo y en cadena a la vez - se crea el directo, una sola vez, y no además la cadena con las mismas viviendas', async () => {
+    const prepared = chainSetup();
+    liked(prepared, THEIR_HOME, MY_HOME);
+    liked(prepared, THEIR_HOME, THIRD_HOME);
+    liked(prepared, THIRD_HOME, MY_HOME);
+
+    const { match } = await likeB(prepared);
+
+    expect(match).toMatchObject({ type: 2 });
+    expect(prepared.matching.saved.map((saved) => saved.cycle.cycleKey)).toEqual([
+      [MY_HOME, THEIR_HOME].sort().join(':'),
+    ]);
+  });
+
+  it('si el directo no es aceptable, se crea la cadena', async () => {
+    // En el directo Beto recibiría 10.000 € y pide al menos 15.000 €; en la cadena paga
+    const prepared = chainSetup({ [THEIR_HOME]: { minToReceiveCents: euros(15_000) } });
+    liked(prepared, THEIR_HOME, MY_HOME);
+    liked(prepared, THEIR_HOME, THIRD_HOME);
+    liked(prepared, THIRD_HOME, MY_HOME);
+
+    const { match } = await likeB(prepared);
+
+    expect(match).toMatchObject({ type: 3 });
+    expect(prepared.matching.saved).toHaveLength(1);
+  });
+
+  it('con varias cadenas, crea solo la primera aceptable en el orden de los candidatos', async () => {
+    // A → B → D → A espera desde antes, pero Dani no acepta recibir tan poco: se crea A → B → C → A
+    const prepared = chainSetup({ [FOURTH_HOME]: { minToReceiveCents: euros(40_000) } });
+    liked(prepared, THEIR_HOME, FOURTH_HOME, '2026-10-18T09:00:00.000Z');
+    liked(prepared, FOURTH_HOME, MY_HOME, '2026-10-18T09:00:00.000Z');
+    liked(prepared, THEIR_HOME, THIRD_HOME);
+    liked(prepared, THIRD_HOME, MY_HOME);
+
+    const { match } = await likeB(prepared);
+
+    expect(match?.participants.map((p) => p.homeId).sort()).toEqual(
+      [MY_HOME, THEIR_HOME, THIRD_HOME].sort(),
+    );
+    expect(prepared.matching.saved).toHaveLength(1);
+  });
+
+  it('una tercera vivienda de uno de los otros dos propietarios no forma cadena', async () => {
+    const prepared = chainSetup();
+    // La de Carla pasa a ser mía: Ana ocuparía dos eslabones
+    const third = prepared.homes.homes.get(THIRD_HOME);
+    if (!third) throw new Error('falta la tercera');
+    prepared.homes.homes.set(THIRD_HOME, { ...third, ownerId: ME });
+    liked(prepared, THEIR_HOME, THIRD_HOME);
+    liked(prepared, THIRD_HOME, MY_HOME);
+
+    expect(await likeB(prepared)).toEqual({ liked: true, match: null });
+    expect(prepared.matching.saved).toEqual([]);
+  });
+});
+
 describe('límite diario de me gusta', () => {
   it('Scenario: Undécimo me gusta del día - responde 429 con los segundos hasta la medianoche de Madrid', async () => {
     const prepared = setup(new Date('2026-10-19T10:00:00.000Z'));

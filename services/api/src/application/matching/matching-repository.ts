@@ -7,8 +7,8 @@ import type { OutboxWriter } from '../outbox/outbox.js';
 /**
  * Puerto de salida: los ciclos candidatos que cierra la arista `from → to` recién insertada
  * (README §11), leídos dentro de la transacción del me gusta. Cada ciclo es una lista ordenada que
- * empieza en `from`: cada vivienda dio «Me gusta» a la siguiente y la última a la primera. Por
- * ahora solo ciclos de 2; los de 3 llegan con `add-chain-match` sin tocar el dominio.
+ * empieza en `from`: cada vivienda dio «Me gusta» a la siguiente y la última a la primera. Primero
+ * el ciclo de 2, si existe, y después los de 3 en orden de prioridad; nunca de más de 3 (RN-05).
  */
 export interface CycleCandidates {
   findCycles(fromHomeId: string, toHomeId: string): Promise<CycleHome[][]>;

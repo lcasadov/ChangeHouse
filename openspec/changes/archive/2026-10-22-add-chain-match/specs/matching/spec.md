@@ -4,11 +4,13 @@
 
 ### Requirement: Match en cadena de tres
 
-Al registrar un «Me gusta» de X a Y, el sistema SHALL crear un match en cadena
-por cada vivienda Z distinta de X e Y tal que Y tiene «Me gusta» hacia Z y Z
-hacia X, las tres viviendas están publicadas y la compensación de cada
-participante es aceptable con sus preferencias efectivas; MUST NOT formar
-ciclos de más de tres viviendas (RN-05) ni duplicar un ciclo ya existente.
+Al registrar un «Me gusta» de X a Y, si no se forma un match directo
+aceptable, el sistema SHALL crear un match en cadena con una vivienda Z
+distinta de X e Y tal que Y tiene «Me gusta» hacia Z y Z hacia X, las tres
+viviendas están publicadas, pertenecen a tres propietarios distintos y la
+compensación de cada participante es aceptable con sus preferencias efectivas;
+cada «Me gusta» SHALL crear como mucho un match, y MUST NOT formar ciclos de
+más de tres viviendas (RN-05) ni duplicar un ciclo ya existente.
 
 #### Scenario: Cadena compatible
 - **GIVEN** B tiene «Me gusta» a C, C tiene «Me gusta» a A y las compensaciones son aceptables para los tres
@@ -26,9 +28,9 @@ ciclos de más de tres viviendas (RN-05) ni duplicar un ciclo ya existente.
 - **THEN** no se crea ningún match
 
 #### Scenario: Directo y en cadena a la vez
-- **GIVEN** un «Me gusta» que cierra a la vez un ciclo de dos y uno de tres
+- **GIVEN** un «Me gusta» que cierra a la vez un ciclo de dos aceptable y uno de tres
 - **WHEN** se registra
-- **THEN** se crean los dos matches, cada uno una sola vez
+- **THEN** se crea solo el match directo, una sola vez, y la cadena no se crea con ese «Me gusta»
 
 ### Requirement: Rendimiento de la detección
 

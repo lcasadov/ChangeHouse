@@ -37,6 +37,7 @@ export {
   homePatchSchema,
   type HomeRegime,
   type HomeStatus,
+  isProtectedRegime,
   LOCATION_VISIBILITIES,
   type LocationVisibility,
   validateHomeInput,

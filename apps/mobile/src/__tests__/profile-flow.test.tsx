@@ -58,6 +58,12 @@ describe('Edición del perfil', () => {
     expect(screen.getByText(profile.form.phoneHint)).toBeTruthy();
   });
 
+  it('Scenario: Detalle de una VPPL - la declaración de cumplir los requisitos de vivienda protegida se explica junto a la casilla', async () => {
+    await openProfile();
+
+    expect(screen.getByText(profile.form.meetsVppRequirementsHint)).toBeTruthy();
+  });
+
   it('un perfil sin municipio ni teléfono muestra los campos vacíos', async () => {
     await openProfile({
       backend: new FakeBackend({ registered: true, profile: me({ displayName: 'Beto' }) }),

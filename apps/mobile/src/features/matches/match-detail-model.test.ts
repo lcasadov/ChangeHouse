@@ -1,4 +1,4 @@
-import { fakeMatchDetail } from '../../test-support/fake-matches';
+import { fakeChainMatchDetail, fakeMatchDetail } from '../../test-support/fake-matches';
 import { detailViewOf } from './match-detail-model';
 
 const MINE = 'home-mine';
@@ -110,5 +110,31 @@ describe('detailViewOf', () => {
 
     expect(view.homeOf(THEIRS)?.id).toBe(THEIRS);
     expect(view.homeOf('desconocida')).toBeUndefined();
+  });
+});
+
+describe('detailViewOf de un match en cadena', () => {
+  const A = 'home-c';
+  const B = 'home-a';
+  const C = 'home-b';
+  const detail = fakeChainMatchDetail({ mineHomeId: A, fromHomeId: B, toHomeId: C });
+
+  it('muestra las tres viviendas en el orden del ciclo empezando por la mía', () => {
+    const view = detailViewOf(detail, new Set([A]));
+
+    expect(view.isChain).toBe(true);
+    expect(view.sections.map((participant) => participant.displayName)).toEqual([
+      'Ana',
+      'Beto',
+      'Carla',
+    ]);
+    expect(view.total).toBe(3);
+  });
+
+  it('un match directo no es una cadena y conserva su orden', () => {
+    const view = detailViewOf(fakeMatchDetail({ mineHomeId: A, theirHomeId: B }), new Set([A]));
+
+    expect(view.isChain).toBe(false);
+    expect(view.sections.map((participant) => participant.homeId)).toEqual([B, A]);
   });
 });

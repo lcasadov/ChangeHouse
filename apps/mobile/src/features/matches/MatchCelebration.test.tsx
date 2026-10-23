@@ -166,3 +166,118 @@ describe('animación de intercambio', () => {
     expect(shiftOf('theirs')).toBe(-shiftOf('mine'));
   });
 });
+
+describe('celebración en triángulo (match en cadena)', () => {
+  const THIRD = { title: 'Casa en Malasaña', coverUrl: 'https://cdn.changehouse.test/third.webp' };
+  const CHAIN = { third: THIRD, fromName: 'Beto', toName: 'Carla' };
+
+  // `isReduceMotionEnabled` ya es un `jest.fn` de React Native: `restoreAllMocks` no deshace su valor
+  beforeEach(() => {
+    jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(false);
+  });
+
+  const offsetOf = (side: 'mine' | 'theirs' | 'third') => {
+    const transform = (animatedStyleOf(screen.getByTestId(`swap-tile-${side}`)).transform ??
+      []) as Record<string, number>[];
+    return {
+      x: transform.find((entry) => 'translateX' in entry)?.['translateX'] ?? 0,
+      y: transform.find((entry) => 'translateY' in entry)?.['translateY'] ?? 0,
+    };
+  };
+
+  it('Scenario: Celebración en triángulo - muestra tres casas, la etiqueta «Cadena de 3» y explica quién entrega a quién', async () => {
+    await show({ chain: CHAIN });
+
+    expect(screen.getByRole('header', { name: c.title })).toBeTruthy();
+    expect(screen.getByText(es.matches.chain.label)).toBeTruthy();
+    expect(screen.getByText(c.chain.subtitle)).toBeTruthy();
+    expect(screen.queryByText(c.subtitle)).toBeNull();
+    expect(screen.getByText('A tu casa le llega la de Beto, la tuya va a Carla')).toBeTruthy();
+    expect(screen.getByTestId('match-cover-mine').props.source).toEqual([{ uri: MINE.coverUrl }]);
+    expect(screen.getByTestId('match-cover-theirs').props.source).toEqual([
+      { uri: THEIRS.coverUrl },
+    ]);
+    expect(screen.getByTestId('match-cover-third').props.source).toEqual([{ uri: THIRD.coverUrl }]);
+    expect(screen.getByText(`Tú pagas ${formatEuros(1_200_000)}`)).toBeTruthy();
+    expect(screen.getByRole('button', { name: c.view })).toBeTruthy();
+    expect(screen.getByRole('button', { name: c.continue })).toBeTruthy();
+  });
+
+  it('un match directo no muestra etiqueta de cadena ni tercera casa', async () => {
+    await show();
+
+    expect(screen.queryByText(es.matches.chain.label)).toBeNull();
+    expect(screen.queryByTestId('swap-tile-third')).toBeNull();
+    expect(screen.queryByTestId('chain-arrow-0')).toBeNull();
+  });
+
+  it('dibuja tres flechas decorativas entre las casas y las fotos también lo son', async () => {
+    await show({ chain: CHAIN });
+
+    for (const index of [0, 1, 2]) {
+      expect(screen.getByTestId(`chain-arrow-${String(index)}`).props.accessible).toBe(false);
+    }
+    expect(screen.getByTestId('match-cover-third').props.accessible).toBe(false);
+  });
+
+  it('una tercera casa sin foto se sustituye por un marcador', async () => {
+    await show({ chain: { ...CHAIN, third: { title: THIRD.title, coverUrl: undefined } } });
+
+    expect(screen.queryByTestId('match-cover-third')).toBeNull();
+    expect(screen.getByTestId('match-cover-third-placeholder')).toBeTruthy();
+  });
+
+  it('las tres casas giran por el ciclo: la mía baja a la derecha, la tercera cruza abajo y la que recibo sube', async () => {
+    jest.useFakeTimers();
+    await show({ chain: CHAIN });
+    await layOut();
+    // Antes de que arranque el giro (hay un breve retraso inicial), las casas ya están en su vértice
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(10);
+    });
+    const start = { mine: offsetOf('mine'), theirs: offsetOf('theirs'), third: offsetOf('third') };
+
+    // Al empezar forman el triángulo: la mía arriba, la que recibo abajo a la izquierda y la tercera abajo a la derecha
+    expect(start.mine.y).toBeLessThan(start.third.y);
+    expect(start.theirs.x).toBeLessThan(start.mine.x);
+    expect(start.mine.x).toBeLessThan(start.third.x);
+    expect(start.theirs.y).toBeCloseTo(start.third.y);
+
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(2000);
+    });
+
+    // Cada casa ocupa el sitio de la siguiente del ciclo (mía → tercera → la que recibo → mía)
+    expect(offsetOf('mine').x).toBeCloseTo(start.third.x);
+    expect(offsetOf('mine').y).toBeCloseTo(start.third.y);
+    expect(offsetOf('third').x).toBeCloseTo(start.theirs.x);
+    expect(offsetOf('third').y).toBeCloseTo(start.theirs.y);
+    expect(offsetOf('theirs').x).toBeCloseTo(start.mine.x);
+    expect(offsetOf('theirs').y).toBeCloseTo(start.mine.y);
+  });
+
+  it('con «reducir movimiento» aparecen ya giradas, con un fundido y sin recorrido', async () => {
+    jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(true);
+    await show({ chain: CHAIN });
+    await layOut();
+
+    expect(await screen.findByTestId('swap-tile-third')).toBeTruthy();
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(offsetOf('mine').y).toBeGreaterThan(offsetOf('theirs').y);
+    expect(offsetOf('third').x).toBeLessThan(offsetOf('mine').x);
+    expect(screen.getByTestId('swap-tile-third').props.entering).toBeDefined();
+  });
+
+  it.each(THEME_NAMES)('funciona en el tema %s con el degradado de match', async (theme) => {
+    await show({ chain: CHAIN }, theme);
+
+    expect(screen.getByTestId('match-gradient').props.colors).toEqual([
+      processColor(themes[theme].color.matchGradientStart),
+      processColor(themes[theme].color.matchGradientEnd),
+    ]);
+    expect(screen.getByText(es.matches.chain.label)).toBeTruthy();
+  });
+});

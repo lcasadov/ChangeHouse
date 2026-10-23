@@ -556,9 +556,9 @@ export class InMemoryDecisionUnitOfWork implements DecisionUnitOfWork {
 }
 
 /**
- * Matches en memoria: busca los ciclos de 2 en los me gusta del almacén de decisiones y guarda los
- * matches con su clave única. `statusInTransaction` simula un cambio de estado que solo se ve ya
- * dentro de la transacción; `terms`, las preferencias efectivas de cada vivienda.
+ * Matches en memoria: busca los ciclos de 2 y 3 en los me gusta del almacén de decisiones y guarda
+ * los matches con su clave única. `statusInTransaction` simula un cambio de estado que solo se ve
+ * ya dentro de la transacción; `terms`, las preferencias efectivas de cada vivienda.
  */
 export class InMemoryMatchStore implements CycleCandidates, MatchWriter {
   readonly terms = new Map<string, CompensationTerms>();
@@ -588,11 +588,32 @@ export class InMemoryMatchStore implements CycleCandidates, MatchWriter {
     };
   }
 
+  /**
+   * Como el adaptador: primero el ciclo de 2 y después los de 3 con una tercera vivienda publicada
+   * de otro propietario, del que lleva más tiempo esperando (su me gusta más reciente, el más
+   * antiguo) al que menos.
+   */
   findCycles(fromHomeId: string, toHomeId: string): Promise<CycleHome[][]> {
-    const back = this.decisions.likes.some(
-      (like) => like.from === toHomeId && like.to === fromHomeId,
-    );
-    return Promise.resolve(back ? [[this.member(fromHomeId), this.member(toHomeId)]] : []);
+    const likeAt = (from: string, to: string) =>
+      this.decisions.likes.find((like) => like.from === from && like.to === to)?.at;
+    const direct =
+      likeAt(toHomeId, fromHomeId) === undefined
+        ? []
+        : [[this.member(fromHomeId), this.member(toHomeId)]];
+    const owners = new Set([fromHomeId, toHomeId].map((id) => this.member(id).ownerId));
+    const chains = this.decisions.likes
+      .filter((like) => like.from === toHomeId && ![fromHomeId, toHomeId].includes(like.to))
+      .flatMap((like) => {
+        const back = likeAt(like.to, fromHomeId);
+        const third = this.member(like.to);
+        if (back === undefined || third.status !== 'published' || owners.has(third.ownerId)) {
+          return [];
+        }
+        return [{ third, waiting: Math.max(like.at.getTime(), back.getTime()) }];
+      })
+      .sort((a, b) => a.waiting - b.waiting || a.third.homeId.localeCompare(b.third.homeId))
+      .map(({ third }) => [this.member(fromHomeId), this.member(toHomeId), third]);
+    return Promise.resolve([...direct, ...chains]);
   }
 
   saveMatch(match: NewMatch): Promise<string> {

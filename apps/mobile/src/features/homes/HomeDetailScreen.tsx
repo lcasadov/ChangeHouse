@@ -14,6 +14,7 @@ import { type Home, HomesApiError } from './homes-api';
 import { HomeSummary } from './HomeSummary';
 import { SubmitAction } from './SubmitAction';
 import { useHome } from './use-homes';
+import { VppNotice } from './VppNotice';
 
 /** Estados en los que el propietario puede seguir cambiando las fotos sin pasar por el asistente. */
 const MANAGEABLE_PHOTOS = new Set<Home['status']>(['published', 'paused']);
@@ -43,6 +44,7 @@ function HomeDetail({ home }: Readonly<{ home: Home }>) {
       <Badge tone={tone} icon={icon} label={t(`homes.status.${home.status}`)} />
       <Text accessibilityLiveRegion="polite">{t(`homes.detail.statusNote.${home.status}`)}</Text>
       <Text tone="textMuted">{t('homes.detail.privateAddress')}</Text>
+      <VppNotice regime={home.regime} maxLegalPriceCents={home.vppMaxLegalPriceCents} />
       <HomeSummary home={home} />
       {rejection ? (
         <View style={{ gap: theme.space[3] }}>

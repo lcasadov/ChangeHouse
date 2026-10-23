@@ -386,6 +386,91 @@ describe.skipIf(!emulatorAvailable())('match directo con tokens reales y Postgre
     });
   });
 
+  describe('match en cadena', () => {
+    interface ChainDetail extends MatchBody {
+      homes: { id: string }[];
+      participants: (Participant & { exactAddress?: string })[];
+    }
+
+    /** Ana (200.000 €) → Beto (212.000 €) → Carla (205.000 €) → Ana: Ana paga 12.000 €, Beto y Carla reciben. */
+    async function chainOfThree() {
+      const mine = await ana();
+      const beto = await leganesOwner('Beto', 212_000);
+      const carla = await leganesOwner('Carla', 205_000);
+      expect((await like(beto.person, beto.home, carla.home)).json()).toMatchObject({
+        match: null,
+      });
+      expect((await like(carla.person, carla.home, mine.home)).json()).toMatchObject({
+        match: null,
+      });
+      const response = await like(mine.person, mine.home, beto.home);
+      return { mine, beto, carla, response };
+    }
+
+    it('Scenario: Cadena compatible - el me gusta que cierra la cadena responde 201 con el match de tres, cuya suma es 0', async () => {
+      const { mine, beto, carla, response } = await chainOfThree();
+
+      expect(response.statusCode, response.body).toBe(201);
+      const { match } = response.json<{ match: MatchBody }>();
+      expect(match).toMatchObject({ type: 3, status: 'open' });
+      expect(match.participants).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            homeId: mine.home,
+            displayName: 'Ana',
+            receivesHomeId: beto.home,
+            compensationCents: euros(12_000),
+          }),
+          expect.objectContaining({
+            homeId: beto.home,
+            displayName: 'Beto',
+            receivesHomeId: carla.home,
+            compensationCents: -euros(7_000),
+          }),
+          expect.objectContaining({
+            homeId: carla.home,
+            displayName: 'Carla',
+            receivesHomeId: mine.home,
+            compensationCents: -euros(5_000),
+          }),
+        ]),
+      );
+      expect(match.participants).toHaveLength(3);
+      expect(await matchCount()).toBe(1);
+      for (const person of [mine.person, beto.person, carla.person]) {
+        expect((await myMatches(person)).map((found) => found.id)).toEqual([match.id]);
+      }
+    });
+
+    it('el detalle muestra a cada participante las tres viviendas, sus direcciones y quién entrega a quién; y confirman los tres', async () => {
+      const { mine, beto, carla, response } = await chainOfThree();
+      const matchId = response.json<{ match: MatchBody }>().match.id;
+
+      const detail = await call(carla.person, 'GET', `/v1/matches/${matchId}`);
+
+      expect(detail.statusCode, detail.body).toBe(200);
+      const body = detail.json<ChainDetail>();
+      const homeIds = [mine.home, beto.home, carla.home];
+      expect(body.homes.map((h) => h.id).sort()).toEqual([...homeIds].sort());
+      expect(body.participants.map((p) => p.givesHomeId).sort()).toEqual([...homeIds].sort());
+      expect(body.participants.map((p) => p.receivesHomeId).sort()).toEqual([...homeIds].sort());
+      for (const participant of body.participants) {
+        expect(participant.exactAddress).toContain('Calle Mayor');
+        expect(participant.givesHomeId).toBe(participant.homeId);
+      }
+      expect(body.participants.reduce((sum, p) => sum + p.compensationCents, 0)).toBe(0);
+
+      for (const person of [mine.person, beto.person, carla.person]) {
+        const confirm = await call(person, 'POST', `/v1/matches/${matchId}/confirm`);
+        expect(confirm.statusCode, confirm.body).toBe(200);
+      }
+      const [row] = await sql<
+        { status: string }[]
+      >`SELECT status FROM matches WHERE id = ${matchId}`;
+      expect(row?.status).toBe('confirmed');
+    });
+  });
+
   describe('detalle y decisiones de un match', () => {
     const BETO_PHONE = '+34600111222';
 

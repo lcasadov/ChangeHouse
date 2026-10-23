@@ -125,7 +125,10 @@ export interface paths {
      * @description El borrador nace con el tipo y la dirección (primer paso del asistente); el resto de
      *     campos de `HomeInput` es opcional y se completa con `updateHome`. La completitud se
      *     exige al enviar (`submitHome`). El servidor resuelve el `placeId` (punto exacto, barrio
-     *     o zona y su centro); si no puede, responde 422 con `code: ADDRESS_NOT_RESOLVED`.
+     *     o zona y su centro); si no puede, responde 422 con `code: ADDRESS_NOT_RESOLVED`. En una
+     *     vivienda protegida (`VPPB`, `VPPL`, `VPO`) con `vppMaxLegalPriceCents`, un
+     *     `valueMaxCents` mayor responde 422 con `code: VALUE_ABOVE_VPP_MAX_LEGAL_PRICE` y
+     *     `errors` en `valueMaxCents` (RN-06).
      */
     post: operations['createHome'];
     delete?: never;
@@ -161,6 +164,11 @@ export interface paths {
      * Modifica una vivienda propia
      * @description Una vivienda `published` que cambia datos relevantes vuelve a `in_review`
      *     (moderación previa, RF-18). No se puede modificar en `in_operation` ni `closed`.
+     *     En una vivienda protegida (`VPPB`, `VPPL`, `VPO`), un `valueMaxCents` mayor que su
+     *     `vppMaxLegalPriceCents` responde 422 con `code: VALUE_ABOVE_VPP_MAX_LEGAL_PRICE` y
+     *     `errors` en `valueMaxCents` (RN-06). Fuera de `draft`, una vivienda protegida sin
+     *     `vppQualificationDate` responde 400 con `code: VPP_QUALIFICATION_DATE_REQUIRED` y
+     *     `errors` en `vppQualificationDate` (RF-14).
      */
     patch: operations['updateHome'];
     trace?: never;
@@ -182,7 +190,9 @@ export interface paths {
      *     `hasLift`, `garage`, `storageRoom`, `valueMinCents`, `valueMaxCents`, `isPrimaryResidence`);
      *     si faltan, 422 con `code: HOME_INCOMPLETE` y `errors` con cada campo. La exigencia de al
      *     menos 3 fotos procesadas (RF-11); si faltan, el mismo 422 incluye `photos` entre los
-     *     `errors`.
+     *     `errors`. Una vivienda protegida (`VPPB`, `VPPL`, `VPO`) sin `vppQualificationDate`
+     *     responde antes 400 con `code: VPP_QUALIFICATION_DATE_REQUIRED` y `errors` en
+     *     `vppQualificationDate` (RF-14).
      */
     post: operations['submitHome'];
     delete?: never;
@@ -401,14 +411,18 @@ export interface paths {
      * Me gusta en una vivienda (RF-41, RN-01, RN-02)
      * @description Crea la arista desde una vivienda publicada del usuario (`fromHomeId`)
      *     hacia la vivienda indicada y, en la misma transacción, busca los ciclos
-     *     que cierra (de 2 viviendas; los de 3 llegan con `add-chain-match`). Cada
-     *     vivienda del usuario participa de forma independiente (RF-20). Si el ciclo
-     *     es compatible —todas sus viviendas siguen publicadas y la compensación es
-     *     aceptable para cada propietario con sus preferencias efectivas (RN-03)—,
-     *     `match` es el match creado (`type: 2`, `status: open`, participantes en
-     *     `pending`, sin `chatId`); si no, `null`. Un mismo conjunto de viviendas
-     *     nunca forma dos matches: dos me gusta cruzados simultáneos responden los
-     *     dos 201 y solo uno de ellos trae el match.
+     *     que cierra: el directo (de 2 viviendas) y las cadenas de 3 (X → Y → Z → X,
+     *     con Z publicada y de un tercer propietario); nunca de más de 3 (RN-05).
+     *     Cada vivienda del usuario participa de forma independiente (RF-20). Un
+     *     ciclo es compatible si todas sus viviendas siguen publicadas y la
+     *     compensación es aceptable para cada propietario con sus preferencias
+     *     efectivas (RN-03). Se crea como mucho un match por me gusta: el directo si
+     *     es compatible y, si no, la primera cadena compatible por antigüedad de su
+     *     me gusta más reciente. `match` es el match creado (`type` 2 o 3,
+     *     `status: open`, participantes en `pending`, sin `chatId`); si no, `null`.
+     *     Un mismo conjunto de viviendas nunca forma dos matches: los me gusta
+     *     simultáneos que cierran el mismo ciclo responden todos 201 y solo uno de
+     *     ellos trae el match.
      *
      *     Límite diario (RF-45): 10 me gusta por usuario y día natural de
      *     `Europe/Madrid`, sumando todas sus viviendas y configurable por entorno
@@ -1052,6 +1066,9 @@ export interface components {
      * @description Solo `type` y `address` son obligatorios al crear el borrador; `regime` es `libre` por
      *     defecto. Los demás son obligatorios para enviar a revisión (`submitHome`), no para guardar.
      *     Si hay rango, `valueMinCents` > 0 y `valueMinCents` <= `valueMaxCents` (422 en otro caso).
+     *     Una vivienda protegida (`VPPB`, `VPPL`, `VPO`) exige `vppQualificationDate` para salir del
+     *     borrador (400 `VPP_QUALIFICATION_DATE_REQUIRED`) y, si declara `vppMaxLegalPriceCents`,
+     *     `valueMaxCents` <= `vppMaxLegalPriceCents` (422 `VALUE_ABOVE_VPP_MAX_LEGAL_PRICE`).
      */
     HomeInput: {
       type: components['schemas']['HomeType'];
@@ -1135,6 +1152,8 @@ export interface components {
       yearBuilt?: number | null;
       valueMinCents: number | null;
       valueMaxCents: number | null;
+      /** @description Precio máximo legal de una vivienda protegida, si se conoce: tope de `valueMaxCents` y dato del aviso de vivienda protegida (RN-06). `null` si no se conoce o es libre. */
+      vppMaxLegalPriceCents: number | null;
       /** @description Punto exacto si el propietario eligió `exact`; centro del barrio o zona si eligió `area`. */
       location: {
         visibility: components['schemas']['LocationVisibility'];
@@ -1162,7 +1181,6 @@ export interface components {
       vppQualificationDate?: string | null;
       /** Format: date */
       vppProtectionEnd?: string | null;
-      vppMaxLegalPriceCents?: number | null;
       /** @description Dirección exacta formateada. En las respuestas de administración (`adminListHomes`, `adminModerateHome`) lleva el barrio o zona. */
       address: string;
       /** @description Motivo del último rechazo. Se conserva al volver a enviar la vivienda y se limpia al aprobarla. Solo lo ven el propietario y el admin, nunca la vista pública. */
@@ -1765,6 +1783,7 @@ export interface operations {
           'application/json': components['schemas']['Home'];
         };
       };
+      400: components['responses']['BadRequest'];
       401: components['responses']['Unauthorized'];
       404: components['responses']['NotFound'];
       409: components['responses']['Conflict'];
