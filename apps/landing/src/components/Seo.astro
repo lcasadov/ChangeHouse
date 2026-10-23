@@ -7,9 +7,11 @@ interface Props {
   description: string;
   /** Ruta o URL de la imagen para compartir. */
   image?: string;
+  /** Valor de og:type. */
+  type?: 'website' | 'article';
 }
 
-const { title, description, image = '/og.png' } = Astro.props;
+const { title, description, image = '/og.png', type = 'website' } = Astro.props;
 
 const base = Astro.site ?? Astro.url;
 const path = Astro.url.pathname.replace(/(.)\/$/, '$1');
@@ -21,7 +23,7 @@ const fullTitle = pageTitle(title);
 <title>{fullTitle}</title>
 <meta name="description" content={description} />
 <link rel="canonical" href={canonical} />
-<meta property="og:type" content="website" />
+<meta property="og:type" content={type} />
 <meta property="og:site_name" content="ChangeHouse" />
 <meta property="og:locale" content={es.locale} />
 <meta property="og:title" content={fullTitle} />

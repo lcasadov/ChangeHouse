@@ -14,9 +14,11 @@ import { buildThemeStylesheet, themeColors } from '../lib/theme-css';
 interface Props {
   title?: string;
   description?: string;
+  image?: string;
+  ogType?: 'website' | 'article';
 }
 
-const { title, description = es.meta.description } = Astro.props;
+const { title, description = es.meta.description, image, ogType } = Astro.props;
 const colors = themeColors();
 const themeStylesheet = buildThemeStylesheet();
 ---
@@ -29,7 +31,8 @@ const themeStylesheet = buildThemeStylesheet();
     <meta name="color-scheme" content="light dark" />
     <meta name="theme-color" content={colors.light} media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content={colors.dark} media="(prefers-color-scheme: dark)" />
-    <Seo title={title} description={description} />
+    <Seo title={title} description={description} image={image} type={ogType} />
+    <slot name="head" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <style is:inline set:html={themeStylesheet}></style>
   </head>
