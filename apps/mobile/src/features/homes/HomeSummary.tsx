@@ -1,9 +1,10 @@
+import { isProtectedRegime } from '@changehouse/shared';
 import { useTheme } from '@changehouse/ui';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
 import { Text } from '../../ui';
-import { decimalFieldText, FEATURE_FLAGS, formatEuros } from './home-form';
+import { dateFieldText, decimalFieldText, FEATURE_FLAGS, formatEuros } from './home-form';
 import type { Home } from './homes-api';
 
 interface RowProps {
@@ -33,6 +34,8 @@ export function HomeSummary({ home }: Readonly<{ home: Home }>) {
       ? pending
       : t(value ? 'homes.summary.yes' : 'homes.summary.no');
   const known = (...values: (number | null)[]) => values.every((value) => value !== null);
+  const date = (value: string | null | undefined) => dateFieldText(value) || pending;
+  const protectedHome = isProtectedRegime(home.regime);
 
   const features = home.features ?? {};
   const extras = [
@@ -51,6 +54,24 @@ export function HomeSummary({ home }: Readonly<{ home: Home }>) {
         label={t('homes.summary.visibility')}
         value={t(`homes.location.${home.location.visibility}`)}
       />
+      <Row label={t('homes.summary.regime')} value={t(`homes.regime.${home.regime}`)} />
+      {protectedHome ? (
+        <>
+          <Row
+            label={t('homes.summary.qualificationDate')}
+            value={date(home.vppQualificationDate)}
+          />
+          <Row label={t('homes.summary.protectionEnd')} value={date(home.vppProtectionEnd)} />
+          <Row
+            label={t('homes.summary.maxLegalPrice')}
+            value={
+              home.vppMaxLegalPriceCents === null || home.vppMaxLegalPriceCents === undefined
+                ? pending
+                : formatEuros(home.vppMaxLegalPriceCents)
+            }
+          />
+        </>
+      ) : null}
       <Row
         label={t('homes.summary.surfaces')}
         value={

@@ -25,7 +25,7 @@ const button = (name: string) => screen.getByRole('button', { name });
 const counter = (count: number) => p.counter.replace('{{count}}', String(count));
 const stepBar = (current: number) =>
   screen.findByRole('progressbar', {
-    name: h.wizard.step.replace('{{current}}', String(current)).replace('{{total}}', '6'),
+    name: h.wizard.step.replace('{{current}}', String(current)).replace('{{total}}', '7'),
   });
 const cardAction = (action: string) =>
   h.card.action.replace('{{action}}', action).replace('{{title}}', MALASANA_TITLE);
@@ -140,6 +140,8 @@ describe('Paso de fotos', () => {
     await fireEvent.press(
       await screen.findByRole('button', { name: cardAction(h.actions.continue) }),
     );
+    await stepBar(4);
+    await fireEvent.press(button(h.wizard.back));
     await stepBar(3);
     await fireEvent.press(button(h.wizard.back));
     await stepBar(2);
@@ -416,7 +418,7 @@ describe('Envío con fotos', () => {
       await screen.findByRole('button', { name: cardAction(h.actions.submit) }),
     );
 
-    expect(await stepBar(6)).toBeTruthy();
+    expect(await stepBar(7)).toBeTruthy();
   });
 });
 

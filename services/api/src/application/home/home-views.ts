@@ -44,6 +44,8 @@ export interface HomePublicView {
   yearBuilt: number | null;
   valueMinCents: number | null;
   valueMaxCents: number | null;
+  /** Tope legal del valor de una vivienda protegida, si se conoce: lo muestra su aviso (RN-06). */
+  vppMaxLegalPriceCents: number | null;
   location: {
     visibility: LocationVisibility;
     /** El punto exacto solo si el propietario lo eligió; si no, el centro del barrio o zona. */
@@ -60,7 +62,6 @@ export interface HomeView extends HomePublicView {
   mortgageOutstandingCents: number | null;
   vppQualificationDate: string | null;
   vppProtectionEnd: string | null;
-  vppMaxLegalPriceCents: number | null;
   address: string;
   moderationNote: string | null;
   createdAt: string;
@@ -85,6 +86,7 @@ export type PublicHome = Pick<
   | 'yearBuilt'
   | 'valueMinCents'
   | 'valueMaxCents'
+  | 'vppMaxLegalPriceCents'
   | 'locationVisibility'
   | 'location'
 >;
@@ -109,6 +111,7 @@ export function toHomePublicView(home: PublicHome, photos: readonly PhotoView[])
     yearBuilt: home.yearBuilt,
     valueMinCents: home.valueMinCents,
     valueMaxCents: home.valueMaxCents,
+    vppMaxLegalPriceCents: home.vppMaxLegalPriceCents,
     location: {
       visibility: home.locationVisibility,
       point: exact ? home.location.exact : home.location.areaCenter,
@@ -126,7 +129,6 @@ export function toHomeView(home: Home, photos: readonly PhotoView[]): HomeView {
     mortgageOutstandingCents: home.mortgageOutstandingCents,
     vppQualificationDate: home.vppQualificationDate,
     vppProtectionEnd: home.vppProtectionEnd,
-    vppMaxLegalPriceCents: home.vppMaxLegalPriceCents,
     address: home.address,
     moderationNote: home.moderationNote,
     createdAt: home.createdAt.toISOString(),

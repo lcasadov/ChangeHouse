@@ -312,6 +312,46 @@ describe('migraciones', () => {
     await target.end();
   });
 
+  it('Scenario: VPP sin fecha de calificación - homes exige, como red de seguridad, fecha de calificación a una VPP fuera de borrador y un valor máximo no superior al máximo legal', async () => {
+    const target = openSql(urlFor(EMPTY_DB));
+    const user = '0199c1a2-0000-7000-8000-0000000000e2';
+    await target`INSERT INTO users (id, firebase_uid, email, display_name)
+                 VALUES (${user}, 'uid-vpp-checks', 'vpp-checks@example.com', 'Carla')`;
+    const insert = (home: {
+      status?: string;
+      regime: string;
+      qualification?: string;
+      maxLegal?: number;
+      valueMax?: number;
+    }) => target`
+      INSERT INTO homes (id, owner_id, type, status, regime, vpp_qualification_date,
+                         vpp_max_legal_price_cents, value_max_cents, exact_address,
+                         exact_location, approx_location, area_name)
+      VALUES (${crypto.randomUUID()}, ${user}, 'piso', ${home.status ?? 'draft'}, ${home.regime},
+              ${home.qualification ?? null}, ${home.maxLegal ?? null}, ${home.valueMax ?? null},
+              ${Buffer.from('x')}, ST_SetSRID(ST_MakePoint(-3.7, 40.4), 4326)::geography,
+              ST_SetSRID(ST_MakePoint(-3.7, 40.4), 4326)::geography, 'Malasaña')`;
+
+    await expect(insert({ regime: 'VPPL' })).resolves.toBeDefined();
+    await expect(insert({ regime: 'libre', status: 'in_review' })).resolves.toBeDefined();
+    await expect(insert({ regime: 'VPPL', status: 'in_review' })).rejects.toThrow(
+      /homes_vpp_qualification_date_required/,
+    );
+    await expect(
+      insert({ regime: 'VPO', status: 'published', qualification: '2010-01-01' }),
+    ).resolves.toBeDefined();
+    await expect(
+      insert({ regime: 'VPO', maxLegal: 180_000_00, valueMax: 200_000_00 }),
+    ).rejects.toThrow(/homes_value_max_within_vpp_max_legal_price/);
+    await expect(
+      insert({ regime: 'VPO', maxLegal: 180_000_00, valueMax: 180_000_00 }),
+    ).resolves.toBeDefined();
+    await expect(
+      insert({ regime: 'libre', maxLegal: 180_000_00, valueMax: 200_000_00 }),
+    ).resolves.toBeDefined();
+    await target.end();
+  });
+
   it('GIVEN la base migrada WHEN se inspecciona THEN existen dismissals (PK compuesta, en cascada, sin descartarse a sí misma), homes.published_at, el municipio y los índices del descubrimiento', async () => {
     const target = openSql(urlFor(EMPTY_DB));
     const columns = await target<{ column_name: string; udt_name: string; is_nullable: string }[]>`

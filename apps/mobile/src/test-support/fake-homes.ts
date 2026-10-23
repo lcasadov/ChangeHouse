@@ -69,6 +69,9 @@ export function draftHome(overrides: Partial<Home> = {}): Home {
     valueMaxCents: null,
     isPrimaryResidence: null,
     mortgageOutstandingCents: null,
+    vppQualificationDate: null,
+    vppProtectionEnd: null,
+    vppMaxLegalPriceCents: null,
     location: {
       visibility: 'area',
       point: MALASANA?.areaCenter ?? { lat: 0, lng: 0 },

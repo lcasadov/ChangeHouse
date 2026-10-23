@@ -36,6 +36,7 @@ export class DrizzleMatchHomes implements MatchHomeReader {
         yearBuilt: homes.yearBuilt,
         valueMinCents: homes.valueMinCents,
         valueMaxCents: homes.valueMaxCents,
+        vppMaxLegalPriceCents: homes.vppMaxLegalPriceCents,
         locationVisibility: homes.locationVisibility,
         exactLocation: homes.exactLocation,
         approxLocation: homes.approxLocation,

@@ -175,6 +175,9 @@ function ProfileForm({ me }: Readonly<{ me: Me }>) {
         name="meetsVppRequirements"
         label={t('profile.form.meetsVppRequirements')}
       />
+      <Text variant="caption" tone="textMuted">
+        {t('profile.form.meetsVppRequirementsHint')}
+      </Text>
       <ProfileCheckbox {...shared} name="isOver65" label={t('profile.form.isOver65')} />
 
       {outcome ? (
