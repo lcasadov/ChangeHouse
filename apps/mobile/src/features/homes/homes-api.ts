@@ -26,7 +26,13 @@ export type HomesApiErrorKind =
   | 'address-not-resolved'
   /** Mínimo mayor que el máximo, o no positivo (422 `INVALID_VALUE_RANGE`). */
   | 'invalid-value-range'
-  /** Faltan datos obligatorios para enviar (422 `HOME_INCOMPLETE`); `fields` los nombra. */
+  /** Valor máximo por encima del precio máximo legal de una protegida (422 `VALUE_ABOVE_VPP_MAX_LEGAL_PRICE`). */
+  | 'above-legal-price'
+  /**
+   * Faltan datos obligatorios para enviar (422 `HOME_INCOMPLETE`, o 400
+   * `VPP_QUALIFICATION_DATE_REQUIRED` si es la fecha de calificación de una protegida); `fields`
+   * los nombra.
+   */
   | 'incomplete'
   /** Ya hay 20 fotos (409 `PHOTO_LIMIT_REACHED`). */
   | 'photo-limit'

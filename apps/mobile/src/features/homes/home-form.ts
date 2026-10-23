@@ -1,6 +1,8 @@
 import {
   type HomePatch,
+  type HomeRegime,
   type HomeType,
+  isProtectedRegime,
   type LocationVisibility,
   validateHomePatch,
 } from '@changehouse/shared';
@@ -10,9 +12,9 @@ import type { FieldErrors, Resolver } from 'react-hook-form';
 import { DEFAULT_LANGUAGE } from '../../i18n';
 import type { Home } from './homes-api';
 
-/** Fotos, tipo y dirección, características, valor, ubicación y revisión. */
-export type WizardStep = 1 | 2 | 3 | 4 | 5 | 6;
-export const TOTAL_STEPS = 6;
+/** Fotos, tipo y dirección, régimen, características, valor, ubicación y revisión. */
+export type WizardStep = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+export const TOTAL_STEPS = 7;
 
 /** Fotos por vivienda: el mínimo para enviarla a revisión y el máximo que admite la API. */
 export const MIN_PHOTOS = 3;
@@ -73,6 +75,34 @@ export function euroFieldText(cents: number | null | undefined): string {
   );
 }
 
+// --- Fechas escritas a mano (dd/mm/aaaa, como se leen en España) ---
+
+const DAY_MONTH_YEAR = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
+const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+/**
+ * Una fecha «dd/mm/aaaa» a `aaaa-mm-dd` (el `date` del contrato). Vacío es «no indicada»
+ * (`undefined`); lo que no es una fecha del calendario, `null`.
+ */
+export function parseDate(text: string): string | null | undefined {
+  const trimmed = text.trim();
+  if (trimmed === '') return undefined;
+  const match = DAY_MONTH_YEAR.exec(trimmed);
+  if (!match) return null;
+  const [, day = '', month = '', year = ''] = match;
+  const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+  const iso = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+  return date.toISOString().startsWith(iso) ? iso : null;
+}
+
+/** Una fecha guardada (`aaaa-mm-dd`) para un campo editable: «dd/mm/aaaa». */
+export function dateFieldText(iso: string | null | undefined): string {
+  const match = ISO_DATE.exec(iso ?? '');
+  if (!match) return '';
+  const [, year = '', month = '', day = ''] = match;
+  return `${day}/${month}/${year}`;
+}
+
 /** Un número para un campo editable, con coma decimal. */
 export function decimalFieldText(value: number | null | undefined): string {
   return value === null || value === undefined ? '' : String(value).replace('.', ',');
@@ -92,20 +122,43 @@ export type FormField =
   | 'yearBuilt'
   | 'valueMin'
   | 'valueMax'
-  | 'mortgage';
+  | 'mortgage'
+  | 'qualificationDate'
+  | 'protectionEnd'
+  | 'maxLegalPrice';
 
-export type HomeErrorKey = FormField | 'valueRange' | 'addressNotResolved';
+export type HomeErrorKey =
+  | Exclude<FormField, 'qualificationDate' | 'protectionEnd'>
+  | 'valueRange'
+  | 'addressNotResolved'
+  | 'qualificationDateRequired'
+  | 'date'
+  | 'maxLegalPriceBelowValue'
+  | 'valueAboveLegalPrice';
 
 const FORM_FIELD_OF_API: Record<string, FormField> = {
   valueMinCents: 'valueMin',
   valueMaxCents: 'valueMax',
   mortgageOutstandingCents: 'mortgage',
+  vppQualificationDate: 'qualificationDate',
+  vppProtectionEnd: 'protectionEnd',
+  vppMaxLegalPriceCents: 'maxLegalPrice',
+};
+
+/** Textos propios de un tipo de fallo concreto; el resto usa el texto del campo. */
+const SPECIFIC_ERRORS: Partial<Record<FormField, Record<string, HomeErrorKey>>> = {
+  valueMax: { range: 'valueRange', aboveLegalPrice: 'valueAboveLegalPrice' },
+  address: { unresolved: 'addressNotResolved' },
+  qualificationDate: { required: 'qualificationDateRequired' },
+  maxLegalPrice: { belowValue: 'maxLegalPriceBelowValue' },
 };
 
 /** Clave de `homes.errors` con el texto del fallo de un campo. */
 export function errorKeyOf(field: FormField, type: string): HomeErrorKey {
-  if (field === 'valueMax' && type === 'range') return 'valueRange';
-  if (field === 'address' && type === 'unresolved') return 'addressNotResolved';
+  const specific = SPECIFIC_ERRORS[field]?.[type];
+  if (specific) return specific;
+  // Una fecha mal escrita se explica igual en cualquier campo de fecha
+  if (field === 'qualificationDate' || field === 'protectionEnd') return 'date';
   return field;
 }
 
@@ -125,6 +178,9 @@ function resolution<O>(patch: unknown, extra: RawErrors = {}) {
   }
   return { values: result.data as O, errors: {} };
 }
+
+const isPositive = (cents: number | undefined) =>
+  cents === undefined || Number.isNaN(cents) || cents > 0;
 
 const defined = <T>(entries: Record<string, T | undefined>): Record<string, T> =>
   Object.fromEntries(Object.entries(entries).filter(([, value]) => value !== undefined)) as Record<
@@ -179,7 +235,70 @@ export const typeStepResolver: Resolver<
   };
 };
 
-// --- Paso 2: características ---
+// --- Paso 3: régimen de protección ---
+
+export type RegimeValues = {
+  regime: HomeRegime;
+  qualificationDate: string;
+  protectionEnd: string;
+  maxLegalPrice: string;
+};
+
+export interface RegimeContext {
+  /** El valor máximo ya guardado: el precio máximo legal no puede quedar por debajo (RN-06). */
+  valueMaxCents: number | null;
+}
+
+export const regimeDefaults = (home?: Home): RegimeValues => ({
+  regime: home?.regime ?? 'libre',
+  qualificationDate: dateFieldText(home?.vppQualificationDate),
+  protectionEnd: dateFieldText(home?.vppProtectionEnd),
+  maxLegalPrice: euroFieldText(home?.vppMaxLegalPriceCents),
+});
+
+/**
+ * Una vivienda libre solo guarda su régimen: no se le piden datos de protección. Una protegida
+ * exige la fecha de calificación definitiva (RF-14); el fin de la protección y el precio máximo
+ * legal son opcionales, y este no puede quedar por debajo del valor máximo ya indicado (RN-06).
+ */
+export const regimeResolver: Resolver<RegimeValues, RegimeContext | undefined, HomePatch> = (
+  values,
+  context,
+) => {
+  if (!isProtectedRegime(values.regime)) return resolution<HomePatch>({ regime: values.regime });
+  const qualification = parseDate(values.qualificationDate);
+  const protectionEnd = parseDate(values.protectionEnd);
+  const maxLegal = parseEuros(values.maxLegalPrice);
+  const extra: RawErrors = {};
+  if (qualification === undefined) extra['qualificationDate'] = { type: 'required' };
+  if (qualification === null) extra['qualificationDate'] = { type: 'invalid' };
+  if (protectionEnd === null) extra['protectionEnd'] = { type: 'invalid' };
+  if (!isPositive(maxLegal)) extra['maxLegalPrice'] = { type: 'invalid' };
+  const valueMax = context?.valueMaxCents ?? null;
+  if (maxLegal !== undefined && valueMax !== null && maxLegal > 0 && maxLegal < valueMax) {
+    extra['maxLegalPrice'] = { type: 'belowValue' };
+  }
+  return resolution<HomePatch>(
+    {
+      regime: values.regime,
+      ...defined({
+        vppQualificationDate: qualification ?? undefined,
+        vppProtectionEnd: protectionEnd ?? undefined,
+        vppMaxLegalPriceCents: maxLegal,
+      }),
+    },
+    extra,
+  );
+};
+
+/** ¿Coincide lo que se iba a guardar con lo ya guardado? Entonces el paso solo avanza. */
+export function sameAsSaved(home: Home, patch: HomePatch): boolean {
+  return Object.entries(patch).every(
+    ([field, value]) => (home as Record<string, unknown>)[field] === value,
+  );
+}
+
+// --- Paso 4: características ---
 
 export type CharacteristicsValues = {
   usefulM2: string;
@@ -256,7 +375,7 @@ export const characteristicsResolver: Resolver<CharacteristicsValues, unknown, H
   });
 };
 
-// --- Paso 3: valor y cargas ---
+// --- Paso 5: valor y cargas ---
 
 export type ValueValues = {
   valueMin: string;
@@ -272,10 +391,15 @@ export const valueDefaults = (home?: Home): ValueValues => ({
   isPrimaryResidence: home?.isPrimaryResidence ?? false,
 });
 
-const isPositive = (cents: number | undefined) =>
-  cents === undefined || Number.isNaN(cents) || cents > 0;
+export interface ValueContext {
+  /** Precio máximo legal de una vivienda protegida, si se conoce: tope del valor máximo (RN-06). */
+  maxLegalPriceCents: number | null;
+}
 
-export const valueResolver: Resolver<ValueValues, unknown, HomePatch> = (values) => {
+export const valueResolver: Resolver<ValueValues, ValueContext | undefined, HomePatch> = (
+  values,
+  context,
+) => {
   const min = parseEuros(values.valueMin);
   const max = parseEuros(values.valueMax);
   const extra: RawErrors = {};
@@ -284,6 +408,10 @@ export const valueResolver: Resolver<ValueValues, unknown, HomePatch> = (values)
   const bothValid = min !== undefined && max !== undefined && !Number.isNaN(min + max);
   if (bothValid && Object.keys(extra).length === 0 && min > max) {
     extra['valueMax'] = { type: 'range' };
+  }
+  const cap = context?.maxLegalPriceCents ?? null;
+  if (cap !== null && max !== undefined && extra['valueMax'] === undefined && max > cap) {
+    extra['valueMax'] = { type: 'aboveLegalPrice' };
   }
   return resolution<HomePatch>(
     {
@@ -298,7 +426,7 @@ export const valueResolver: Resolver<ValueValues, unknown, HomePatch> = (values)
   );
 };
 
-// --- Paso 4: ubicación visible ---
+// --- Paso 6: ubicación visible ---
 
 export type LocationValues = {
   locationVisibility: LocationVisibility;
@@ -326,19 +454,25 @@ type SubmitField = Extract<
   | 'valueMinCents'
   | 'valueMaxCents'
   | 'isPrimaryResidence'
+  | 'vppQualificationDate'
 >;
 
 /** Los campos que exige `submitHome`, por el paso del asistente donde se rellenan. */
 const SUBMIT_FIELDS: readonly (readonly [WizardStep, readonly (SubmitField | 'photos')[]])[] = [
   [1, ['photos']],
-  [3, ['usefulM2', 'builtM2', 'bedrooms', 'bathrooms', 'hasLift', 'garage', 'storageRoom']],
-  [4, ['valueMinCents', 'valueMaxCents', 'isPrimaryResidence']],
+  [3, ['vppQualificationDate']],
+  [4, ['usefulM2', 'builtM2', 'bedrooms', 'bathrooms', 'hasLift', 'garage', 'storageRoom']],
+  [5, ['valueMinCents', 'valueMaxCents', 'isPrimaryResidence']],
 ];
 
-export const REVIEW_STEP: WizardStep = 6;
+export const REVIEW_STEP: WizardStep = 7;
 
-const isMissing = (home: Home, field: SubmitField | 'photos') =>
-  field === 'photos' ? (home.photos?.length ?? 0) < MIN_PHOTOS : (home[field] ?? null) === null;
+function isMissing(home: Home, field: SubmitField | 'photos'): boolean {
+  if (field === 'photos') return (home.photos?.length ?? 0) < MIN_PHOTOS;
+  // La fecha de calificación solo se exige a una vivienda protegida (RF-14)
+  if (field === 'vppQualificationDate' && !isProtectedRegime(home.regime)) return false;
+  return (home[field] ?? null) === null;
+}
 
 /**
  * El primer paso con datos obligatorios por rellenar; si no falta nada, la revisión final. Las fotos

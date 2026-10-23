@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { validateHomeInput, validateHomePatch } from './home.js';
+import { isProtectedRegime, validateHomeInput, validateHomePatch } from './home.js';
 import type { Validation } from './validation.js';
 
 const address = { placeId: 'fixture-malasana', formatted: 'Calle del Pez, 12, 28004 Madrid' };
@@ -125,5 +125,18 @@ describe('validateHomePatch', () => {
       { field: 'usefulM2', code: 'required' },
       { field: 'status', code: 'invalid' },
     ]);
+  });
+});
+
+describe('isProtectedRegime', () => {
+  it.each(['VPPB', 'VPPL', 'VPO'] as const)(
+    'Scenario: VPP sin fecha de calificación - %s es un régimen protegido',
+    (regime) => {
+      expect(isProtectedRegime(regime)).toBe(true);
+    },
+  );
+
+  it('Scenario: Vivienda libre - libre no es un régimen protegido', () => {
+    expect(isProtectedRegime('libre')).toBe(false);
   });
 });
