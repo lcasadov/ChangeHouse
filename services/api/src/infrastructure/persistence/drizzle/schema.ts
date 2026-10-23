@@ -15,6 +15,7 @@ import {
   customType,
   date,
   index,
+  integer,
   jsonb,
   numeric,
   pgEnum,
@@ -345,7 +346,7 @@ export const matches = pgTable(
     type: smallint('type').notNull(),
     status: matchStatusEnum('status').notNull().default('open'),
     cycleKey: text('cycle_key').notNull().unique(),
-    // Chat de grupo en Firestore: llega con `add-match-chat`
+    // Chat de grupo en Firestore: lo rellena el despachador del outbox cuando lo crea (`add-match-chat`)
     chatId: text('chat_id'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -387,5 +388,30 @@ export const matchParticipants = pgTable(
     // Mis matches (`listMyMatches`) y ¿este me gusta forma parte de un match? (deshacer)
     index('match_participants_user_idx').on(table.userId, table.matchId),
     index('match_participants_gives_receives_idx').on(table.givesHomeId, table.receivesHomeId),
+  ],
+);
+
+/**
+ * Bandeja de salida (patrón *outbox*): eventos de negocio que hay que propagar a un sistema externo
+ * (por ahora, crear el chat de Firestore de un match nuevo). Se insertan en la misma transacción
+ * que el cambio de negocio y un despachador los procesa después; `processed_at` nulo = pendiente.
+ * Un mismo hecho (`type` sobre `aggregate_id`) se registra una sola vez.
+ */
+export const outbox = pgTable(
+  'outbox',
+  {
+    id: uuid('id').primaryKey(),
+    type: text('type').notNull(),
+    aggregateId: uuid('aggregate_id').notNull(),
+    attempts: integer('attempts').notNull().default(0),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    processedAt: timestamp('processed_at', { withTimezone: true }),
+  },
+  (table) => [
+    unique('outbox_type_aggregate_key').on(table.type, table.aggregateId),
+    // Los pendientes, en orden de llegada: es lo único que lee el despachador
+    index('outbox_pending_idx')
+      .on(table.createdAt)
+      .where(sql`${table.processedAt} IS NULL`),
   ],
 );

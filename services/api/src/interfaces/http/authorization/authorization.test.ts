@@ -115,6 +115,10 @@ describe('política de autorización', () => {
       confirmMatch: { kind: 'roles', roles: ['seeker', 'owner'] },
       withdrawFromMatch: { kind: 'roles', roles: ['seeker', 'owner'] },
       setPhoneSharing: { kind: 'roles', roles: ['seeker', 'owner'] },
+      // Chat: solo participantes (seeker u owner); la pertenencia la resuelve el caso de uso con un 404
+      getChatImageUrl: { kind: 'roles', roles: ['seeker', 'owner'] },
+      createChatImageUpload: { kind: 'roles', roles: ['seeker', 'owner'] },
+      sendMatchMessage: { kind: 'roles', roles: ['seeker', 'owner'] },
       // Moderación: solo el admin (RF-18, RF-93)
       adminListHomes: { kind: 'roles', roles: ['admin'] },
       adminModerateHome: { kind: 'roles', roles: ['admin'] },

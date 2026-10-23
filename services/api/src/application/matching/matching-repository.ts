@@ -2,6 +2,7 @@ import type { AcceptedCycle, CycleHome, CycleType } from '../../domain/matching/
 import type { MatchState, MatchStatus, ParticipantStatus } from '../../domain/matching/match.js';
 import type { PublicHome } from '../home/home-views.js';
 import type { ModerationCursor } from '../moderation/cursor.js';
+import type { OutboxWriter } from '../outbox/outbox.js';
 
 /**
  * Puerto de salida: los ciclos candidatos que cierra la arista `from → to` recién insertada
@@ -37,6 +38,8 @@ export interface MatchRecord {
   readonly type: CycleType;
   readonly status: MatchStatus;
   readonly createdAt: Date;
+  /** Identificador del chat en Firestore; `null` o ausente hasta que el despachador lo crea. */
+  readonly chatId?: string | null;
   readonly participants: readonly MatchParticipantRecord[];
 }
 
@@ -54,6 +57,8 @@ export interface MatchWriter {
 export interface MatchingTransaction {
   readonly cycles: CycleCandidates;
   readonly matches: MatchWriter;
+  /** Hechos a propagar tras confirmar la transacción (el chat del match nuevo). */
+  readonly outbox: OutboxWriter;
 }
 
 /** Matches en los que participa una vivienda del usuario, del más reciente al más antiguo. */

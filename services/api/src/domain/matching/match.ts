@@ -73,3 +73,14 @@ export function ensureCanSharePhone(match: MatchState, userId: string): void {
   participantsOf(match, userId);
   if (match.status !== 'open' && match.status !== 'confirmed') throw new MatchNotOpenError();
 }
+
+/** Se puede escribir en el chat mientras el match está `open` o `confirmed`; después queda en solo lectura. */
+export function ensureCanChat(match: MatchState, userId: string): void {
+  participantsOf(match, userId);
+  if (match.status !== 'open' && match.status !== 'confirmed') throw new MatchNotOpenError();
+}
+
+/** Quien participa en el match, sea cual sea su estado; si no, el match no existe para él. */
+export function ensureParticipant(match: MatchState, userId: string): void {
+  participantsOf(match, userId);
+}

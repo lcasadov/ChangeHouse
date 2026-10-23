@@ -1,7 +1,20 @@
 rules_version = '2';
-// Denegación por defecto. Cada change que use Firestore (chat) abre solo lo que necesita.
+// Denegación por defecto. Cada change que use Firestore abre solo lo que necesita.
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Chat de un match: lo escribe solo la API (firebase-admin, que no pasa por estas reglas) y lo
+    // leen los participantes, cuyos `firebase_uid` figuran en `participantUids` (add-match-chat).
+    match /chats/{chatId} {
+      allow read: if request.auth != null && request.auth.uid in resource.data.participantUids;
+      allow write: if false;
+
+      match /messages/{messageId} {
+        allow read: if request.auth != null
+          && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantUids;
+        allow write: if false;
+      }
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

@@ -15,7 +15,11 @@ export interface ApiConfig {
     projectId: string;
     /** `host:puerto` del emulador de Auth. Solo en local y en las pruebas. */
     authEmulatorHost: string | undefined;
+    /** `host:puerto` del emulador de Firestore (chat). Solo en local y en las pruebas. */
+    firestoreEmulatorHost: string | undefined;
   };
+  /** Reintento periódico de los hechos pendientes de la bandeja de salida (creación de chats). */
+  outbox: { intervalSeconds: number };
   /** Clave AES-256 (base64, 32 bytes) con la que se cifra la dirección postal de las viviendas. */
   addressEncryptionKey: string;
   places: {
@@ -44,6 +48,7 @@ const DEFAULT_APP_ORIGIN = 'http://localhost:8081'; // `expo start --web`
 const DEFAULT_WAITLIST_MAX = 5;
 const DEFAULT_WAITLIST_WINDOW_SECONDS = 600; // 10 minutos
 const DEFAULT_LIKES_PER_DAY = 10;
+const DEFAULT_OUTBOX_INTERVAL_SECONDS = 30;
 const CLOUD_RUN_PROXY_HOPS = 1;
 const DEFAULT_PRIVATE_BUCKET = 'changehouse-photos-private'; // docker-compose.yml
 const DEFAULT_PUBLIC_BUCKET = 'changehouse-photos-public'; // docker-compose.yml
@@ -114,6 +119,12 @@ export function loadConfig(env: Env = process.env): ApiConfig {
     throw new Error('FIREBASE_AUTH_EMULATOR_HOST no puede definirse en Cloud Run');
   }
 
+  const firestoreEmulatorHost = env['FIRESTORE_EMULATOR_HOST'] || undefined;
+  // El emulador no aplica las reglas de producción: en Cloud Run escribiría el chat en un servidor falso
+  if (firestoreEmulatorHost && env['K_SERVICE']) {
+    throw new Error('FIRESTORE_EMULATOR_HOST no puede definirse en Cloud Run');
+  }
+
   const addressEncryptionKey = env['ADDRESS_ENCRYPTION_KEY'];
   if (!addressEncryptionKey) throw new Error('Falta la variable ADDRESS_ENCRYPTION_KEY');
   const placesServerKey = env['GOOGLE_PLACES_SERVER_KEY'] || undefined;
@@ -139,7 +150,10 @@ export function loadConfig(env: Env = process.env): ApiConfig {
       windowSeconds: integer(env, 'WAITLIST_RATE_LIMIT_WINDOW', DEFAULT_WAITLIST_WINDOW_SECONDS, 1),
     },
     likesPerDay: integer(env, 'LIKES_PER_DAY', DEFAULT_LIKES_PER_DAY, 1),
-    firebase: { projectId, authEmulatorHost },
+    firebase: { projectId, authEmulatorHost, firestoreEmulatorHost },
+    outbox: {
+      intervalSeconds: integer(env, 'OUTBOX_INTERVAL_SECONDS', DEFAULT_OUTBOX_INTERVAL_SECONDS, 1),
+    },
     addressEncryptionKey,
     places: { serverKey: placesServerKey },
     storage: storageConfig(env),

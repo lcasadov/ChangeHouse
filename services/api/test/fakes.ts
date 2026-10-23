@@ -5,6 +5,13 @@ import type { ConsentRepository } from '../src/application/account/consent-repos
 import type { HomeOwnership } from '../src/application/account/home-ownership.js';
 import type { ProfileChanges, UserRepository } from '../src/application/account/user-repository.js';
 import type {
+  ChatChannel,
+  ChatMessageRecord,
+  NewChat,
+} from '../src/application/chat/chat-channel.js';
+import type { ChatImageStorage } from '../src/application/chat/chat-image-storage.js';
+import type { ChatRoster, ChatSetup } from '../src/application/chat/chat-setup.js';
+import type {
   DecisionOrigin,
   DecisionStore,
   DecisionUnitOfWork,
@@ -39,6 +46,13 @@ import type {
 } from '../src/application/matching/matching-repository.js';
 import type { AuditEntry, AuditLog } from '../src/application/moderation/audit-log.js';
 import type { ModerationScope, UnitOfWork } from '../src/application/moderation/unit-of-work.js';
+import type {
+  NewOutboxEvent,
+  OutboxProcessor,
+  OutboxWriter,
+  PendingOutboxEvent,
+  ProcessSummary,
+} from '../src/application/outbox/outbox.js';
 import type {
   PreferencesScope,
   SearchPreferencesRepository,
@@ -513,6 +527,7 @@ export class InMemoryDecisionUnitOfWork implements DecisionUnitOfWork {
   constructor(
     readonly store: InMemoryDecisionStore,
     readonly matching: InMemoryMatchStore,
+    readonly outbox: InMemoryOutbox = new InMemoryOutbox(),
   ) {}
 
   async run<T>(
@@ -522,13 +537,19 @@ export class InMemoryDecisionUnitOfWork implements DecisionUnitOfWork {
     const dismissals = this.store.dismissals.map((row) => ({ ...row }));
     const records = [...this.matching.records];
     const saved = [...this.matching.saved];
+    const events = this.outbox.events.map((event) => ({ ...event }));
     try {
-      return await work(this.store, { cycles: this.matching, matches: this.matching });
+      return await work(this.store, {
+        cycles: this.matching,
+        matches: this.matching,
+        outbox: this.outbox,
+      });
     } catch (error) {
       this.store.likes.splice(0, this.store.likes.length, ...likes);
       this.store.dismissals.splice(0, this.store.dismissals.length, ...dismissals);
       this.matching.records.splice(0, this.matching.records.length, ...records);
       this.matching.saved.splice(0, this.matching.saved.length, ...saved);
+      this.outbox.events.splice(0, this.outbox.events.length, ...events);
       throw error;
     }
   }
@@ -743,5 +764,141 @@ export class FakeMatchLookup implements MatchLookup {
 
   isLikeInMatch(from: string, to: string): Promise<boolean> {
     return Promise.resolve(this.inMatch.has(`${from}>${to}`));
+  }
+}
+
+/** Bandeja de salida en memoria: un hecho por (tipo, agregado) y un contador de intentos fallidos. */
+export class InMemoryOutbox implements OutboxWriter, OutboxProcessor {
+  readonly events: {
+    id: string;
+    type: string;
+    aggregateId: string;
+    attempts: number;
+    processedAt: Date | null;
+  }[] = [];
+
+  enqueue(event: NewOutboxEvent): Promise<void> {
+    const exists = this.events.some(
+      (known) => known.type === event.type && known.aggregateId === event.aggregateId,
+    );
+    if (!exists) {
+      this.events.push({
+        id: event.id,
+        type: event.type,
+        aggregateId: event.aggregateId,
+        attempts: 0,
+        processedAt: null,
+      });
+    }
+    return Promise.resolve();
+  }
+
+  async processPending(
+    limit: number,
+    handle: (event: PendingOutboxEvent) => Promise<void>,
+    at: Date,
+  ): Promise<ProcessSummary> {
+    const summary = { processed: 0, failed: 0 };
+    for (const event of this.events.filter((known) => known.processedAt === null).slice(0, limit)) {
+      try {
+        await handle(event);
+        event.processedAt = at;
+        summary.processed += 1;
+      } catch {
+        event.attempts += 1;
+        summary.failed += 1;
+      }
+    }
+    return summary;
+  }
+}
+
+/** Chat en memoria; `failures` hace fallar las siguientes escrituras (Firestore caído). */
+export class InMemoryChatChannel implements ChatChannel {
+  readonly chats = new Map<string, { chat: NewChat; messages: ChatMessageRecord[] }>();
+  /** Escrituras que se rechazan antes de volver a funcionar. */
+  failures = 0;
+  createCalls = 0;
+
+  /** El fallo de esta escritura, si Firestore está «caído». */
+  private outage(): Error | null {
+    if (this.failures <= 0) return null;
+    this.failures -= 1;
+    return new Error('Firestore no disponible');
+  }
+
+  createChat(chat: NewChat): Promise<void> {
+    this.createCalls += 1;
+    const outage = this.outage();
+    if (outage) return Promise.reject(outage);
+    if (!this.chats.has(chat.chatId)) {
+      this.chats.set(chat.chatId, { chat, messages: [chat.welcome] });
+    }
+    return Promise.resolve();
+  }
+
+  appendMessage(chatId: string, message: ChatMessageRecord): Promise<void> {
+    const outage = this.outage();
+    if (outage) return Promise.reject(outage);
+    const stored = this.chats.get(chatId);
+    if (!stored) return Promise.reject(new Error(`Chat inexistente: ${chatId}`));
+    stored.messages.push(message);
+    return Promise.resolve();
+  }
+}
+
+/** Participantes y enlace del chat en memoria. */
+export class InMemoryChatSetup implements ChatSetup {
+  readonly rosters = new Map<string, ChatRoster>();
+
+  findRoster(matchId: string): Promise<ChatRoster | null> {
+    return Promise.resolve(this.rosters.get(matchId) ?? null);
+  }
+
+  linkChat(matchId: string, chatId: string): Promise<void> {
+    const roster = this.rosters.get(matchId);
+    if (roster) this.rosters.set(matchId, { ...roster, chatId });
+    return Promise.resolve();
+  }
+}
+
+/** Almacenamiento privado de las imágenes del chat en memoria. */
+export class InMemoryChatImageStorage implements ChatImageStorage {
+  readonly originals = new Map<string, Buffer>();
+  readonly stored = new Map<string, { data: Buffer; contentType: string }>();
+  readonly uploadUrls: { path: string; contentType: string; expiresAt: Date }[] = [];
+  readonly signed: { path: string; expiresAt: Date }[] = [];
+
+  createUploadUrl(path: string, contentType: string, expiresAt: Date): Promise<string> {
+    this.uploadUrls.push({ path, contentType, expiresAt });
+    return Promise.resolve(`https://storage.test/upload/${path}`);
+  }
+
+  readOriginal(path: string, maxBytes: number): Promise<OriginalFile> {
+    const data = this.originals.get(path);
+    if (!data) return Promise.resolve({ status: 'missing' });
+    return Promise.resolve(
+      data.length > maxBytes ? { status: 'too_large' } : { status: 'found', data },
+    );
+  }
+
+  store(path: string, data: Buffer, contentType: string): Promise<void> {
+    this.stored.set(path, { data, contentType });
+    return Promise.resolve();
+  }
+
+  delete(path: string): Promise<void> {
+    this.originals.delete(path);
+    this.stored.delete(path);
+    return Promise.resolve();
+  }
+
+  exists(path: string): Promise<boolean> {
+    return Promise.resolve(this.stored.has(path));
+  }
+
+  signedReadUrl(path: string, expiresAt: Date): Promise<string> {
+    this.signed.push({ path, expiresAt });
+    return Promise.resolve(`https://storage.test/read/${path}?expires=${expiresAt.toISOString()}`);
   }
 }

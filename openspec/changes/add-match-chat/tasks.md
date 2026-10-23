@@ -2,18 +2,18 @@
 
 ## 1. Reglas y canal
 
-- [ ] T1 Escribir las pruebas de las reglas de Firestore con el emulador (participante lee, ajeno no lee, nadie escribe desde el cliente) y comprobar que fallan con las reglas actuales donde corresponda. ref: Solo los participantes leen el chat · est: 2h · disc: qa
+- [x] T1 Escribir las pruebas de las reglas de Firestore con el emulador (participante lee, ajeno no lee, nadie escribe desde el cliente) y comprobar que fallan con las reglas actuales donde corresponda. ref: Solo los participantes leen el chat · est: 2h · disc: qa
   - GIVEN un usuario ajeno WHEN lee `chats/{chatId}/messages` THEN la regla deniega el acceso
-- [ ] B1 Escribir las reglas del chat en `firebase/firestore.rules`, añadir el emulador de Firestore al job de integración de la CI y verificar que pasan las pruebas de T1. ref: Solo los participantes leen el chat · est: 2h · disc: back
+- [x] B1 Escribir las reglas del chat en `firebase/firestore.rules`, añadir el emulador de Firestore al job de integración de la CI y verificar que pasan las pruebas de T1. ref: Solo los participantes leen el chat · est: 2h · disc: back
   - GIVEN un participante WHEN escribe directamente un mensaje THEN la regla deniega la escritura
 
 ## 2. API
 
-- [ ] B2 Crear la tabla `outbox` con su migración, añadir `sendMatchMessage` y `createChatImageUpload` al contrato y verificar la migración y la validación de Redocly. ref: Chat de grupo por match · est: 2h · disc: bd
+- [x] B2 Crear la tabla `outbox` con su migración, añadir `sendMatchMessage` y `createChatImageUpload` al contrato y verificar la migración y la validación de Redocly. ref: Chat de grupo por match · est: 2h · disc: bd
   - GIVEN el contrato actualizado WHEN se valida con Redocly THEN no hay errores
-- [ ] T2 Escribir las pruebas de integración de la creación del chat por el outbox (incluido el reintento tras un fallo de Firestore), del envío de texto e imagen, de los límites (vacío, 2.001 caracteres), del 409 en match cerrado y del 404 a usuarios ajenos, con sus filas en la matriz, y comprobar que fallan. ref: Enviar mensajes · est: 4h · disc: qa
+- [x] T2 Escribir las pruebas de integración de la creación del chat por el outbox (incluido el reintento tras un fallo de Firestore), del envío de texto e imagen, de los límites (vacío, 2.001 caracteres), del 409 en match cerrado y del 404 a usuarios ajenos, con sus filas en la matriz, y comprobar que fallan. ref: Enviar mensajes · est: 4h · disc: qa
   - GIVEN un fallo de Firestore al crear el match WHEN se reintenta el despacho THEN el chat acaba creado una sola vez
-- [ ] B3 Implementar el puerto `ChatChannel` con el adaptador de Firestore, el despachador del outbox, los casos de uso y las rutas, y verificar que pasan las pruebas de T2. ref: Chat de un match cerrado · est: 6h · disc: back
+- [x] B3 Implementar el puerto `ChatChannel` con el adaptador de Firestore, el despachador del outbox, los casos de uso y las rutas, y verificar que pasan las pruebas de T2. ref: Chat de un match cerrado · est: 6h · disc: back
   - GIVEN un match `closed` WHEN se envía un mensaje THEN la respuesta es 409
 
 ## 3. App

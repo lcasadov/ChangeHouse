@@ -14,6 +14,8 @@ declare module 'vitest' {
     adminUrl: string;
     /** `host:puerto` del emulador de Firebase Auth, o cadena vacía si no está disponible en local. */
     authEmulatorHost: string;
+    /** `host:puerto` del emulador de Firestore, o cadena vacía si no está disponible en local. */
+    firestoreEmulatorHost: string;
     /** `host:puerto` de fake-gcs-server (Cloud Storage simulado) con los buckets de las fotos ya creados. */
     storageEmulatorHost: string;
   }
@@ -28,6 +30,7 @@ const PASSWORD = 'changehouse';
 const PORT = 5432;
 
 const DEFAULT_AUTH_EMULATOR_HOST = 'localhost:9099';
+const DEFAULT_FIRESTORE_EMULATOR_HOST = 'localhost:8085'; // firebase.json
 const PROBE_TIMEOUT_MS = 2000;
 
 async function isReachable(host: string): Promise<boolean> {
@@ -42,15 +45,15 @@ async function isReachable(host: string): Promise<boolean> {
 }
 
 /**
- * Localiza el emulador de Auth. En local, si no está arrancado, las pruebas que lo necesitan se
+ * Localiza un emulador de Firebase. En local, si no está arrancado, las pruebas que lo necesitan se
  * omiten con un aviso; en la CI su ausencia es un error: nunca se da por buena una ejecución sin él.
  */
-async function locateAuthEmulator(): Promise<string> {
-  const host = process.env['FIREBASE_AUTH_EMULATOR_HOST'] ?? DEFAULT_AUTH_EMULATOR_HOST;
+async function locateEmulator(name: string, envVar: string, fallback: string): Promise<string> {
+  const host = process.env[envVar] ?? fallback;
   if (await isReachable(host)) return host;
-  if (process.env['CI']) throw new Error(`El emulador de Firebase Auth no responde en ${host}`);
+  if (process.env['CI']) throw new Error(`El emulador de ${name} no responde en ${host}`);
   process.stderr.write(
-    `\n[integración] El emulador de Firebase Auth no responde en ${host}: se OMITEN las pruebas que lo necesitan.\n` +
+    `\n[integración] El emulador de ${name} no responde en ${host}: se OMITEN las pruebas que lo necesitan.\n` +
       '  Ejecuta `pnpm test:integration` desde la raíz (lo arranca) o `pnpm emulators` en otra terminal.\n\n',
   );
   return '';
@@ -111,7 +114,18 @@ export default async function setup(project: TestProject): Promise<() => Promise
 
   project.provide('databaseUrl', databaseUrl);
   project.provide('adminUrl', databaseUrl);
-  project.provide('authEmulatorHost', await locateAuthEmulator());
+  project.provide(
+    'authEmulatorHost',
+    await locateEmulator(
+      'Firebase Auth',
+      'FIREBASE_AUTH_EMULATOR_HOST',
+      DEFAULT_AUTH_EMULATOR_HOST,
+    ),
+  );
+  project.provide(
+    'firestoreEmulatorHost',
+    await locateEmulator('Firestore', 'FIRESTORE_EMULATOR_HOST', DEFAULT_FIRESTORE_EMULATOR_HOST),
+  );
   const storage = await startStorage();
   project.provide('storageEmulatorHost', storage.host);
   return async () => {

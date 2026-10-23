@@ -27,6 +27,9 @@ API (RNF-01). Motivación en `proposal.md`.
   de vivienda; `sendMatchMessage` con `imageUploadId` procesa la imagen
   (reutiliza `ImageProcessor`) y la publica en una ruta privada servida con URL
   firmada de corta duración.
+  El mensaje de Firestore guarda solo un `imageId` opaco; los demás participantes lo
+  cambian por una URL firmada de 15 minutos con `getChatImageUrl`
+  (`GET /matches/{matchId}/chat/images/{imageId}`, solo participantes).
 - **Pruebas de reglas** con `@firebase/rules-unit-testing` contra el emulador
   de Firestore (también en el job de integración de la CI).
 

@@ -1,0 +1,432 @@
+import { describe, expect, it } from 'vitest';
+
+import {
+  InMemoryChatChannel,
+  InMemoryChatImageStorage,
+  InMemoryChatSetup,
+  InMemoryMatchReader,
+  StubImageProcessor,
+} from '../../../test/fakes.js';
+import {
+  ChatImageNotFoundError,
+  ChatNotReadyError,
+  ImageNotUploadedError,
+} from '../../domain/chat/errors.js';
+import { InvalidImageError } from '../../domain/home/errors.js';
+import { MatchNotFoundError, MatchNotOpenError } from '../../domain/matching/errors.js';
+import type { MatchRecord } from '../matching/matching-repository.js';
+import { chatOperations } from './chat-operations.js';
+import { chatImagePath, chatUploadPath } from './chat-paths.js';
+
+const MATCH_ID = 'match-1';
+const ANA = 'user-ana';
+const BETO = 'user-beto';
+const NOW = new Date('2026-10-20T09:00:00.000Z');
+const MINUTE = 60_000;
+const UPLOAD_ID = '0199c1a2-7b3e-7c1d-8a40-3f5e6d7c8b9a';
+
+function match(overrides: Partial<MatchRecord> = {}): MatchRecord {
+  const participant = (userId: string, displayName: string, other: string) => ({
+    homeId: `home-${userId}`,
+    userId,
+    displayName,
+    givesHomeId: `home-${userId}`,
+    receivesHomeId: `home-${other}`,
+    compensationCents: 0,
+    status: 'pending' as const,
+  });
+  return {
+    id: MATCH_ID,
+    type: 2,
+    status: 'open',
+    createdAt: NOW,
+    chatId: MATCH_ID,
+    participants: [participant(ANA, 'Ana', BETO), participant(BETO, 'Beto', ANA)],
+    ...overrides,
+  };
+}
+
+function setup(record: MatchRecord = match()) {
+  const reader = new InMemoryMatchReader([record]);
+  const chatSetup = new InMemoryChatSetup();
+  chatSetup.rosters.set(MATCH_ID, {
+    matchId: MATCH_ID,
+    chatId: record.chatId ?? null,
+    members: [
+      { userId: ANA, firebaseUid: 'uid-ana', displayName: 'Ana' },
+      { userId: BETO, firebaseUid: 'uid-beto', displayName: 'Beto' },
+    ],
+  });
+  const channel = new InMemoryChatChannel();
+  if (record.chatId) {
+    channel.chats.set(record.chatId, {
+      chat: {
+        chatId: record.chatId,
+        matchId: MATCH_ID,
+        participantUids: ['uid-ana', 'uid-beto'],
+        welcome: {
+          id: 'welcome',
+          kind: 'system',
+          event: 'welcome',
+          participantNames: [],
+          createdAt: NOW,
+        },
+        createdAt: NOW,
+      },
+      messages: [],
+    });
+  }
+  const storage = new InMemoryChatImageStorage();
+  const images = new StubImageProcessor();
+  let sequence = 0;
+  const operations = chatOperations({
+    matches: reader,
+    setup: chatSetup,
+    channel,
+    storage,
+    images,
+    clock: { now: () => NOW },
+    ids: { next: () => `id-${String(++sequence)}` },
+  });
+  return { operations, reader, chatSetup, channel, storage, images };
+}
+
+describe('createChatForMatch', () => {
+  it('Scenario: Chat creado con el match - crea el chat con los uid de Firebase y un mensaje del sistema que presenta a los participantes', async () => {
+    const { operations, channel, chatSetup } = setup(match({ chatId: null }));
+
+    await operations.createChatForMatch(MATCH_ID);
+
+    const created = channel.chats.get(MATCH_ID);
+    expect(created?.chat).toMatchObject({
+      chatId: MATCH_ID,
+      matchId: MATCH_ID,
+      participantUids: ['uid-ana', 'uid-beto'],
+      createdAt: NOW,
+    });
+    expect(created?.messages).toEqual([
+      {
+        id: 'welcome',
+        kind: 'system',
+        event: 'welcome',
+        participantNames: ['Ana', 'Beto'],
+        createdAt: NOW,
+      },
+    ]);
+    expect((await chatSetup.findRoster(MATCH_ID))?.chatId).toBe(MATCH_ID);
+  });
+
+  it('GIVEN un fallo de Firestore WHEN se reintenta THEN el chat acaba creado una sola vez y enlazado', async () => {
+    const { operations, channel, chatSetup } = setup(match({ chatId: null }));
+    channel.failures = 1;
+
+    await expect(operations.createChatForMatch(MATCH_ID)).rejects.toThrow('Firestore');
+    expect((await chatSetup.findRoster(MATCH_ID))?.chatId).toBeNull();
+    await operations.createChatForMatch(MATCH_ID);
+    await operations.createChatForMatch(MATCH_ID);
+
+    expect(channel.chats.size).toBe(1);
+    expect(channel.chats.get(MATCH_ID)?.messages).toHaveLength(1);
+    expect(channel.createCalls).toBe(2);
+    expect((await chatSetup.findRoster(MATCH_ID))?.chatId).toBe(MATCH_ID);
+  });
+
+  it('si el match ya tiene chat no vuelve a escribir en Firestore', async () => {
+    const { operations, channel } = setup();
+
+    await operations.createChatForMatch(MATCH_ID);
+
+    expect(channel.createCalls).toBe(0);
+  });
+
+  it('un match que ya no existe no es un error: no hay nada que crear', async () => {
+    const { operations, channel } = setup();
+
+    await expect(operations.createChatForMatch('otro')).resolves.toBeUndefined();
+
+    expect(channel.createCalls).toBe(0);
+  });
+});
+
+describe('sendMatchMessage - texto', () => {
+  it('un participante envía un texto: se escribe con su id interno y su nombre, y nada más', async () => {
+    const { operations, channel } = setup();
+
+    const view = await operations.sendMatchMessage(ANA, MATCH_ID, {
+      kind: 'text',
+      text: '¿Te viene bien visitarla el sábado?',
+    });
+
+    expect(view).toEqual({
+      id: 'id-1',
+      kind: 'text',
+      text: '¿Te viene bien visitarla el sábado?',
+      imageUrl: null,
+      createdAt: NOW.toISOString(),
+    });
+    expect(channel.chats.get(MATCH_ID)?.messages).toEqual([
+      {
+        id: 'id-1',
+        kind: 'text',
+        senderId: ANA,
+        senderName: 'Ana',
+        text: '¿Te viene bien visitarla el sábado?',
+        createdAt: NOW,
+      },
+    ]);
+  });
+
+  it('Scenario: Usuario ajeno - quien no participa recibe MatchNotFoundError y no se escribe nada', async () => {
+    const { operations, channel } = setup();
+
+    await expect(
+      operations.sendMatchMessage('user-intruso', MATCH_ID, { kind: 'text', text: 'hola' }),
+    ).rejects.toBeInstanceOf(MatchNotFoundError);
+    await expect(
+      operations.sendMatchMessage(ANA, 'no-existe', { kind: 'text', text: 'hola' }),
+    ).rejects.toBeInstanceOf(MatchNotFoundError);
+
+    expect(channel.chats.get(MATCH_ID)?.messages).toEqual([]);
+  });
+
+  it('Scenario: Match cerrado - responde MatchNotOpenError y el chat queda solo con su historial', async () => {
+    const { operations, channel } = setup(match({ status: 'closed' }));
+
+    const attempt = operations.sendMatchMessage(BETO, MATCH_ID, { kind: 'text', text: 'hola' });
+
+    await expect(attempt).rejects.toBeInstanceOf(MatchNotOpenError);
+    await expect(attempt).rejects.toMatchObject({ code: 'MATCH_NOT_OPEN', kind: 'conflict' });
+    expect(channel.chats.get(MATCH_ID)?.messages).toEqual([]);
+  });
+
+  it('un match confirmado admite mensajes', async () => {
+    const { operations } = setup(match({ status: 'confirmed' }));
+
+    await expect(
+      operations.sendMatchMessage(ANA, MATCH_ID, { kind: 'text', text: 'hola' }),
+    ).resolves.toMatchObject({ kind: 'text' });
+  });
+
+  it('si el chat aún no se ha creado responde ChatNotReadyError (409) y no escribe', async () => {
+    const { operations, channel } = setup(match({ chatId: null }));
+
+    const attempt = operations.sendMatchMessage(ANA, MATCH_ID, { kind: 'text', text: 'hola' });
+
+    await expect(attempt).rejects.toBeInstanceOf(ChatNotReadyError);
+    await expect(attempt).rejects.toMatchObject({ code: 'CHAT_NOT_READY', kind: 'conflict' });
+    expect(channel.chats.size).toBe(0);
+  });
+
+  it('un fallo de Firestore se propaga como error técnico', async () => {
+    const { operations, channel } = setup();
+    channel.failures = 1;
+
+    await expect(
+      operations.sendMatchMessage(ANA, MATCH_ID, { kind: 'text', text: 'hola' }),
+    ).rejects.toThrow('Firestore');
+  });
+});
+
+describe('createChatImageUpload', () => {
+  it('emite una URL firmada de 15 minutos para una ruta atada al match y a la cuenta', async () => {
+    const { operations, storage } = setup();
+
+    const upload = await operations.createChatImageUpload(ANA, MATCH_ID, 'image/jpeg');
+
+    const expiresAt = new Date(NOW.getTime() + 15 * MINUTE);
+    expect(upload).toEqual({
+      uploadId: 'id-1',
+      uploadUrl: `https://storage.test/upload/${chatUploadPath(MATCH_ID, ANA, 'id-1')}`,
+      expiresAt: expiresAt.toISOString(),
+    });
+    expect(storage.uploadUrls).toEqual([
+      { path: chatUploadPath(MATCH_ID, ANA, 'id-1'), contentType: 'image/jpeg', expiresAt },
+    ]);
+  });
+
+  it('un ajeno recibe 404 y un match cerrado 409, sin emitir ninguna URL', async () => {
+    const open = setup();
+    await expect(
+      open.operations.createChatImageUpload('user-intruso', MATCH_ID, 'image/png'),
+    ).rejects.toBeInstanceOf(MatchNotFoundError);
+    const closed = setup(match({ status: 'closed' }));
+    await expect(
+      closed.operations.createChatImageUpload(ANA, MATCH_ID, 'image/png'),
+    ).rejects.toBeInstanceOf(MatchNotOpenError);
+
+    expect(open.storage.uploadUrls).toEqual([]);
+    expect(closed.storage.uploadUrls).toEqual([]);
+  });
+});
+
+describe('sendMatchMessage - imagen', () => {
+  const upload = (storage: InMemoryChatImageStorage, content = 'IMG:foto', user = ANA) =>
+    storage.originals.set(chatUploadPath(MATCH_ID, user, UPLOAD_ID), Buffer.from(content));
+
+  it('Scenario: Imagen - se procesa, se guarda en privado, se anota en el chat y se devuelve con URL firmada de corta duración', async () => {
+    const { operations, channel, storage } = setup();
+    upload(storage);
+
+    const view = await operations.sendMatchMessage(ANA, MATCH_ID, {
+      kind: 'image',
+      imageUploadId: UPLOAD_ID,
+    });
+
+    const path = chatImagePath(MATCH_ID, 'id-1');
+    expect(storage.stored.get(path)).toEqual({
+      data: Buffer.from('WEBP:IMG:foto'),
+      contentType: 'image/webp',
+    });
+    expect(storage.originals.size).toBe(0);
+    expect(storage.signed).toEqual([{ path, expiresAt: new Date(NOW.getTime() + 15 * MINUTE) }]);
+    expect(view).toEqual({
+      id: 'id-1',
+      kind: 'image',
+      text: null,
+      imageUrl: `https://storage.test/read/${path}?expires=${new Date(NOW.getTime() + 15 * MINUTE).toISOString()}`,
+      createdAt: NOW.toISOString(),
+    });
+    expect(channel.chats.get(MATCH_ID)?.messages).toEqual([
+      {
+        id: 'id-1',
+        kind: 'image',
+        senderId: ANA,
+        senderName: 'Ana',
+        imageId: 'id-1',
+        createdAt: NOW,
+      },
+    ]);
+  });
+
+  it('una imagen que no se ha subido responde ImageNotUploadedError (422) y no escribe', async () => {
+    const { operations, channel } = setup();
+
+    const attempt = operations.sendMatchMessage(ANA, MATCH_ID, {
+      kind: 'image',
+      imageUploadId: UPLOAD_ID,
+    });
+
+    await expect(attempt).rejects.toBeInstanceOf(ImageNotUploadedError);
+    await expect(attempt).rejects.toMatchObject({ code: 'IMAGE_NOT_UPLOADED' });
+    expect(channel.chats.get(MATCH_ID)?.messages).toEqual([]);
+  });
+
+  it('el original de otro participante no sirve: la ruta lleva la cuenta de quien envía', async () => {
+    const { operations, storage } = setup();
+    upload(storage, 'IMG:foto', BETO);
+
+    await expect(
+      operations.sendMatchMessage(ANA, MATCH_ID, { kind: 'image', imageUploadId: UPLOAD_ID }),
+    ).rejects.toBeInstanceOf(ImageNotUploadedError);
+  });
+
+  it('un fichero que no es una imagen responde InvalidImageError y se descarta el original', async () => {
+    const { operations, channel, storage } = setup();
+    upload(storage, 'esto no es una imagen');
+
+    await expect(
+      operations.sendMatchMessage(ANA, MATCH_ID, { kind: 'image', imageUploadId: UPLOAD_ID }),
+    ).rejects.toBeInstanceOf(InvalidImageError);
+
+    expect(storage.originals.size).toBe(0);
+    expect(storage.stored.size).toBe(0);
+    expect(channel.chats.get(MATCH_ID)?.messages).toEqual([]);
+  });
+
+  it('un original demasiado grande se descarta como imagen no válida', async () => {
+    const { operations, storage } = setup();
+    upload(storage, 'IMG:'.padEnd(25 * 1024 * 1024 + 1, 'x'));
+
+    await expect(
+      operations.sendMatchMessage(ANA, MATCH_ID, { kind: 'image', imageUploadId: UPLOAD_ID }),
+    ).rejects.toBeInstanceOf(InvalidImageError);
+    expect(storage.originals.size).toBe(0);
+  });
+
+  it('si Firestore falla, la imagen publicada se retira y el original se conserva para reintentar', async () => {
+    const { operations, channel, storage } = setup();
+    upload(storage);
+    channel.failures = 1;
+
+    await expect(
+      operations.sendMatchMessage(ANA, MATCH_ID, { kind: 'image', imageUploadId: UPLOAD_ID }),
+    ).rejects.toThrow('Firestore');
+
+    expect(storage.stored.size).toBe(0);
+    expect(storage.originals.size).toBe(1);
+    await expect(
+      operations.sendMatchMessage(ANA, MATCH_ID, { kind: 'image', imageUploadId: UPLOAD_ID }),
+    ).resolves.toMatchObject({ kind: 'image' });
+  });
+
+  it('Scenario: Match cerrado - no se procesa ninguna imagen', async () => {
+    const { operations, storage, images } = setup(match({ status: 'closed' }));
+    upload(storage);
+
+    await expect(
+      operations.sendMatchMessage(ANA, MATCH_ID, { kind: 'image', imageUploadId: UPLOAD_ID }),
+    ).rejects.toBeInstanceOf(MatchNotOpenError);
+
+    expect(images.received).toEqual([]);
+  });
+});
+
+describe('getChatImageUrl', () => {
+  const IMAGE_ID = 'imagen-1';
+  const stored = (storage: InMemoryChatImageStorage) =>
+    storage.stored.set(chatImagePath(MATCH_ID, IMAGE_ID), {
+      data: Buffer.from('webp'),
+      contentType: 'image/webp',
+    });
+
+  it('un participante obtiene una URL firmada de 15 minutos de una imagen del chat', async () => {
+    const { operations, storage } = setup();
+    stored(storage);
+
+    const result = await operations.getChatImageUrl(BETO, MATCH_ID, IMAGE_ID);
+
+    const expiresAt = new Date(NOW.getTime() + 15 * MINUTE);
+    const path = chatImagePath(MATCH_ID, IMAGE_ID);
+    expect(result).toEqual({
+      url: `https://storage.test/read/${path}?expires=${expiresAt.toISOString()}`,
+      expiresAt: expiresAt.toISOString(),
+    });
+    expect(storage.signed).toEqual([{ path, expiresAt }]);
+  });
+
+  it('con el match cerrado el historial sigue siendo legible', async () => {
+    const { operations, storage } = setup(match({ status: 'closed' }));
+    stored(storage);
+
+    await expect(operations.getChatImageUrl(ANA, MATCH_ID, IMAGE_ID)).resolves.toHaveProperty(
+      'url',
+    );
+  });
+
+  it('Scenario: Usuario ajeno - quien no participa recibe MatchNotFoundError y no se firma nada', async () => {
+    const { operations, storage } = setup();
+    stored(storage);
+
+    await expect(
+      operations.getChatImageUrl('user-intruso', MATCH_ID, IMAGE_ID),
+    ).rejects.toBeInstanceOf(MatchNotFoundError);
+    await expect(operations.getChatImageUrl(ANA, 'no-existe', IMAGE_ID)).rejects.toBeInstanceOf(
+      MatchNotFoundError,
+    );
+    expect(storage.signed).toEqual([]);
+  });
+
+  it('una imagen que no existe en este match es ChatImageNotFoundError (404)', async () => {
+    const { operations, storage } = setup();
+    storage.stored.set(chatImagePath('otro-match', IMAGE_ID), {
+      data: Buffer.from('webp'),
+      contentType: 'image/webp',
+    });
+
+    const attempt = operations.getChatImageUrl(ANA, MATCH_ID, IMAGE_ID);
+
+    await expect(attempt).rejects.toBeInstanceOf(ChatImageNotFoundError);
+    await expect(attempt).rejects.toMatchObject({ kind: 'not_found' });
+    expect(storage.signed).toEqual([]);
+  });
+});

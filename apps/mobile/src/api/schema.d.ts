@@ -606,6 +606,94 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/matches/{matchId}/chat/image-uploads': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        matchId: components['parameters']['MatchId'];
+      };
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Solicita una URL firmada para subir una imagen al chat del match (RF-52)
+     * @description Devuelve una URL firmada de subida (`PUT`, válida 15 minutos, con el `Content-Type`
+     *     indicado) y el `uploadId` con el que se envía el mensaje (`sendMatchMessage`). La
+     *     imagen no llega al chat hasta ese envío. Solo vale mientras el match está `open` o
+     *     `confirmed`; en otro estado, 409 con `code: MATCH_NOT_OPEN`. Quien no participa
+     *     recibe 404, igual que ante un match inexistente.
+     */
+    post: operations['createChatImageUpload'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/matches/{matchId}/messages': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        matchId: components['parameters']['MatchId'];
+      };
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Envía un mensaje de texto o una imagen al chat del match (RF-52, RF-60)
+     * @description La API comprueba que quien envía participa en el match y que el match está `open` o
+     *     `confirmed`, y escribe el mensaje en el chat de Firestore, que los participantes leen
+     *     en tiempo real (ningún cliente escribe en él directamente, RC-16). El cuerpo lleva
+     *     **exactamente uno** de `text` (de 1 a 2.000 caracteres, no solo espacios) o
+     *     `imageUploadId` (el `uploadId` de `createChatImageUpload`, con la imagen ya subida).
+     *     Un mensaje vacío o de más de 2.000 caracteres: 400 con el campo `text` (`required` o
+     *     `too_long`). La imagen se procesa como las fotos de vivienda (sin metadatos, lado
+     *     mayor de 2048 px, WebP) y se guarda en un espacio privado; `imageUrl` es una URL
+     *     firmada de corta duración (el resto de participantes la piden con `getChatImageUrl`;
+     *     en Firestore el mensaje lleva solo un `imageId` opaco, nunca la ruta de almacenamiento). Si el fichero no es una imagen válida: 422 con
+     *     `code: INVALID_IMAGE`; si aún no se ha subido: 422 con `code: IMAGE_NOT_UPLOADED`.
+     *     Match no `open` ni `confirmed` (por ejemplo, `closed`: el chat queda en solo lectura):
+     *     409 con `code: MATCH_NOT_OPEN`. Chat aún sin crear: 409 con `code: CHAT_NOT_READY`
+     *     (se reintenta). Quien no participa recibe 404, igual que ante un match inexistente.
+     */
+    post: operations['sendMatchMessage'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/matches/{matchId}/chat/images/{imageId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        matchId: components['parameters']['MatchId'];
+        /** @description Identificador opaco (`imageId`) del mensaje de imagen en Firestore */
+        imageId: string;
+      };
+      cookie?: never;
+    };
+    /**
+     * URL firmada de corta duración de una imagen del chat (RF-52)
+     * @description Los mensajes de imagen de Firestore llevan solo un `imageId` opaco; los participantes
+     *     lo cambian aquí por una URL firmada de lectura válida 15 minutos (`expiresAt`). Vale
+     *     también con el match cerrado (el historial sigue siendo legible). Quien no participa,
+     *     una imagen que no existe en este match o un `imageId` que no es UUID reciben 404.
+     */
+    get: operations['getChatImageUrl'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/reports': {
     parameters: {
       query?: never;
@@ -1097,6 +1185,39 @@ export interface components {
       /** Format: date-time */
       expiresAt: string;
     };
+    ChatImageUpload: {
+      /** Format: uuid */
+      uploadId: string;
+      /** Format: uri */
+      uploadUrl: string;
+      /** Format: date-time */
+      expiresAt: string;
+    };
+    ChatImageUrl: {
+      /** Format: uri */
+      url: string;
+      /** Format: date-time */
+      expiresAt: string;
+    };
+    /**
+     * @description Mensaje que acaba de enviar quien llama. Los mensajes del chat se leen de Firestore
+     *     (`chats/{chatId}/messages`), no de la API. Nunca lleva el id interno del remitente.
+     */
+    ChatMessage: {
+      /** Format: uuid */
+      id: string;
+      /** @enum {string} */
+      kind: 'text' | 'image';
+      /** @description Solo en los mensajes de texto */
+      text?: string | null;
+      /**
+       * Format: uri
+       * @description URL firmada de corta duración; solo en los mensajes de imagen
+       */
+      imageUrl?: string | null;
+      /** Format: date-time */
+      createdAt: string;
+    };
     SearchPreferences: {
       center?: components['schemas']['GeoPoint'];
       radiusKm?: number;
@@ -1130,7 +1251,7 @@ export interface components {
       /** @enum {integer} */
       type: 2 | 3;
       status: components['schemas']['MatchStatus'];
-      /** @description Identificador del chat de grupo en Firestore; ausente hasta que se crea el chat */
+      /** @description Identificador del chat de grupo en Firestore (`chats/{chatId}`); ausente hasta que se crea, poco después del match */
       chatId?: string;
       /** Format: date-time */
       createdAt: string;
@@ -2274,6 +2395,103 @@ export interface operations {
       403: components['responses']['Forbidden'];
       404: components['responses']['NotFound'];
       409: components['responses']['Conflict'];
+    };
+  };
+  createChatImageUpload: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        matchId: components['parameters']['MatchId'];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': {
+          /** @enum {string} */
+          contentType: 'image/jpeg' | 'image/png' | 'image/heic' | 'image/webp';
+        };
+      };
+    };
+    responses: {
+      /** @description URL de subida */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ChatImageUpload'];
+        };
+      };
+      400: components['responses']['BadRequest'];
+      401: components['responses']['Unauthorized'];
+      403: components['responses']['Forbidden'];
+      404: components['responses']['NotFound'];
+      409: components['responses']['Conflict'];
+    };
+  };
+  sendMatchMessage: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        matchId: components['parameters']['MatchId'];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': {
+          text?: string;
+          /** Format: uuid */
+          imageUploadId?: string;
+        };
+      };
+    };
+    responses: {
+      /** @description Mensaje enviado */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ChatMessage'];
+        };
+      };
+      400: components['responses']['BadRequest'];
+      401: components['responses']['Unauthorized'];
+      403: components['responses']['Forbidden'];
+      404: components['responses']['NotFound'];
+      409: components['responses']['Conflict'];
+      422: components['responses']['Unprocessable'];
+    };
+  };
+  getChatImageUrl: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        matchId: components['parameters']['MatchId'];
+        /** @description Identificador opaco (`imageId`) del mensaje de imagen en Firestore */
+        imageId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description URL firmada */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ChatImageUrl'];
+        };
+      };
+      401: components['responses']['Unauthorized'];
+      403: components['responses']['Forbidden'];
+      404: components['responses']['NotFound'];
     };
   };
   createReport: {

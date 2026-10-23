@@ -6,6 +6,7 @@ import {
   InMemoryDecisionUnitOfWork,
   InMemoryHomeRepository,
   InMemoryMatchStore,
+  InMemoryOutbox,
 } from '../../../test/fakes.js';
 import { type Home, newDraft } from '../../domain/home/home.js';
 import { HomeNotFoundError } from '../home/errors.js';
@@ -60,16 +61,17 @@ function setup(now = new Date('2026-10-19T10:00:00.000Z'), homesToAdd: Home[] = 
   const store = new InMemoryDecisionStore(homes);
   const matching = new InMemoryMatchStore(store, homes);
   const matches = new FakeMatchLookup();
+  const outbox = new InMemoryOutbox();
   let sequence = 0;
   const operations = decisionOperations({
     homes,
-    units: new InMemoryDecisionUnitOfWork(store, matching),
+    units: new InMemoryDecisionUnitOfWork(store, matching, outbox),
     matches,
     clock: { now: () => clock.current },
     ids: { next: () => `match-${String(++sequence)}` },
     likesPerDay: LIMIT,
   });
-  return { operations, homes, store, matching, matches, clock };
+  return { operations, homes, store, matching, matches, clock, outbox };
 }
 
 type Prepared = ReturnType<typeof setup>;
@@ -306,6 +308,51 @@ describe('likeHome con match directo', () => {
 
     expect(prepared.store.likes).toHaveLength(1);
     expect(prepared.matching.records).toEqual([]);
+  });
+
+  it('Scenario: Chat creado con el match - el match nuevo deja un hecho match.created en la bandeja de salida', async () => {
+    const prepared = valued();
+    theyLikedMe(prepared);
+
+    const result = await prepared.operations.likeHome(ME, {
+      fromHomeId: MY_HOME,
+      targetHomeId: THEIR_HOME,
+    });
+
+    expect(prepared.outbox.events).toEqual([
+      {
+        id: 'match-2',
+        type: 'match.created',
+        aggregateId: result.match?.id,
+        attempts: 0,
+        processedAt: null,
+      },
+    ]);
+  });
+
+  it('un me gusta que no forma match no deja ningún hecho, y repetir el de un ciclo ya creado no añade otro', async () => {
+    const lonely = valued();
+    await lonely.operations.likeHome(ME, { fromHomeId: MY_HOME, targetHomeId: THEIR_HOME });
+    expect(lonely.outbox.events).toEqual([]);
+
+    const prepared = valued();
+    theyLikedMe(prepared);
+    await prepared.operations.likeHome(ME, { fromHomeId: MY_HOME, targetHomeId: THEIR_HOME });
+    await prepared.store.deleteLike(MY_HOME, THEIR_HOME);
+    await prepared.operations.likeHome(ME, { fromHomeId: MY_HOME, targetHomeId: THEIR_HOME });
+    expect(prepared.outbox.events).toHaveLength(1);
+  });
+
+  it('si algo falla tras crear el match, el hecho de la bandeja de salida se deshace con la transacción', async () => {
+    const prepared = valued();
+    theyLikedMe(prepared);
+    prepared.matching.failOnFind = true;
+
+    await expect(
+      prepared.operations.likeHome(ME, { fromHomeId: MY_HOME, targetHomeId: THEIR_HOME }),
+    ).rejects.toThrow();
+
+    expect(prepared.outbox.events).toEqual([]);
   });
 
   it('deshacer un me gusta bloquea antes el par de viviendas, para no cruzarse con el match que lo usa', async () => {

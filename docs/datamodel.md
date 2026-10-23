@@ -353,13 +353,28 @@ concatenados (evita duplicados, README §11).
 
 Implementada en `add-direct-match` (migración `0009_matches`): `type` con
 `CHECK (type IN (2, 3))`, `status` (`match_status`) `open` por defecto,
-`chat_id` nulo hasta `add-match-chat`, `cycle_key` con la restricción única
+`chat_id` nulo hasta que el despachador del outbox crea el chat (`add-match-chat`, migración `0010_chat_outbox`; el identificador del chat es el del match), `cycle_key` con la restricción única
 `matches_cycle_key_unique` (identificadores ordenados y unidos con `:`). El
 match se crea en la misma transacción que el «Me gusta» que cierra el ciclo,
 con `INSERT … ON CONFLICT (cycle_key) DO NOTHING RETURNING`; si no devuelve
 fila, se lee el existente. Antes de insertar la arista se toma
 `pg_advisory_xact_lock` sobre la clave del par `{from, to}`, de modo que dos
 «Me gusta» cruzados simultáneos se serializan y forman un único match.
+
+### `outbox` — hechos pendientes de propagar
+
+Patrón *outbox* (migración `0010_chat_outbox`, `add-match-chat`): `id`, `type`
+(`match.created`), `aggregate_id`, `attempts` (intentos fallidos), `created_at`
+y `processed_at` (nulo = pendiente). `UNIQUE (type, aggregate_id)`: un mismo
+hecho se registra una sola vez. Se inserta en la misma transacción que el
+match; un despachador de la API (tras la petición, al arrancar y cada
+`OUTBOX_INTERVAL_SECONDS`) lee los pendientes con `FOR UPDATE SKIP LOCKED`,
+crea el chat de Firestore (`chats/{matchId}`, `participantUids` = `firebase_uid`
+de los participantes, mensaje de sistema `welcome`) y rellena `matches.chat_id`.
+Sin clave ajena: no depende de `matches`. Los mensajes viven solo en Firestore
+(`chats/{chatId}/messages`): `senderId` (id interno), `senderName` y el texto o
+`imageId` (opaco, no una ruta: se cambia por una URL firmada con `getChatImageUrl`),
+nunca email ni teléfono.
 
 ### `match_participants` — cada vivienda de un match
 

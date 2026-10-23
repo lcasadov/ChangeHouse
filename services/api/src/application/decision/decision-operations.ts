@@ -7,6 +7,7 @@ import type { HomeRepository } from '../home/home-repository.js';
 import type { IdGenerator } from '../id-generator.js';
 import { type MatchView, toMatchView } from '../matching/match-views.js';
 import type { MatchingTransaction } from '../matching/matching-repository.js';
+import { MATCH_CREATED } from '../outbox/outbox.js';
 import type {
   DecisionOrigin,
   DecisionStore,
@@ -95,6 +96,13 @@ async function closeCycle(
       id: deps.ids.next(),
       createdAt: now,
       cycle: evaluation.match,
+    });
+    // El chat se crea fuera de la transacción: el hecho queda registrado en ella (y solo una vez)
+    await matching.outbox.enqueue({
+      id: deps.ids.next(),
+      type: MATCH_CREATED,
+      aggregateId: id,
+      at: now,
     });
     const saved = await matching.matches.findMatch(id);
     if (!saved) throw new Error(`El match ${id} no se encuentra tras guardarlo`);
