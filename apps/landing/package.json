@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
-    "lint": "eslint .",
+    "lint": "astro sync && eslint .",
     "typecheck": "astro check",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
