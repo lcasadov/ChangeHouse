@@ -1,3 +1,5 @@
+export type { BackButtonProps } from './BackButton';
+export { BackButton } from './BackButton';
 export type { BadgeProps, BadgeTone } from './Badge';
 export { Badge } from './Badge';
 export type { BottomSheetProps } from './BottomSheet';
