@@ -46,43 +46,43 @@
       "key": "B1",
       "id": 253,
       "parent": 249,
-      "state": "open"
+      "state": "doing"
     },
     {
       "key": "T1",
       "id": 254,
       "parent": 250,
-      "state": "open"
+      "state": "doing"
     },
     {
       "key": "B2",
       "id": 255,
       "parent": 252,
-      "state": "open"
+      "state": "doing"
     },
     {
       "key": "B3",
       "id": 256,
       "parent": 251,
-      "state": "open"
+      "state": "doing"
     },
     {
       "key": "T2",
       "id": 257,
       "parent": 249,
-      "state": "open"
+      "state": "doing"
     },
     {
       "key": "F1",
       "id": 258,
       "parent": 250,
-      "state": "open"
+      "state": "doing"
     },
     {
       "key": "V1",
       "id": 259,
       "parent": 250,
-      "state": "open"
+      "state": "doing"
     }
   ],
   "bugs": [],
