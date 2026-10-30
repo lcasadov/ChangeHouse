@@ -6,6 +6,11 @@ import { createFirebaseAuth } from '../auth/create-firebase-auth';
 import { createFirebaseAuthService } from '../auth/firebase-auth-service';
 import { type FirebaseEnv, readFirebaseConfig } from '../auth/firebase-config';
 import type { GoogleEnv } from '../auth/google-sign-in';
+import {
+  createFirestoreChatMessages,
+  type FirestoreChatEnv,
+} from '../chat/firestore-chat-messages';
+import { createHttpChatApi } from '../chat/http-chat-api';
 import { createHttpDiscoveryApi } from '../discovery/http-discovery-api';
 import {
   type AddressSuggestionsEnv,
@@ -19,7 +24,7 @@ import { createFixtureZoneSuggestions } from '../search/fixture-zone-suggestions
 import { createHttpSearchPreferencesApi } from '../search/http-search-preferences-api';
 import type { AppServices } from './services';
 
-export interface AppEnv extends FirebaseEnv, GoogleEnv, AddressSuggestionsEnv {
+export interface AppEnv extends FirebaseEnv, FirestoreChatEnv, GoogleEnv, AddressSuggestionsEnv {
   /** Origen de la API, sin barra final (`services/api`). */
   EXPO_PUBLIC_API_URL?: string | undefined;
   /** Origen donde la landing publica `/terminos` y `/privacidad`. */
@@ -34,7 +39,7 @@ const withoutTrailingSlash = (url: string) => url.replace(/\/+$/, '');
 // Firebase solo admite una instancia por app: se crea la primera vez que hace falta y se reutiliza
 let authService: AuthService | undefined;
 
-/** Compone los servicios reales: Firebase Auth, el cliente HTTP tipado con el token y los textos legales. */
+/** Compone los servicios reales: Firebase (Auth y el chat en Firestore), el cliente HTTP tipado con el token y los textos legales. */
 export function createAppServices(
   env: Readonly<AppEnv>,
   social: readonly SocialSignIn[],
@@ -57,6 +62,8 @@ export function createAppServices(
     photoUploader: createXhrPhotoUploader(),
     discoveryApi: createHttpDiscoveryApi(client),
     matchesApi: createHttpMatchesApi(client),
+    chatApi: createHttpChatApi(client),
+    chatMessages: createFirestoreChatMessages(env),
     searchPreferencesApi: createHttpSearchPreferencesApi(client),
     // Sin servicio de zonas real todavía: las sugerencias de prueba (ver design.md de add-search-preferences)
     zoneSuggestions: createFixtureZoneSuggestions(),

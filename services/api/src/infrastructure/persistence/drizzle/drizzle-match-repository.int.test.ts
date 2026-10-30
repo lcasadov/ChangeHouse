@@ -202,6 +202,7 @@ describe('DrizzleMatchRepository', () => {
       type: 2,
       status: 'open',
       createdAt: NOON,
+      chatId: null,
       participants: [first, second].map((homeId) => ({
         homeId,
         userId: homeId === mine ? ME : OTHER,

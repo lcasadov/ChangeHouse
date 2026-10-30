@@ -367,7 +367,7 @@ describe('DrizzleMatchRepository', () => {
   });
 
   it('findMatch agrupa los participantes de cada match, o devuelve null', async () => {
-    const row = { id: 'm', type: 2, status: 'open', createdAt: at, cycleKey: 'a:b', chatId: null };
+    const row = { id: 'm', type: 2, status: 'open', createdAt: at, cycleKey: 'a:b', chatId: 'm' };
     const participant = {
       homeId: 'a',
       userId: 'u-a',
@@ -387,6 +387,7 @@ describe('DrizzleMatchRepository', () => {
       type: 2,
       status: 'open',
       createdAt: at,
+      chatId: 'm',
       participants: [participant],
     });
     expect(missing).toBeNull();

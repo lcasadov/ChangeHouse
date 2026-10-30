@@ -3,6 +3,9 @@ import { PRIVACY_VERSION, TERMS_VERSION } from '@changehouse/shared';
 import { accountOperations } from './application/account/account-operations.js';
 import type { HomeOwnership } from './application/account/home-ownership.js';
 import { resolvePrincipal } from './application/auth/resolve-principal.js';
+import type { ChatChannel } from './application/chat/chat-channel.js';
+import type { ChatImageStorage } from './application/chat/chat-image-storage.js';
+import { chatOperations } from './application/chat/chat-operations.js';
 import type { Clock } from './application/clock.js';
 import { decisionOperations } from './application/decision/decision-operations.js';
 import type { MatchLookup } from './application/decision/decision-repository.js';
@@ -14,13 +17,17 @@ import type { PhotoStorage } from './application/home/photo-storage.js';
 import type { PlaceResolver } from './application/home/place-resolver.js';
 import { matchOperations } from './application/matching/match-operations.js';
 import { moderationOperations } from './application/moderation/moderation-operations.js';
+import { MATCH_CREATED } from './application/outbox/outbox.js';
+import { OutboxDispatcher } from './application/outbox/outbox-dispatcher.js';
 import { searchPreferencesOperations } from './application/search-preferences/search-preferences-operations.js';
 import { joinWaitlist } from './application/waitlist/join-waitlist.js';
 import type { ApiConfig } from './config.js';
 import { createFirebaseIdentityVerifier } from './infrastructure/auth/firebase-identity-verifier.js';
+import { createFirestoreChatChannel } from './infrastructure/chat/firestore-chat-channel.js';
 import { AddressCipher } from './infrastructure/crypto/address-cipher.js';
 import { SharpImageProcessor } from './infrastructure/images/sharp-image-processor.js';
 import { createDatabase } from './infrastructure/persistence/drizzle/database.js';
+import { DrizzleChatSetup } from './infrastructure/persistence/drizzle/drizzle-chat-setup.js';
 import { DrizzleDecisionUnitOfWork } from './infrastructure/persistence/drizzle/drizzle-decision-unit-of-work.js';
 import { DrizzleDiscoveryRepository } from './infrastructure/persistence/drizzle/drizzle-discovery-repository.js';
 import { DrizzleHomeOwnership } from './infrastructure/persistence/drizzle/drizzle-home-ownership.js';
@@ -28,6 +35,7 @@ import { DrizzleHomeRepository } from './infrastructure/persistence/drizzle/driz
 import { DrizzleMatchHomes } from './infrastructure/persistence/drizzle/drizzle-match-homes.js';
 import { DrizzleMatchRepository } from './infrastructure/persistence/drizzle/drizzle-match-repository.js';
 import { DrizzleMatchUnitOfWork } from './infrastructure/persistence/drizzle/drizzle-match-unit-of-work.js';
+import { DrizzleOutbox } from './infrastructure/persistence/drizzle/drizzle-outbox.js';
 import { DrizzlePhotoRepository } from './infrastructure/persistence/drizzle/drizzle-photo-repository.js';
 import { DrizzleSearchPreferencesRepository } from './infrastructure/persistence/drizzle/drizzle-search-preferences-repository.js';
 import { DrizzleUnitOfWork } from './infrastructure/persistence/drizzle/drizzle-unit-of-work.js';
@@ -35,6 +43,7 @@ import { DrizzleUserRepository } from './infrastructure/persistence/drizzle/driz
 import { DrizzleWaitlistRepository } from './infrastructure/persistence/drizzle/drizzle-waitlist-repository.js';
 import { FixturePlaceResolver } from './infrastructure/places/fixture-place-resolver.js';
 import { GooglePlaceResolver } from './infrastructure/places/google-place-resolver.js';
+import { CloudChatImageStorage } from './infrastructure/storage/cloud-chat-image-storage.js';
 import { CloudPhotoStorage } from './infrastructure/storage/cloud-photo-storage.js';
 import { systemClock, uuidV7Generator } from './infrastructure/system.js';
 import { buildApp } from './interfaces/http/app.js';
@@ -53,6 +62,18 @@ export interface ApiAdapters {
   clock?: Clock;
   /** Por defecto, los matches reales de PostgreSQL (`DrizzleMatchRepository`). */
   matchLookup?: MatchLookup;
+  /** Por defecto, Cloud Firestore (o su emulador si hay `FIRESTORE_EMULATOR_HOST`). */
+  chatChannel?: ChatChannel;
+  /** Por defecto, el bucket privado de Cloud Storage (o fake-gcs-server). */
+  chatImageStorage?: ChatImageStorage;
+}
+
+const MS_PER_SECOND = 1000;
+
+/** El canal sustituido por las pruebas o, por defecto, Firestore con su propia aplicación de Firebase. */
+function chatChannelFor(config: ApiConfig, override: ChatChannel | undefined) {
+  if (override) return { channel: override, close: () => Promise.resolve() };
+  return createFirestoreChatChannel(config.firebase);
 }
 
 function placeResolverFor(config: ApiConfig): PlaceResolver {
@@ -141,6 +162,26 @@ export function createApi(config: ApiConfig, adapters: ApiAdapters = {}) {
     units: new DrizzleMatchUnitOfWork(database.db),
     clock: adapters.clock ?? systemClock,
   });
+  const chatChannel = chatChannelFor(config, adapters.chatChannel);
+  const chat = chatOperations({
+    matches: matchRepository,
+    setup: new DrizzleChatSetup(database.db),
+    channel: chatChannel.channel,
+    storage: adapters.chatImageStorage ?? new CloudChatImageStorage(config.storage),
+    images: adapters.imageProcessor ?? new SharpImageProcessor(),
+    clock: adapters.clock ?? systemClock,
+    ids: uuidV7Generator,
+  });
+  // Crea el chat de cada match nuevo fuera de su transacción: tras la petición, al arrancar y cada intervalo
+  const outbox = new OutboxDispatcher({
+    store: new DrizzleOutbox(database.db),
+    handlers: { [MATCH_CREATED]: chat.createChatForMatch },
+    clock: adapters.clock ?? systemClock,
+    intervalMs: config.outbox.intervalSeconds * MS_PER_SECOND,
+    onError: (error, event) => {
+      app.log.error({ err: error, outboxEventId: event.id }, 'No se pudo despachar el hecho');
+    },
+  });
   const app = buildApp({
     logger: config.logger,
     landingOrigin: config.landingOrigin,
@@ -159,14 +200,24 @@ export function createApi(config: ApiConfig, adapters: ApiAdapters = {}) {
     adminHomes,
     searchPreferences,
     discovery,
-    decisions,
-    matches,
+    decisions: {
+      ...decisions,
+      likeHome: async (userId, command) => {
+        const result = await decisions.likeHome(userId, command);
+        if (result.match) outbox.kick();
+        return result;
+      },
+    },
+    matches: { ...matches, ...chat },
   });
 
   return {
     app,
+    outbox,
     close: async () => {
+      await outbox.stop();
       await app.close();
+      await chatChannel.close();
       await closeIdentity();
       await database.close();
     },

@@ -57,13 +57,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
-      # El emulador de Firebase necesita Java
+      # Los emuladores de Firebase (Auth y Firestore) necesitan Java
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '21'
       # Testcontainers usa el Docker del runner (PostgreSQL + PostGIS reales) y `firebase emulators:exec`
-      # arranca el emulador de Auth para las pruebas y lo apaga al terminar (script raíz test:integration)
+      # arranca los emuladores de Auth y Firestore para las pruebas (también las de reglas de Firestore) y los apaga
+      # al terminar (script raíz test:integration)
       - run: pnpm test:integration
 
   build:

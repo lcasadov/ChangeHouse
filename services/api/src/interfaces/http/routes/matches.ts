@@ -1,15 +1,29 @@
+import {
+  type PhotoContentType,
+  type SendMessageInput,
+  validatePhotoUploadInput,
+  validateSendMessageInput,
+} from '@changehouse/shared';
 import type { FastifyPluginCallback } from 'fastify';
 
+import type {
+  ChatImageUploadView,
+  ChatImageUrlView,
+  ChatMessageView,
+} from '../../../application/chat/chat-operations.js';
 import type {
   MatchPage,
   MatchViewer,
   MyMatchesQuery,
 } from '../../../application/matching/match-operations.js';
 import type { MatchDetailView, MatchView } from '../../../application/matching/match-views.js';
+import { ChatImageNotFoundError } from '../../../domain/chat/errors.js';
 import { MatchNotFoundError } from '../../../domain/matching/errors.js';
 import { MATCH_STATUSES, type MatchStatus } from '../../../domain/matching/match.js';
 import { type FieldError, ValidationFailedError } from '../problem.js';
-import { accountId, type PageParams, parsePage, uuidOr404 } from './request-helpers.js';
+import { accountId, type PageParams, parsePage, uuidOr404, validated } from './request-helpers.js';
+
+const CREATED = 201;
 
 export interface MatchRouteOptions {
   listMyMatches: (userId: string, query: MyMatchesQuery) => Promise<MatchPage>;
@@ -17,6 +31,17 @@ export interface MatchRouteOptions {
   confirmMatch: (userId: string, matchId: string) => Promise<MatchView>;
   withdrawFromMatch: (userId: string, matchId: string) => Promise<MatchView>;
   setPhoneSharing: (userId: string, matchId: string, share: boolean) => Promise<void>;
+  sendMatchMessage: (
+    userId: string,
+    matchId: string,
+    input: SendMessageInput,
+  ) => Promise<ChatMessageView>;
+  getChatImageUrl: (userId: string, matchId: string, imageId: string) => Promise<ChatImageUrlView>;
+  createChatImageUpload: (
+    userId: string,
+    matchId: string,
+    contentType: PhotoContentType,
+  ) => Promise<ChatImageUploadView>;
 }
 
 interface MatchParams {
@@ -66,8 +91,8 @@ function parseShare(body: unknown): boolean {
 }
 
 /**
- * `listMyMatches`, `getMatch`, `confirmMatch`, `withdrawFromMatch` y `setPhoneSharing` del contrato
- * (RF-50, RF-53, RF-54). Solo transporte: la política central decide el acceso por rol y los casos de
+ * `listMyMatches`, `getMatch`, `confirmMatch`, `withdrawFromMatch`, `setPhoneSharing`,
+ * `sendMatchMessage` y `createChatImageUpload` del contrato (RF-50, RF-52, RF-53, RF-54, RF-60). Solo transporte: la política central decide el acceso por rol y los casos de
  * uso, la pertenencia al match (quien no participa recibe 404) y el estado (409).
  */
 export function matchRoutes(options: MatchRouteOptions): FastifyPluginCallback {
@@ -104,6 +129,39 @@ export function matchRoutes(options: MatchRouteOptions): FastifyPluginCallback {
         const share = parseShare(request.body);
         await options.setPhoneSharing(accountId(request), matchId, share);
         return reply.code(204).send();
+      },
+    );
+    app.post<{ Params: MatchParams }>(
+      '/matches/:matchId/messages',
+      { config: { operationId: 'sendMatchMessage' } },
+      async (request, reply) => {
+        const matchId = matchIdOf(request);
+        const input = validated(validateSendMessageInput(request.body));
+        const message = await options.sendMatchMessage(accountId(request), matchId, input);
+        return reply.code(CREATED).send(message);
+      },
+    );
+    app.post<{ Params: MatchParams }>(
+      '/matches/:matchId/chat/image-uploads',
+      { config: { operationId: 'createChatImageUpload' } },
+      async (request, reply) => {
+        const matchId = matchIdOf(request);
+        const { contentType } = validated(validatePhotoUploadInput(request.body));
+        const upload = await options.createChatImageUpload(
+          accountId(request),
+          matchId,
+          contentType,
+        );
+        return reply.code(CREATED).send(upload);
+      },
+    );
+    app.get<{ Params: MatchParams & { imageId: string } }>(
+      '/matches/:matchId/chat/images/:imageId',
+      { config: { operationId: 'getChatImageUrl' } },
+      (request) => {
+        const matchId = matchIdOf(request);
+        const imageId = uuidOr404(request.params.imageId, () => new ChatImageNotFoundError());
+        return options.getChatImageUrl(accountId(request), matchId, imageId);
       },
     );
     done();

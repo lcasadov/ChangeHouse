@@ -1,3 +1,5 @@
+import { initializeFirestore } from 'firebase/firestore';
+
 import { createApiClient } from '../../api/client';
 import { createFirebaseAuth } from '../auth/create-firebase-auth';
 import { createFirebaseAuthService } from '../auth/firebase-auth-service';
@@ -7,6 +9,7 @@ jest.mock('../auth/create-firebase-auth', () => ({ createFirebaseAuth: jest.fn((
 jest.mock('../auth/firebase-auth-service', () => ({
   createFirebaseAuthService: jest.fn(() => ({ getIdToken: () => Promise.resolve('token') })),
 }));
+jest.mock('firebase/firestore', () => ({ initializeFirestore: jest.fn() }));
 jest.mock('../../api/client', () => ({
   createApiClient: jest.fn(() => ({ GET: jest.fn(), PUT: jest.fn() })),
 }));
@@ -68,6 +71,16 @@ describe('createAppServices', () => {
       'https://api.changehouse.test',
     );
     expect(services.legalUrls.terms).toBe('https://changehouse.test/terminos');
+  });
+
+  it('compone el chat: mensajes en tiempo real de Firestore y envío por la API, sin abrir Firestore todavía', () => {
+    const services = createAppServices(env, []);
+
+    expect(typeof services.chatMessages.subscribe).toBe('function');
+    expect(typeof services.chatApi.sendMessage).toBe('function');
+    expect(typeof services.chatApi.createImageUpload).toBe('function');
+    expect(typeof services.chatApi.getImageUrl).toBe('function');
+    expect(initializeFirestore).not.toHaveBeenCalled();
   });
 
   it('compone el adaptador de viviendas y, sin clave de Google, las sugerencias de prueba', async () => {

@@ -21,7 +21,7 @@ const PUBLIC_CACHE_CONTROL = 'public, max-age=31536000, immutable';
  * Cliente para el emulador. fake-gcs-server no valida la firma de las URL, pero la biblioteca exige
  * una clave para firmarlas: se genera una efímera que no sale del proceso y no sirve en ningún otro sitio.
  */
-function emulatorClient(emulatorHost: string): Storage {
+export function emulatorClient(emulatorHost: string): Storage {
   const { privateKey } = generateKeyPairSync('rsa', {
     modulusLength: RSA_KEY_BITS,
     privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
@@ -37,7 +37,7 @@ function emulatorClient(emulatorHost: string): Storage {
   });
 }
 
-function isNotFound(error: unknown): boolean {
+export function isNotFound(error: unknown): boolean {
   return (error as { code?: number }).code === NOT_FOUND;
 }
 

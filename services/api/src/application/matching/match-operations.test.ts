@@ -38,6 +38,20 @@ function record(id: string, createdAt: string, overrides: Partial<MatchRecord> =
 
 const setup = matchEnv;
 
+describe('chatId del match', () => {
+  it('Scenario: Chat creado con el match - el match lo muestra cuando el chat existe y no antes', async () => {
+    const { operations } = setup([
+      record('con-chat', '2026-10-19T10:00:00.000Z', { chatId: 'con-chat' }),
+      record('sin-chat', '2026-10-18T10:00:00.000Z', { chatId: null }),
+    ]);
+
+    const page = await operations.listMyMatches(ME, { limit: 20 });
+
+    expect(page.items[0]).toHaveProperty('chatId', 'con-chat');
+    expect(page.items[1]).not.toHaveProperty('chatId');
+  });
+});
+
 describe('listMyMatches', () => {
   it('Scenario: Ver mis matches - ve los dos, el más reciente primero, cada uno con su compensación', async () => {
     const { operations, reader } = setup([

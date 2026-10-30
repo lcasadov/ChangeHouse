@@ -7,6 +7,7 @@ import type { Database } from './database.js';
 import { DrizzleCycleCandidates } from './drizzle-cycle-candidates.js';
 import { DrizzleDecisionStore } from './drizzle-decision-store.js';
 import { DrizzleMatchRepository } from './drizzle-match-repository.js';
+import { DrizzleOutboxWriter } from './drizzle-outbox.js';
 
 /**
  * Una transacción de PostgreSQL (`READ COMMITTED`): el almacén de decisiones, la búsqueda de ciclos
@@ -20,6 +21,7 @@ export class DrizzleDecisionUnitOfWork implements DecisionUnitOfWork {
       work(new DrizzleDecisionStore(tx), {
         cycles: new DrizzleCycleCandidates(tx),
         matches: new DrizzleMatchRepository(tx),
+        outbox: new DrizzleOutboxWriter(tx),
       }),
     );
   }

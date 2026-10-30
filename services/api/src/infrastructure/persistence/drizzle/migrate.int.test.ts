@@ -587,6 +587,30 @@ describe('migraciones', () => {
     expect(participantsLeft).toHaveLength(0);
   });
 
+  it('GIVEN la base migrada WHEN se inspecciona THEN outbox guarda cada hecho una sola vez, nace pendiente y tiene un índice de pendientes', async () => {
+    const target = openSql(urlFor(EMPTY_DB));
+    const [event, duplicate, other] = [
+      '0199c1a2-0000-7000-8000-0000000000d1',
+      '0199c1a2-0000-7000-8000-0000000000d2',
+      '0199c1a2-0000-7000-8000-0000000000d3',
+    ];
+    const aggregate = '0199c1a2-0000-7000-8000-0000000000d9';
+    await target`INSERT INTO outbox (id, type, aggregate_id) VALUES (${event}, 'match.created', ${aggregate})`;
+    const [created] = await target<{ attempts: number; processed_at: Date | null }[]>`
+      SELECT attempts, processed_at FROM outbox WHERE id = ${event}`;
+    const sameFact = target`INSERT INTO outbox (id, type, aggregate_id) VALUES (${duplicate}, 'match.created', ${aggregate})`;
+    await expect(sameFact).rejects.toThrow(/outbox_type_aggregate_key/);
+    await target`INSERT INTO outbox (id, type, aggregate_id) VALUES (${other}, 'otro', ${aggregate})`;
+    const indexes = await target<{ indexdef: string }[]>`
+      SELECT indexdef FROM pg_indexes WHERE tablename = 'outbox' AND indexname = 'outbox_pending_idx'`;
+    await target`DELETE FROM outbox`;
+    await target.end();
+
+    expect(created).toEqual({ attempts: 0, processed_at: null });
+    expect(indexes).toHaveLength(1);
+    expect(indexes[0]?.indexdef).toMatch(/WHERE \(processed_at IS NULL\)/);
+  });
+
   it('GIVEN viviendas ya publicadas antes de la migración WHEN se aplica THEN reciben su fecha de publicación y las demás no', async () => {
     // Las migraciones hasta la 0006 en una carpeta aparte: la base queda como antes de este cambio
     const before = await mkdtemp(join(tmpdir(), 'migrations-0006-'));

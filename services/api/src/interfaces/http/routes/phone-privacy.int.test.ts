@@ -119,6 +119,20 @@ const HOMES_REQUESTS: Record<string, RequestTemplate> = {
     url: `/v1/matches/${MISSING_ID}/phone-sharing`,
     payload: () => ({ share: true }),
   },
+  getChatImageUrl: {
+    method: 'GET',
+    url: `/v1/matches/${MISSING_ID}/chat/images/${MISSING_ID}`,
+  },
+  createChatImageUpload: {
+    method: 'POST',
+    url: `/v1/matches/${MISSING_ID}/chat/image-uploads`,
+    payload: () => ({ contentType: 'image/jpeg' }),
+  },
+  sendMatchMessage: {
+    method: 'POST',
+    url: `/v1/matches/${MISSING_ID}/messages`,
+    payload: () => ({ text: 'Hola' }),
+  },
   adminListHomes: { method: 'GET', url: '/v1/admin/homes?status=in_review' },
   adminModerateHome: {
     method: 'POST',

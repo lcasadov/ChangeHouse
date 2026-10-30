@@ -24,7 +24,12 @@ describe('loadConfig', () => {
       trustProxyHops: 0,
       waitlistRateLimit: { max: 5, windowSeconds: 600 },
       likesPerDay: 10,
-      firebase: { projectId: 'changehouse-des', authEmulatorHost: undefined },
+      firebase: {
+        projectId: 'changehouse-des',
+        authEmulatorHost: undefined,
+        firestoreEmulatorHost: undefined,
+      },
+      outbox: { intervalSeconds: 30 },
       addressEncryptionKey: ADDRESS_KEY,
       places: { serverKey: undefined },
       logger: true,
@@ -138,7 +143,33 @@ describe('loadConfig', () => {
     expect(config.firebase).toEqual({
       projectId: 'changehouse-des',
       authEmulatorHost: 'localhost:9099',
+      firestoreEmulatorHost: undefined,
     });
+  });
+
+  it('lee el emulador de Firestore del entorno y se niega a usarlo en Cloud Run', () => {
+    const config = loadConfig({ ...base, FIRESTORE_EMULATOR_HOST: 'localhost:8085' });
+
+    expect(config.firebase.firestoreEmulatorHost).toBe('localhost:8085');
+    expect(() =>
+      loadConfig({
+        ...base,
+        K_SERVICE: 'api',
+        GOOGLE_PLACES_SERVER_KEY: 'k',
+        FIRESTORE_EMULATOR_HOST: 'localhost:8085',
+      }),
+    ).toThrow(/FIRESTORE_EMULATOR_HOST/);
+  });
+
+  it('lee el intervalo de reintento del outbox (OUTBOX_INTERVAL_SECONDS) y rechaza los valores no válidos', () => {
+    expect(loadConfig({ ...base, OUTBOX_INTERVAL_SECONDS: '5' }).outbox).toEqual({
+      intervalSeconds: 5,
+    });
+    for (const invalid of ['0', '-1', 'rápido', '']) {
+      expect(() => loadConfig({ ...base, OUTBOX_INTERVAL_SECONDS: invalid })).toThrow(
+        /OUTBOX_INTERVAL_SECONDS/,
+      );
+    }
   });
 
   it('se niega a arrancar en Cloud Run con el emulador de Auth: aceptaría tokens sin firma', () => {

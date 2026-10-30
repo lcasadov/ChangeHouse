@@ -19,12 +19,16 @@ import MatchesRoute from '../../app/(tabs)/matches';
 import ProfileRoute from '../../app/(tabs)/profile';
 import NotFoundRoute from '../../app/+not-found';
 import DiscoverDetailRoute from '../../app/discover/[homeId]';
-import MatchDetailRoute from '../../app/match/[matchId]';
+import MatchLayout from '../../app/match/[matchId]/_layout';
+import MatchChatRoute from '../../app/match/[matchId]/chat';
+import MatchDetailRoute from '../../app/match/[matchId]/index';
 import OnboardingRoute from '../../app/onboarding';
 import { createApiClient } from '../api/client';
 import { createHttpAccountApi } from '../features/account/http-account-api';
 import { createHttpAdminApi } from '../features/admin/http-admin-api';
 import type { SocialSignIn } from '../features/auth/auth-service';
+import type { ChatApi } from '../features/chat/chat-api';
+import type { ChatMessages } from '../features/chat/chat-messages';
 import { createHttpDiscoveryApi } from '../features/discovery/http-discovery-api';
 import type { AddressSuggestions } from '../features/homes/address-suggestions';
 import { createFixtureAddressSuggestions } from '../features/homes/fixture-address-suggestions';
@@ -40,6 +44,7 @@ import { SessionRoot } from '../features/session/SessionRoot';
 import { AppThemeProvider } from '../theme/AppThemeProvider';
 import { authUser, FakeAuthService } from './fake-auth-service';
 import { DEFAULT_SEARCH_PREFERENCES, type FakeBackend, me } from './fake-backend';
+import { FakeChatApi, FakeChatMessages } from './fake-chat';
 import { FakePhotoPicker, FakePhotoUploader } from './fake-photos';
 
 export const TEST_LEGAL_URLS = {
@@ -75,6 +80,8 @@ export function fakeServices(overrides: Partial<AppServices> = {}): AppServices 
     },
     photoPicker: { pick: () => Promise.resolve([]) },
     photoUploader: { upload: () => Promise.resolve() },
+    chatApi: new FakeChatApi(),
+    chatMessages: new FakeChatMessages(),
     matchesApi: {
       list: () => Promise.resolve({ items: [], nextCursor: null }),
       get: () => Promise.reject(new Error('Sin matches en este doble')),
@@ -109,6 +116,10 @@ export interface SessionAppOptions {
   photoUploader?: PhotoUploader;
   /** Autocompletado de zonas de búsqueda; por defecto, los municipios y lugares de prueba. */
   zoneSuggestions?: ZoneSuggestions;
+  /** Los mensajes del chat en tiempo real; por defecto, un canal simulado sin mensajes. */
+  chatMessages?: ChatMessages;
+  /** El envío de mensajes por la API; por defecto, uno simulado. */
+  chatApi?: ChatApi;
   theme?: ThemeName;
   /** Ruta a la que se abre la app (por defecto la raíz, que es una pestaña protegida). */
   url?: string;
@@ -123,6 +134,8 @@ export function renderSessionApp({
   photoPicker = new FakePhotoPicker(),
   photoUploader = new FakePhotoUploader(backend),
   zoneSuggestions = createFixtureZoneSuggestions(),
+  chatMessages = new FakeChatMessages(),
+  chatApi = new FakeChatApi(),
   theme = 'light',
   url = '/',
 }: SessionAppOptions) {
@@ -143,6 +156,8 @@ export function renderSessionApp({
     matchesApi: createHttpMatchesApi(client),
     searchPreferencesApi: createHttpSearchPreferencesApi(client),
     zoneSuggestions,
+    chatMessages,
+    chatApi,
     social,
     legalUrls: TEST_LEGAL_URLS,
   };
@@ -164,7 +179,9 @@ export function renderSessionApp({
       '(auth)/forgot-password': ForgotPasswordRoute,
       onboarding: OnboardingRoute,
       'discover/[homeId]': DiscoverDetailRoute,
-      'match/[matchId]': MatchDetailRoute,
+      'match/[matchId]/_layout': MatchLayout,
+      'match/[matchId]/index': MatchDetailRoute,
+      'match/[matchId]/chat': MatchChatRoute,
       '+not-found': NotFoundRoute,
       '(tabs)/_layout': TabsLayout,
       '(tabs)/index': ExploreRoute,

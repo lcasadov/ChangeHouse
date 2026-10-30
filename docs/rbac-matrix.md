@@ -212,10 +212,13 @@ operación de la API sin filas en ese fichero hace fallar la prueba.
 | `confirmMatch` | 401 | `participant` / 404 | `participant` / 404 | 403 | no participante → 404; estado → 409 (`MATCH_NOT_OPEN`); confirmar de nuevo es idempotente |
 | `withdrawFromMatch` | 401 | `participant` / 404 | `participant` / 404 | 403 | no participante → 404; estado → 409 (`MATCH_NOT_OPEN`); queda en `audit_log` |
 | `setPhoneSharing` | 401 | `participant` / 404 | `participant` / 404 | 403 | solo la fila propia; match `closed` → 409 |
+| `sendMatchMessage` | 401 | `participant` / 404 | `participant` / 404 | 403 | no participante → 404; match no `open`/`confirmed` → 409 (`MATCH_NOT_OPEN`, chat de solo lectura); chat sin crear → 409 (`CHAT_NOT_READY`); texto vacío o de más de 2.000 caracteres → 400 |
+| `getChatImageUrl` | 401 | `participant` / 404 | `participant` / 404 | 403 | no participante, imagen desconocida o id que no es UUID → 404; vale con el match cerrado |
+| `createChatImageUpload` | 401 | `participant` / 404 | `participant` / 404 | 403 | no participante → 404; match no `open`/`confirmed` → 409 (`MATCH_NOT_OPEN`) |
 
 Un `seeker` puede ser participante (por ejemplo, con su vivienda pausada); en la
 matriz como datos, que no crea matches, los actores `seeker` y `owner` obtienen
-404 en estas cuatro operaciones y la pertenencia se prueba con matches reales en
+404 en estas operaciones y la pertenencia se prueba con matches reales en
 `matches.int.test.ts`.
 | `createReport` | 401 | ✅ | ✅ | 403 | límite de peticiones |
 | `blockUser` | 401 | ✅ | ✅ | 403 | — |

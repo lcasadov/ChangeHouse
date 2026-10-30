@@ -250,6 +250,9 @@
         "server": "No hemos podido completar la acción. Inténtalo de nuevo en unos minutos.",
         "conflict": "Este match ha cambiado y ya no admite esta acción. Hemos actualizado la pantalla con su estado actual.",
         "phone": "No hemos podido guardar tu preferencia de teléfono. Inténtalo de nuevo."
+      },
+      "chat": {
+        "open": "Abrir chat"
       }
     }
   },
@@ -828,6 +831,68 @@
       "loadFailed": "No hemos podido cargar las preferencias de esta vivienda.",
       "deleteFailed": "No hemos podido eliminar las preferencias propias. Inténtalo de nuevo.",
       "notFound": "Esta vivienda ya no existe."
+    }
+  },
+  "chat": {
+    "title": "Chat con {{names}}",
+    "back": "Volver al match",
+    "loading": "Cargando mensajes",
+    "empty": "Todavía no hay mensajes. Escribe el primero.",
+    "welcome": "Este es el chat del match entre {{names}}. Poneos de acuerdo para visitar las casas.",
+    "loadFailed": {
+      "title": "No hemos podido cargar el chat",
+      "description": "Comprueba tu conexión y vuelve a intentarlo.",
+      "retry": "Reintentar"
+    },
+    "preparing": {
+      "title": "El chat se está preparando",
+      "description": "Estará listo en unos segundos. Vuelve a comprobarlo enseguida.",
+      "retry": "Comprobar de nuevo"
+    },
+    "message": {
+      "from": "{{name}}, {{time}}: {{text}}",
+      "fromMe": "Tú, {{time}}: {{text}}",
+      "imageFrom": "Imagen de {{name}}, {{time}}",
+      "imageFromMe": "Tu imagen, {{time}}",
+      "imageLoading": "Cargando imagen",
+      "imageFailed": "No hemos podido cargar la imagen.",
+      "imageRetry": "Reintentar imagen"
+    },
+    "status": {
+      "sending": "Enviando…",
+      "failed": "No enviado · {{reason}}",
+      "retry": "Reintentar",
+      "discard": "Descartar"
+    },
+    "failure": {
+      "network": "Sin conexión. Comprueba tu conexión y reintenta.",
+      "server": "Ha habido un problema. Inténtalo de nuevo.",
+      "notReady": "El chat se está preparando. Reintenta en unos segundos.",
+      "tooLong": "Supera el límite de {{max}} caracteres. Descártalo y escribe uno más corto.",
+      "invalidImage": "La imagen no es válida. Elige otra foto.",
+      "closed": "El match está cerrado."
+    },
+    "composer": {
+      "label": "Escribe un mensaje",
+      "send": "Enviar",
+      "attach": "Adjuntar imagen",
+      "counter": "{{length}}/{{max}}",
+      "tooLong": "Máximo {{max}} caracteres. Acorta el mensaje para poder enviarlo."
+    },
+    "attach": {
+      "unsupported": "Esa imagen no se puede enviar. Elige una foto JPG, PNG, WebP o HEIC.",
+      "galleryFailed": "No hemos podido abrir la galería. Revisa los permisos e inténtalo de nuevo."
+    },
+    "readOnly": {
+      "closed": "Este match está cerrado. Puedes leer el historial, pero ya no se pueden enviar mensajes.",
+      "closedBy": "{{name}} se ha retirado y el match está cerrado. Puedes leer el historial, pero ya no se pueden enviar mensajes.",
+      "closedByYou": "Te has retirado y el match está cerrado. Puedes leer el historial, pero ya no se pueden enviar mensajes.",
+      "expired": "Este match ha caducado. Puedes leer el historial, pero ya no se pueden enviar mensajes.",
+      "in_operation": "Este match está en operación. Puedes leer el historial, pero ya no se pueden enviar mensajes aquí."
+    },
+    "announce": {
+      "received": "{{name}}: {{text}}",
+      "receivedImage": "{{name}} ha enviado una imagen"
     }
   }
 }
