@@ -532,7 +532,7 @@ function unitsPausingBeforeSave(inner: DecisionUnitOfWork, gate: Gate): Decision
           await gate.arrive();
           return matching.matches.saveMatch(match);
         };
-        return work(store, { cycles: matching.cycles, matches: writer });
+        return work(store, { ...matching, matches: writer });
       }),
   };
 }
