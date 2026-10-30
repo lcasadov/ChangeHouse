@@ -18,14 +18,14 @@
 
 ## 3. App
 
-- [ ] T3 Escribir las pruebas de componentes del chat (lista en tiempo real con un emulador simulado, envío optimista, «No enviado» con reintento, imagen, solo lectura con aviso) y comprobar que fallan. ref: Enviar mensajes · est: 3h · disc: qa
+- [x] T3 Escribir las pruebas de componentes del chat (lista en tiempo real con un emulador simulado, envío optimista, «No enviado» con reintento, imagen, solo lectura con aviso) y comprobar que fallan. ref: Enviar mensajes · est: 3h · disc: qa
   - GIVEN un envío sin conexión WHEN falla THEN el mensaje muestra «No enviado» y «Reintentar»
-- [ ] F1 Implementar la pantalla de chat con el listener de Firestore, el envío por la API, las imágenes y el modo de solo lectura, y verificar que pasan las pruebas de T3. ref: Chat de grupo por match · est: 7h · disc: front
+- [x] F1 Implementar la pantalla de chat con el listener de Firestore, el envío por la API, las imágenes y el modo de solo lectura, y verificar que pasan las pruebas de T3. ref: Chat de grupo por match · est: 7h · disc: front
   - GIVEN un mensaje nuevo de otro participante WHEN llega THEN aparece sin recargar y se anuncia a los lectores de pantalla
 
 ## 4. Integración
 
-- [ ] V1 Ejecutar `pnpm lint`, `pnpm typecheck`, `pnpm test:coverage`, `pnpm test:integration` (PostgreSQL y emuladores) y `pnpm build` y verificar que todo pasa con cobertura ≥ 80 %. ref: Enviar mensajes · est: 1h · disc: qa
+- [x] V1 Ejecutar `pnpm lint`, `pnpm typecheck`, `pnpm test:coverage`, `pnpm test:integration` (PostgreSQL y emuladores) y `pnpm build` y verificar que todo pasa con cobertura ≥ 80 %. ref: Enviar mensajes · est: 1h · disc: qa
   - GIVEN el change implementado WHEN se ejecuta la puerta de calidad local THEN todos los comandos terminan con éxito
 
 ## Workflow follow-up
