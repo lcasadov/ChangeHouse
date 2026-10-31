@@ -37,7 +37,7 @@ personas; la zona generada la reescribe `plan-sync` en cada operación.
 | change | estado | % | completadas/total | fase |
 |---|---|---|---|---|
 | add-admin-panel | ❌ SIN EMPEZAR | 0 % | 0/5 | ❌ SIN EMPEZAR |
-| add-reports-and-blocking | ❌ SIN EMPEZAR | 0 % | 0/6 | ❌ SIN EMPEZAR |
+| add-reports-and-blocking | ❌ SIN EMPEZAR | 0 % | 0/6 | 🔄 EN PROGRESO |
 | add-user-suspension | ❌ SIN EMPEZAR | 0 % | 0/5 | ❌ SIN EMPEZAR |
 
 **Progreso global de los changes activos**: 0/16 (0 %)
