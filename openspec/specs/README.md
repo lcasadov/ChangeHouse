@@ -5,7 +5,7 @@ Capacidades implementadas. Cada una se crea o amplía al archivar un change
 
 | Capacidad | Qué cubre | Change que la creó |
 |---|---|---|
-| [`landing`](landing/spec.md) | Web pública: propuesta de valor, páginas legales, consentimiento de cookies, accesibilidad y SEO | `2026-10-19-add-landing` |
+| [`landing`](landing/spec.md) | Web pública: propuesta de valor, páginas legales, consentimiento de cookies, accesibilidad, SEO y guías con feed RSS | `2026-10-19-add-landing` (ampliado por `add-landing-blog`) |
 | [`waitlist`](waitlist/spec.md) | Alta en la lista de espera con consentimiento, sin revelar inscripciones previas y con límite de peticiones | `2026-10-19-add-waitlist` |
 | [`api-errors`](api-errors/spec.md) | Formato único de error de la API (`Problem`) con identificador de correlación | `2026-10-19-add-waitlist` |
 | [`accounts`](accounts/spec.md) | Registro, acceso, verificación del email, recuperación de la contraseña, alta con consentimiento | `2026-10-19-add-authentication` |
@@ -14,5 +14,7 @@ Capacidades implementadas. Cada una se crea o amplía al archivar un change
 | [`moderation`](moderation/spec.md) | Cola de revisión de viviendas solo para `admin`, aprobación o rechazo con motivo visible para el propietario y auditoría de solo inserción en la misma transacción | `2026-10-19-add-home-moderation` |
 | [`search-preferences`](search-preferences/spec.md) | Preferencias por defecto del usuario y propias de cada vivienda (zonas por municipio o radio, filtros, compensación y punto del rango) y búsqueda en un toque con primer uso | `2026-10-19-add-search-preferences` |
 | [`discovery`](discovery/spec.md) | Me gusta, descartar y deshacer con gesto y límite diario; tarjetas de viviendas compatibles en los dos sentidos con compensación estimada, exclusiones (propias, no publicadas, descartadas, VPP) y modo sin vivienda publicada | `2026-10-19-add-discovery-feed` (ampliado por `add-like-dismiss-undo`) |
-| [`matching`](matching/spec.md) | Match directo detectado en la transacción del me gusta, un solo match por ciclo, compensaciones de suma cero, lista de matches y celebración | `2026-10-22-add-direct-match` |
+| [`matching`](matching/spec.md) | Match directo y en cadena de tres detectados en la transacción del me gusta, un solo match por ciclo, compensaciones de suma cero, lista de matches y celebración | `2026-10-22-add-direct-match` (ampliado por `add-chain-match`) |
 | [`matches`](matches/spec.md) | Detalle del match solo para participantes con dirección exacta, teléfono autorizado por match, confirmar interés y retirarse que cierra para todos | `2026-10-22-add-match-details-and-decisions` |
+| [`chat`](chat/spec.md) | Chat de grupo por match creado con el match, mensajes de texto e imágenes sin metadatos en tiempo real, lectura solo para participantes y envío solo por la API, y solo lectura con aviso al cerrarse el match | `2026-10-30-add-match-chat` |
+| [`notifications`](notifications/spec.md) | Permiso de avisos tras el primer me gusta y registro del dispositivo, avisos push de match nuevo, mensaje, confirmación y cierre que abren el match o su chat, email de match nuevo y cerrado a usuarios verificados, y ningún dato privado en los avisos | `2026-10-31-add-notifications` |

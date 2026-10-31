@@ -1,13 +1,22 @@
-import { borderWidth, contentMaxWidth, touchTarget, useTheme } from '@changehouse/ui';
-import { Ionicons } from '@expo/vector-icons';
+import { borderWidth, contentMaxWidth, useTheme } from '@changehouse/ui';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Badge, Button, Dialog, EmptyState, Link, Notice, Screen, Switch, Text } from '../../ui';
-import { useFocusRing } from '../../ui/useFocusRing';
+import {
+  BackButton,
+  Badge,
+  Button,
+  Dialog,
+  EmptyState,
+  Link,
+  Notice,
+  Screen,
+  Switch,
+  Text,
+} from '../../ui';
 import { CompensationPill } from '../discovery/CompensationPill';
 import { DetailGallery } from '../discovery/DetailGallery';
 import { formatEuros } from '../homes/home-form';
@@ -28,33 +37,6 @@ function useGoBack() {
     if (router.canGoBack()) router.back();
     else router.replace(matchRoutes.list);
   };
-}
-
-function BackButton({ onPress }: Readonly<{ onPress: () => void }>) {
-  const { t } = useTranslation();
-  const theme = useTheme();
-  const focusRing = useFocusRing();
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={t('matches.detail.back')}
-      onPress={onPress}
-      onFocus={focusRing.onFocus}
-      onBlur={focusRing.onBlur}
-      style={[
-        styles.back,
-        { borderRadius: theme.radius.full, minHeight: touchTarget, minWidth: touchTarget },
-        focusRing.style,
-      ]}
-    >
-      <Ionicons
-        accessible={false}
-        name="arrow-back"
-        size={theme.space[5]}
-        color={theme.color.text}
-      />
-    </Pressable>
-  );
 }
 
 const FAILURE_TONE: Record<ActionFailure, 'danger' | 'warning'> = {
@@ -320,6 +302,7 @@ function Detail({ detail, view }: Readonly<{ detail: MatchDetail; view: MatchDet
   const { t } = useTranslation();
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const goBack = useGoBack();
   const query = useMatchDetail(detail.id);
   const actions = useMatchActions(detail.id, view.mine?.homeId);
@@ -354,8 +337,15 @@ function Detail({ detail, view }: Readonly<{ detail: MatchDetail; view: MatchDet
       >
         <View style={[styles.content, { gap: theme.space[4], maxWidth: contentMaxWidth.reading }]}>
           <View style={{ gap: theme.space[2], paddingHorizontal: theme.space[4] }}>
-            <BackButton onPress={goBack} />
+            <BackButton label={t('matches.detail.back')} onPress={goBack} />
             <StatusHeader detail={detail} view={view} />
+            <Button
+              variant="secondary"
+              label={t('matches.detail.chat.open')}
+              onPress={() => {
+                router.push(matchRoutes.chat(detail.id));
+              }}
+            />
           </View>
 
           {view.sections.map((participant) => (
@@ -470,7 +460,6 @@ export function MatchDetailScreen({ matchId }: Readonly<{ matchId: string }>) {
 }
 
 const styles = StyleSheet.create({
-  back: { alignItems: 'center', alignSelf: 'flex-start', justifyContent: 'center' },
   content: { alignSelf: 'center', width: '100%' },
   root: { flex: 1 },
   row: { alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap' },

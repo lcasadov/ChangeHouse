@@ -78,6 +78,20 @@
       "when": 1792680011999,
       "tag": "0010_vpp_regime",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1792733553443,
+      "tag": "0011_chat_outbox",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1793400139375,
+      "tag": "0012_notifications",
+      "breakpoints": true
     }
   ]
 }

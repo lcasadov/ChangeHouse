@@ -34,6 +34,7 @@ export const policy: Policy = {
   getMe: { kind: 'roles', roles: ALL_ACCOUNT_ROLES, denyStatus: 404 },
   listMyConsents: { kind: 'roles', roles: ALL_ACCOUNT_ROLES, denyStatus: 404 },
   acceptConsent: { kind: 'roles', roles: ALL_ACCOUNT_ROLES, denyStatus: 404 },
+  registerDevice: { kind: 'roles', roles: ALL_ACCOUNT_ROLES, denyStatus: 404 },
   // Viviendas: `agency` y `admin` no publican ni gestionan viviendas propias (RC-19); la propiedad
   // de cada vivienda (`resourceOwner`) y su visibilidad las resuelve el caso de uso con un 404
   listMyHomes: { kind: 'roles', roles: HOME_OWNER_ROLES },
@@ -76,6 +77,11 @@ export const policy: Policy = {
   confirmMatch: { kind: 'roles', roles: HOME_OWNER_ROLES },
   withdrawFromMatch: { kind: 'roles', roles: HOME_OWNER_ROLES },
   setPhoneSharing: { kind: 'roles', roles: HOME_OWNER_ROLES },
+  // Chat (RF-52, RF-60): solo participantes; el admin no escribe. La pertenencia (`participant`) y el
+  // estado del match los resuelve el caso de uso (404 / 409)
+  getChatImageUrl: { kind: 'roles', roles: HOME_OWNER_ROLES },
+  createChatImageUpload: { kind: 'roles', roles: HOME_OWNER_ROLES },
+  sendMatchMessage: { kind: 'roles', roles: HOME_OWNER_ROLES },
   // Moderación (RF-18, RF-93): solo el admin; la decisión queda auditada
   adminListHomes: { kind: 'roles', roles: ['admin'] },
   adminModerateHome: { kind: 'roles', roles: ['admin'] },

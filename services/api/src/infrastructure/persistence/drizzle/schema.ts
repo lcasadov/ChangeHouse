@@ -1,5 +1,6 @@
 import {
   CONSENT_TYPES,
+  DEVICE_PLATFORMS,
   HOME_REGIMES,
   HOME_STATUSES,
   HOME_TYPES,
@@ -15,6 +16,7 @@ import {
   customType,
   date,
   index,
+  integer,
   jsonb,
   numeric,
   pgEnum,
@@ -39,6 +41,7 @@ export const homeTypeEnum = pgEnum('home_type', HOME_TYPES);
 export const homeStatusEnum = pgEnum('home_status', HOME_STATUSES);
 export const homeRegimeEnum = pgEnum('home_regime', HOME_REGIMES);
 export const photoStatusEnum = pgEnum('photo_status', PHOTO_STATUSES);
+export const devicePlatformEnum = pgEnum('device_platform', DEVICE_PLATFORMS);
 export const locationVisibilityEnum = pgEnum('location_visibility', LOCATION_VISIBILITIES);
 
 /** Dirección cifrada (`bytea`): se lee y se escribe como `Buffer`. */
@@ -355,7 +358,7 @@ export const matches = pgTable(
     type: smallint('type').notNull(),
     status: matchStatusEnum('status').notNull().default('open'),
     cycleKey: text('cycle_key').notNull().unique(),
-    // Chat de grupo en Firestore: llega con `add-match-chat`
+    // Chat de grupo en Firestore: lo rellena el despachador del outbox cuando lo crea (`add-match-chat`)
     chatId: text('chat_id'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -399,3 +402,43 @@ export const matchParticipants = pgTable(
     index('match_participants_gives_receives_idx').on(table.givesHomeId, table.receivesHomeId),
   ],
 );
+
+/**
+ * Bandeja de salida (patrón *outbox*): eventos de negocio que hay que propagar a un sistema externo
+ * (por ahora, crear el chat de Firestore de un match nuevo). Se insertan en la misma transacción
+ * que el cambio de negocio y un despachador los procesa después; `processed_at` nulo = pendiente.
+ * Un mismo hecho (`type` sobre `aggregate_id`) se registra una sola vez.
+ */
+export const outbox = pgTable(
+  'outbox',
+  {
+    id: uuid('id').primaryKey(),
+    type: text('type').notNull(),
+    aggregateId: uuid('aggregate_id').notNull(),
+    // Identificadores que el manejador necesita además del agregado (p. ej. el match y el remitente de un mensaje)
+    payload: jsonb('payload').$type<Record<string, string>>(),
+    attempts: integer('attempts').notNull().default(0),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    processedAt: timestamp('processed_at', { withTimezone: true }),
+  },
+  (table) => [
+    unique('outbox_type_aggregate_key').on(table.type, table.aggregateId),
+    // Los pendientes, en orden de llegada: es lo único que lee el despachador
+    index('outbox_pending_idx')
+      .on(table.createdAt)
+      .where(sql`${table.processedAt} IS NULL`),
+  ],
+);
+
+/**
+ * Dispositivos con notificaciones push (RF-61): el token FCM es la clave, así que registrarlo de nuevo
+ * lo refresca y, si ahora lo usa otra cuenta, pasa a ella. Se borran los tokens que FCM da por inválidos.
+ */
+export const userDevices = pgTable('user_devices', {
+  fcmToken: text('fcm_token').primaryKey(),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  platform: devicePlatformEnum('platform').notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});

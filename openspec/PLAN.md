@@ -24,31 +24,17 @@ personas; la zona generada la reescribe `plan-sync` en cada operación.
 | add-notifications | D · MVP | add-match-chat | Push y email |
 | add-home-vpp-regime | D · MVP | add-home-listing | |
 | add-home-pause-resume | D · MVP | add-home-moderation | |
-| add-account-deletion-and-export | D · MVP | add-user-profile | RGPD y tiendas |
-| add-reports-and-blocking | D · MVP | add-match-chat | |
-| add-user-suspension | D · MVP | add-reports-and-blocking | |
-| add-admin-panel | D · MVP | add-home-moderation, add-waitlist | Incluye exportación de la lista de espera |
-| add-landing-blog | D · MVP | add-landing | Prioridad baja |
-
-<!-- catalogo:generado:inicio -->
-
-## Estado (generado)
-
-| change | estado | % | completadas/total | fase |
-|---|---|---|---|---|
 | add-account-deletion-and-export | ❌ SIN EMPEZAR | 0 % | 0/6 | ❌ SIN EMPEZAR |
 | add-admin-panel | ❌ SIN EMPEZAR | 0 % | 0/5 | ❌ SIN EMPEZAR |
-| add-match-chat | ❌ SIN EMPEZAR | 0 % | 0/8 | ❌ SIN EMPEZAR |
-| add-notifications | ❌ SIN EMPEZAR | 0 % | 0/7 | ❌ SIN EMPEZAR |
 | add-reports-and-blocking | ❌ SIN EMPEZAR | 0 % | 0/6 | ❌ SIN EMPEZAR |
 | add-user-suspension | ❌ SIN EMPEZAR | 0 % | 0/5 | ❌ SIN EMPEZAR |
 
-**Progreso global de los changes activos**: 0/37 (0 %)
+**Progreso global de los changes activos**: 0/22 (0 %)
 
 | estado | changes |
 |---|---|
-| ❌ SIN EMPEZAR | 6 |
-| ✅ ARCHIVADO | 16 |
+| ❌ SIN EMPEZAR | 4 |
+| ✅ ARCHIVADO | 18 |
 
 ### Changes archivados
 
@@ -70,5 +56,7 @@ personas; la zona generada la reescribe `plan-sync` en cada operación.
 | 2026-10-22-add-match-details-and-decisions | 7/7 | 2026-10-22 |
 | 2026-10-23-add-home-pause-resume | 5/5 | 2026-10-23 |
 | 2026-10-23-add-landing-blog | 5/5 | 2026-10-23 |
+| 2026-10-30-add-match-chat | 8/8 | 2026-10-30 |
+| 2026-10-31-add-notifications | 7/7 | 2026-10-31 |
 
 <!-- catalogo:generado:fin -->

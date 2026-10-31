@@ -36,6 +36,8 @@ export interface FakeMatchOptions {
   mineStatus?: ParticipantStatus;
   /** El estado del otro participante (por defecto, `pending`). */
   theirStatus?: ParticipantStatus;
+  /** El chat de Firestore del match; ausente mientras el chat no se ha creado. */
+  chatId?: string;
 }
 
 /** Un match entre dos viviendas con la forma de la lista (`listMyMatches`): sin teléfono ni dirección. */
@@ -50,12 +52,14 @@ export function fakeMatch({
   theirName = 'Beto',
   mineStatus = 'pending',
   theirStatus = 'pending',
+  chatId,
 }: FakeMatchOptions): Match {
   sequence += 1;
   return {
     id: id ?? `0198f3a0-cccc-7000-8000-${String(sequence).padStart(12, '0')}`,
     type,
     status,
+    ...(chatId ? { chatId } : {}),
     createdAt,
     participants: [
       {

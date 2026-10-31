@@ -15,6 +15,20 @@ export {
   validateProfileForm,
 } from './account.js';
 export { assertNever } from './assert-never.js';
+export {
+  CHAT_MESSAGE_MAX_LENGTH,
+  type SendMessageInput,
+  sendMessageInputSchema,
+  validateSendMessageInput,
+} from './chat.js';
+export {
+  DEVICE_PLATFORMS,
+  type DeviceInput,
+  deviceInputSchema,
+  type DevicePlatform,
+  MAX_FCM_TOKEN_LENGTH,
+  validateDeviceInput,
+} from './device.js';
 export { FIXTURE_PLACES, type FixturePlace } from './fixture-places.js';
 export {
   ENERGY_RATINGS,

@@ -46,49 +46,49 @@
       "key": "T1",
       "id": 238,
       "parent": 236,
-      "state": "open"
+      "state": "done"
     },
     {
       "key": "B1",
       "id": 239,
       "parent": 236,
-      "state": "open"
+      "state": "done"
     },
     {
       "key": "B2",
       "id": 240,
       "parent": 234,
-      "state": "open"
+      "state": "done"
     },
     {
       "key": "T2",
       "id": 241,
       "parent": 235,
-      "state": "open"
+      "state": "done"
     },
     {
       "key": "B3",
       "id": 242,
       "parent": 237,
-      "state": "open"
+      "state": "done"
     },
     {
       "key": "T3",
       "id": 244,
       "parent": 235,
-      "state": "open"
+      "state": "done"
     },
     {
       "key": "F1",
       "id": 245,
       "parent": 234,
-      "state": "open"
+      "state": "done"
     },
     {
       "key": "V1",
       "id": 246,
       "parent": 235,
-      "state": "open"
+      "state": "done"
     }
   ],
   "bugs": [],

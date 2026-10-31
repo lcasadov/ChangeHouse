@@ -163,11 +163,31 @@ const REQUESTS: Record<string, RequestTemplate> = {
     url: `/v1/matches/${MISSING_HOME}/phone-sharing`,
     payload: () => ({ share: true }),
   },
+  // Chat: sin match al que pertenecer, el 404 de quien tiene acceso prueba que se llegó al caso de uso
+  getChatImageUrl: {
+    method: 'GET',
+    url: `/v1/matches/${MISSING_HOME}/chat/images/${MISSING_HOME}`,
+  },
+  createChatImageUpload: {
+    method: 'POST',
+    url: `/v1/matches/${MISSING_HOME}/chat/image-uploads`,
+    payload: () => ({ contentType: 'image/jpeg' }),
+  },
+  sendMatchMessage: {
+    method: 'POST',
+    url: `/v1/matches/${MISSING_HOME}/messages`,
+    payload: () => ({ text: 'Hola' }),
+  },
   adminListHomes: { method: 'GET', url: '/v1/admin/homes?status=in_review' },
   adminModerateHome: {
     method: 'POST',
     url: (context) => `/v1/admin/homes/${context.reviewHomeId}/moderation`,
     payload: () => ({ decision: 'approve' }),
+  },
+  registerDevice: {
+    method: 'PUT',
+    url: '/v1/me/devices',
+    payload: () => ({ fcmToken: 'token-de-la-matriz', platform: 'android' }),
   },
   acceptConsent: {
     method: 'POST',

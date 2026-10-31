@@ -16,12 +16,13 @@ export interface MatchParticipantView {
   status: ParticipantStatus;
 }
 
-/** `Match` del contrato; `chatId` no aparece hasta que exista el chat (`add-match-chat`). */
+/** `Match` del contrato; `chatId` no aparece hasta que el despachador crea el chat (`add-match-chat`). */
 export interface MatchView {
   id: string;
   type: CycleType;
   status: MatchStatus;
   createdAt: string;
+  chatId?: string;
   participants: MatchParticipantView[];
 }
 
@@ -61,6 +62,7 @@ export function toMatchView(record: MatchRecord): MatchView {
     type: record.type,
     status: record.status,
     createdAt: record.createdAt.toISOString(),
+    ...(record.chatId ? { chatId: record.chatId } : {}),
     participants: record.participants.map(toParticipantView),
   };
 }

@@ -256,6 +256,46 @@ describe('confirmMatch', () => {
   });
 });
 
+describe('avisos de cambio de estado en la bandeja de salida', () => {
+  it('Scenario: Todos confirman - se registra match.confirmed en la misma transacción, una sola vez', async () => {
+    const { operations, outbox } = setup(pairMatch('open', 'pending', 'confirmed'));
+
+    await operations.confirmMatch(ME, MATCH_ID);
+    await operations.confirmMatch(ME, MATCH_ID);
+
+    expect(outbox.events).toEqual([
+      expect.objectContaining({ type: 'match.confirmed', aggregateId: MATCH_ID }),
+    ]);
+  });
+
+  it('una confirmación que aún deja el match abierto no avisa a nadie', async () => {
+    const { operations, outbox } = setup();
+
+    await operations.confirmMatch(ME, MATCH_ID);
+
+    expect(outbox.events).toEqual([]);
+  });
+
+  it('retirarse registra match.closed junto con la auditoría', async () => {
+    const { operations, outbox } = setup();
+
+    await operations.withdrawFromMatch(ME, MATCH_ID);
+
+    expect(outbox.events).toEqual([
+      expect.objectContaining({ type: 'match.closed', aggregateId: MATCH_ID, processedAt: null }),
+    ]);
+  });
+
+  it('si la operación falla no queda ningún aviso registrado', async () => {
+    const { operations, outbox } = setup(pairMatch('closed'));
+
+    await expect(operations.withdrawFromMatch(ME, MATCH_ID)).rejects.toThrow(MatchNotOpenError);
+    await expect(operations.confirmMatch(ME, MATCH_ID)).rejects.toThrow(MatchNotOpenError);
+
+    expect(outbox.events).toEqual([]);
+  });
+});
+
 describe('withdrawFromMatch', () => {
   it('Scenario: Retirarse - el match pasa a closed, el participante a withdrawn y queda auditado', async () => {
     const { operations, reader, audit, units } = setup();

@@ -2,7 +2,7 @@ import type { MeInput } from '@changehouse/shared';
 
 import type { ApiClient } from '../../api/client';
 import type { components } from '../../api/schema';
-import { type AccountApi, AccountApiError, type Me } from './account-api';
+import { type AccountApi, AccountApiError, type DeviceRegistration, type Me } from './account-api';
 
 type Problem = components['schemas']['Problem'];
 
@@ -41,6 +41,11 @@ export function createHttpAccountApi(client: ApiClient): AccountApi {
       const { data, error, response } = await request(() => client.PUT('/me', { body: input }));
       if (data) return data;
       throw failureOf(response.status, error);
+    },
+
+    async registerDevice(input: DeviceRegistration): Promise<void> {
+      const { error, response } = await request(() => client.PUT('/me/devices', { body: input }));
+      if (!response.ok) throw failureOf(response.status, error);
     },
   };
 }

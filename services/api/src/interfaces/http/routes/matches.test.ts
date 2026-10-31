@@ -12,6 +12,21 @@ import type { MatchRouteOptions } from './matches.js';
 const MATCH_ID = '0199c1a2-7b3e-7c1d-8a40-3f5e6d7c8b9a';
 const MATCH = { id: MATCH_ID, type: 2, status: 'open' } as unknown as MatchView;
 const DETAIL = { ...MATCH, homes: [] } as unknown as MatchDetailView;
+const MESSAGE = {
+  id: '0199c1a2-7b3e-7c1d-8a40-3f5e6d7c8b9b',
+  kind: 'text',
+  text: 'Hola',
+  imageUrl: null,
+  createdAt: '2026-10-19T10:00:00.000Z',
+} as const;
+const UPLOAD = {
+  uploadId: '0199c1a2-7b3e-7c1d-8a40-3f5e6d7c8b9c',
+  uploadUrl: 'https://storage.test/upload',
+  expiresAt: '2026-10-19T10:15:00.000Z',
+};
+const IMAGE_URL = { url: 'https://storage.test/read', expiresAt: '2026-10-19T10:15:00.000Z' };
+const IMAGE_ID = '0199c1a2-7b3e-7c1d-8a40-3f5e6d7c8b9d';
+const UPLOAD_ID = '0199c1a2-7b3e-7c1d-8a40-3f5e6d7c8b9c';
 const AUTH = { authorization: 'Bearer token-de-prueba' };
 const NOW = new Date('2026-10-19T10:00:00.000Z');
 
@@ -42,6 +57,18 @@ function setup(role: Role | undefined = 'owner', overrides: Partial<MatchRouteOp
     setPhoneSharing: (...args) => {
       calls.push(args);
       return Promise.resolve();
+    },
+    sendMatchMessage: (...args) => {
+      calls.push(args);
+      return Promise.resolve(MESSAGE);
+    },
+    createChatImageUpload: (...args) => {
+      calls.push(args);
+      return Promise.resolve(UPLOAD);
+    },
+    getChatImageUrl: (...args) => {
+      calls.push(args);
+      return Promise.resolve(IMAGE_URL);
     },
     ...overrides,
   };
@@ -257,5 +284,183 @@ describe('PUT /matches/:matchId/phone-sharing', () => {
     const admin = await put(setup('admin').app, { share: true });
 
     expect([closed.statusCode, malformed.statusCode, admin.statusCode]).toEqual([409, 404, 403]);
+  });
+});
+
+describe('POST /matches/:matchId/messages', () => {
+  const url = `/v1/matches/${MATCH_ID}/messages`;
+  const send = (app: FastifyInstance, payload: unknown) =>
+    app.inject({ method: 'POST', url, headers: AUTH, payload: payload as object });
+
+  it('envía un texto con la cuenta de quien llama y responde 201 con el mensaje', async () => {
+    const { app, calls } = setup('owner');
+
+    const response = await send(app, { text: '  Hola  ' });
+
+    expect(response.statusCode).toBe(201);
+    expect(response.json()).toEqual(MESSAGE);
+    expect(calls).toEqual([['user-1', MATCH_ID, { kind: 'text', text: 'Hola' }]]);
+  });
+
+  it('envía una imagen subida', async () => {
+    const { app, calls } = setup('seeker');
+
+    const response = await send(app, { imageUploadId: UPLOAD_ID });
+
+    expect(response.statusCode).toBe(201);
+    expect(calls).toEqual([['user-1', MATCH_ID, { kind: 'image', imageUploadId: UPLOAD_ID }]]);
+  });
+
+  it('Scenario: Mensaje demasiado largo - 2.001 caracteres responde 400 señalando text y no llama al caso de uso', async () => {
+    const { app, calls } = setup();
+
+    const response = await send(app, { text: 'a'.repeat(2001) });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({ errors: [{ field: 'text', message: 'too_long' }] });
+    expect(calls).toEqual([]);
+  });
+
+  it.each([
+    ['vacío', { text: '' }, 'required'],
+    ['sin contenido', {}, 'required'],
+    ['con texto e imagen', { text: 'a', imageUploadId: UPLOAD_ID }, 'invalid'],
+  ])('un mensaje %s responde 400', async (_name, payload, message) => {
+    const { app, calls } = setup();
+
+    const response = await send(app, payload);
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json<{ errors: { message: string }[] }>().errors[0]?.message).toBe(message);
+    expect(calls).toEqual([]);
+  });
+
+  it('un matchId que no es UUID responde 404 como un match inexistente', async () => {
+    const { app, calls } = setup();
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/matches/no-es-uuid/messages',
+      headers: AUTH,
+      payload: { text: 'hola' },
+    });
+
+    expect(response.statusCode).toBe(404);
+    expect(calls).toEqual([]);
+  });
+
+  it.each([
+    ['no participante', new MatchNotFoundError(), 404],
+    ['match cerrado', new MatchNotOpenError(), 409],
+  ])('%s: traduce el error del caso de uso a su estado HTTP', async (_name, error, status) => {
+    const { app } = setup('owner', { sendMatchMessage: () => Promise.reject(error) });
+
+    const response = await send(app, { text: 'hola' });
+
+    expect(response.statusCode).toBe(status);
+  });
+
+  it('agency y admin reciben 403 y sin token es 401', async () => {
+    for (const role of ['agency', 'admin'] as const) {
+      const { app, calls } = setup(role);
+      expect((await send(app, { text: 'hola' })).statusCode, role).toBe(403);
+      expect(calls).toEqual([]);
+    }
+    const { app } = setup();
+    const anonymous = await app.inject({ method: 'POST', url, payload: { text: 'hola' } });
+    expect(anonymous.statusCode).toBe(401);
+  });
+});
+
+describe('POST /matches/:matchId/chat/image-uploads', () => {
+  const url = `/v1/matches/${MATCH_ID}/chat/image-uploads`;
+
+  it('emite la URL de subida y responde 201', async () => {
+    const { app, calls } = setup();
+
+    const response = await app.inject({
+      method: 'POST',
+      url,
+      headers: AUTH,
+      payload: { contentType: 'image/png' },
+    });
+
+    expect(response.statusCode).toBe(201);
+    expect(response.json()).toEqual(UPLOAD);
+    expect(calls).toEqual([['user-1', MATCH_ID, 'image/png']]);
+  });
+
+  it.each([{ contentType: 'image/gif' }, {}, { contentType: 'image/png', extra: 1 }])(
+    'un cuerpo no válido (%j) responde 400',
+    async (payload) => {
+      const { app, calls } = setup();
+
+      const response = await app.inject({ method: 'POST', url, headers: AUTH, payload });
+
+      expect(response.statusCode).toBe(400);
+      expect(calls).toEqual([]);
+    },
+  );
+
+  it('un matchId que no es UUID responde 404, y agency y admin 403', async () => {
+    const { app } = setup();
+    const missing = await app.inject({
+      method: 'POST',
+      url: '/v1/matches/no-es-uuid/chat/image-uploads',
+      headers: AUTH,
+      payload: { contentType: 'image/png' },
+    });
+    expect(missing.statusCode).toBe(404);
+    for (const role of ['agency', 'admin'] as const) {
+      const { app: other } = setup(role);
+      const response = await other.inject({
+        method: 'POST',
+        url,
+        headers: AUTH,
+        payload: { contentType: 'image/png' },
+      });
+      expect(response.statusCode, role).toBe(403);
+    }
+  });
+});
+
+describe('GET /matches/:matchId/chat/images/:imageId', () => {
+  const url = `/v1/matches/${MATCH_ID}/chat/images/${IMAGE_ID}`;
+
+  it('devuelve la URL firmada de la imagen con la cuenta de quien llama', async () => {
+    const { app, calls } = setup('seeker');
+
+    const response = await app.inject({ method: 'GET', url, headers: AUTH });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual(IMAGE_URL);
+    expect(calls).toEqual([['user-1', MATCH_ID, IMAGE_ID]]);
+  });
+
+  it('un matchId o un imageId que no son UUID responden 404 sin llamar al caso de uso', async () => {
+    const { app, calls } = setup();
+
+    for (const bad of [
+      `/v1/matches/no-es-uuid/chat/images/${IMAGE_ID}`,
+      `/v1/matches/${MATCH_ID}/chat/images/ruta-de-almacenamiento`,
+    ]) {
+      const response = await app.inject({ method: 'GET', url: bad, headers: AUTH });
+      expect(response.statusCode, bad).toBe(404);
+    }
+    expect(calls).toEqual([]);
+  });
+
+  it('traduce el 404 del caso de uso; agency y admin reciben 403 y sin token es 401', async () => {
+    const { app } = setup('owner', {
+      getChatImageUrl: () => Promise.reject(new MatchNotFoundError()),
+    });
+    expect((await app.inject({ method: 'GET', url, headers: AUTH })).statusCode).toBe(404);
+    for (const role of ['agency', 'admin'] as const) {
+      const { app: other } = setup(role);
+      const response = await other.inject({ method: 'GET', url, headers: AUTH });
+      expect(response.statusCode, role).toBe(403);
+    }
+    const { app: anonymous } = setup();
+    expect((await anonymous.inject({ method: 'GET', url })).statusCode).toBe(401);
   });
 });
