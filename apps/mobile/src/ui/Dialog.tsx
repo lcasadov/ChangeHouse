@@ -1,7 +1,8 @@
 import { contentMaxWidth, useTheme } from '@changehouse/ui';
+import type { ReactNode } from 'react';
 import { Modal, StyleSheet, View } from 'react-native';
 
-import { Button } from './Button';
+import { Button, type ButtonVariant } from './Button';
 import { Text } from './Text';
 
 export interface DialogProps {
@@ -13,6 +14,12 @@ export interface DialogProps {
   onConfirm: () => void;
   /** También se llama con Escape (web) y con el gesto o botón de volver (Android). */
   onCancel: () => void;
+  /** Contenido propio bajo la descripción (p. ej. un campo de confirmación). */
+  children?: ReactNode;
+  /** La confirmación no se puede pulsar todavía. */
+  confirmDisabled?: boolean;
+  /** Variante del botón de confirmar; `danger` para acciones destructivas. */
+  confirmVariant?: ButtonVariant;
 }
 
 /**
@@ -28,6 +35,9 @@ export function Dialog({
   cancelLabel,
   onConfirm,
   onCancel,
+  children,
+  confirmDisabled = false,
+  confirmVariant = 'primary',
 }: Readonly<DialogProps>) {
   const theme = useTheme();
   const elevation = theme.elevation[3];
@@ -70,8 +80,14 @@ export function Dialog({
             {title}
           </Text>
           <Text tone="textMuted">{description}</Text>
+          {children}
           <View style={{ gap: theme.space[2], paddingTop: theme.space[2] }}>
-            <Button label={confirmLabel} onPress={onConfirm} />
+            <Button
+              label={confirmLabel}
+              variant={confirmVariant}
+              disabled={confirmDisabled}
+              onPress={onConfirm}
+            />
             <Button variant="ghost" label={cancelLabel} onPress={onCancel} />
           </View>
         </View>

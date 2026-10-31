@@ -2,6 +2,8 @@ import { Platform } from 'react-native';
 
 import { createApiClient } from '../../api/client';
 import { createHttpAccountApi } from '../account/http-account-api';
+import { createShareDataExporter } from '../account/share-data-exporter';
+import { createWebDataExporter } from '../account/web-data-exporter';
 import { createHttpAdminApi } from '../admin/http-admin-api';
 import type { AuthService, SocialSignIn } from '../auth/auth-service';
 import { createFirebaseAuth } from '../auth/create-firebase-auth';
@@ -59,6 +61,7 @@ export function createAppServices(
   return {
     auth,
     accountApi: createHttpAccountApi(client),
+    dataExporter: Platform.OS === 'web' ? createWebDataExporter() : createShareDataExporter(),
     homesApi: createHttpHomesApi(client),
     adminApi: createHttpAdminApi(client),
     addressSuggestions: createAddressSuggestions(env),

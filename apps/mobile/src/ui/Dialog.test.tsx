@@ -3,6 +3,7 @@ import { fireEvent, screen } from '@testing-library/react-native';
 
 import { renderThemed, THEME_NAMES } from '../test-utils';
 import { Dialog } from './Dialog';
+import { Text } from './Text';
 
 function setup(visible = true) {
   const onConfirm = jest.fn();
@@ -72,5 +73,47 @@ describe('Dialog', () => {
       expect(rendered).toContain(color.overlay);
       expect(rendered).toContain(elevation[3].surface);
     });
+  });
+});
+
+describe('Dialog - contenido extra y confirmación deshabilitada', () => {
+  it('pinta el contenido extra bajo la descripción', async () => {
+    await renderThemed(
+      <Dialog
+        visible
+        title="Título"
+        description="Descripción"
+        confirmLabel="Aceptar"
+        cancelLabel="Cancelar"
+        onConfirm={jest.fn()}
+        onCancel={jest.fn()}
+      >
+        <Text>Contenido extra</Text>
+      </Dialog>,
+    );
+
+    expect(screen.getByText('Contenido extra')).toBeTruthy();
+  });
+
+  it('con confirmDisabled la confirmación no se puede pulsar', async () => {
+    const onConfirm = jest.fn();
+    await renderThemed(
+      <Dialog
+        visible
+        title="Título"
+        description="Descripción"
+        confirmLabel="Aceptar"
+        cancelLabel="Cancelar"
+        confirmDisabled
+        confirmVariant="danger"
+        onConfirm={onConfirm}
+        onCancel={jest.fn()}
+      />,
+    );
+
+    const confirm = screen.getByRole('button', { name: 'Aceptar' });
+    expect(confirm.props.accessibilityState).toMatchObject({ disabled: true });
+    await fireEvent.press(confirm);
+    expect(onConfirm).not.toHaveBeenCalled();
   });
 });

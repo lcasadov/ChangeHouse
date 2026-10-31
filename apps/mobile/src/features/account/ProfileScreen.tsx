@@ -7,6 +7,7 @@ import { Button, Checkbox, Dialog, FormScreen, Notice, Text, TextField } from '.
 import { useSignOut } from '../auth/use-sign-out';
 import { LoadingView } from '../session/LoadingView';
 import { AccountApiError, type Me } from './account-api';
+import { AccountActions } from './AccountActions';
 import {
   errorKeyOf,
   formValuesOf,
@@ -256,6 +257,7 @@ export function ProfileScreen() {
           setConfirmingSignOut(false);
         }}
       />
+      <AccountActions />
     </FormScreen>
   );
 }

@@ -36,4 +36,8 @@ export interface AccountApi {
   upsertMe: (input: MeInput) => Promise<Me>;
   /** Registra o refresca el token FCM de este dispositivo (`registerDevice`). */
   registerDevice: (input: DeviceRegistration) => Promise<void>;
+  /** Elimina la cuenta (`deleteMe`, 204): anonimización y baja en el proveedor de identidad. */
+  deleteMe: () => Promise<void>;
+  /** Los datos personales del usuario en JSON (`exportMyData`). */
+  exportMyData: () => Promise<Record<string, unknown>>;
 }
