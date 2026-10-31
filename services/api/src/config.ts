@@ -95,10 +95,14 @@ function bucket(env: Env, name: string, fallback: string): string {
 }
 
 function storageConfig(env: Env): ApiConfig['storage'] {
-  const emulatorHost = env['STORAGE_EMULATOR_HOST'] || undefined;
+  // @google-cloud/storage lee STORAGE_EMULATOR_HOST por su cuenta y la usa sin esquema: rompe las subidas
+  if (env['STORAGE_EMULATOR_HOST']) {
+    throw new Error('STORAGE_EMULATOR_HOST ya no se usa: renómbrala a FAKE_GCS_HOST');
+  }
+  const emulatorHost = env['FAKE_GCS_HOST'] || undefined;
   // El emulador no valida las URL firmadas: en Cloud Run guardaría las fotos en un servidor falso
   if (emulatorHost && env['K_SERVICE']) {
-    throw new Error('STORAGE_EMULATOR_HOST no puede definirse en Cloud Run');
+    throw new Error('FAKE_GCS_HOST no puede definirse en Cloud Run');
   }
   const privateBucket = bucket(env, 'STORAGE_PRIVATE_BUCKET', DEFAULT_PRIVATE_BUCKET);
   const publicBucket = bucket(env, 'STORAGE_PUBLIC_BUCKET', DEFAULT_PUBLIC_BUCKET);

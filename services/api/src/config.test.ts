@@ -249,7 +249,7 @@ describe('loadConfig', () => {
     });
 
     it('en local los buckets tienen los nombres de docker-compose y, con emulador, la URL pública apunta a él', () => {
-      const config = loadConfig({ ...withoutBuckets, STORAGE_EMULATOR_HOST: 'localhost:4443' });
+      const config = loadConfig({ ...withoutBuckets, FAKE_GCS_HOST: 'localhost:4443' });
 
       expect(config.storage).toEqual({
         privateBucket: 'changehouse-photos-private',
@@ -274,9 +274,15 @@ describe('loadConfig', () => {
           ...base,
           K_SERVICE: 'api',
           GOOGLE_PLACES_SERVER_KEY: 'k',
-          STORAGE_EMULATOR_HOST: 'localhost:4443',
+          FAKE_GCS_HOST: 'localhost:4443',
         }),
-      ).toThrow(/STORAGE_EMULATOR_HOST/);
+      ).toThrow(/FAKE_GCS_HOST/);
+    });
+
+    it('se niega a arrancar con STORAGE_EMULATOR_HOST: la biblioteca de Storage la lee por su cuenta sin esquema y rompe las subidas (#379)', () => {
+      expect(() => loadConfig({ ...base, STORAGE_EMULATOR_HOST: 'localhost:4443' })).toThrow(
+        /STORAGE_EMULATOR_HOST.*FAKE_GCS_HOST/,
+      );
     });
   });
 });
