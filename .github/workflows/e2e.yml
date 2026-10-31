@@ -1,0 +1,48 @@
+# Pruebas E2E con Playwright (docs/TESTING-STRATEGY.md §1 y §7): solo en PR hacia `master` y bajo demanda.
+# Landing: build estático + preview. App web: entorno local completo, sin GCP (PostgreSQL + PostGIS y
+# fake-gcs en Docker, emuladores de Auth y Firestore, API real y export estático de la app).
+name: E2E
+
+on:
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      # Los emuladores de Firebase (Auth y Firestore) necesitan Java
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+      # Un solo Chromium sirve a la landing y a la app (misma versión de @playwright/test)
+      - name: Instalar el navegador de Playwright
+        run: pnpm --filter @changehouse/mobile exec playwright install --with-deps chromium
+      # Turborepo ejecuta `test:e2e` de la landing y de la app. La app prepara su entorno (Docker, base de
+      # datos E2E, migraciones y export web) y arranca los emuladores con `firebase emulators:exec`
+      - name: E2E de la landing y de la app web
+        run: pnpm test:e2e
+      - name: Subir el informe de Playwright
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-e2e
+          path: |
+            apps/landing/test-results
+            apps/mobile/test-results
+            apps/mobile/playwright-report
+          if-no-files-found: ignore
+          retention-days: 7
