@@ -108,6 +108,16 @@ describe('candidateQuerySql', () => {
     expect(sql).toContain('(h.published_at, h.id) <');
     expect(params).toEqual(expect.arrayContaining([at.toISOString(), ORIGIN.id]));
   });
+  it.each([[null], [ORIGIN]])(
+    'excluye en los dos sentidos a los usuarios bloqueados (origen %#)',
+    (origin) => {
+      const { sql, params } = render({ origin });
+      expect(sql).toContain('FROM user_blocks ub');
+      expect(sql).toContain('ub.blocked_id = h.owner_id');
+      expect(sql).toContain('ub.blocker_id = h.owner_id');
+      expect(params).toContain(ORIGIN.ownerId);
+    },
+  );
 });
 
 describe('DrizzleDiscoveryRepository', () => {

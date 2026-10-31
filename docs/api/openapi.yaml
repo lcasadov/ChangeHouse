@@ -1009,6 +1009,11 @@ paths:
       tags: [moderacion]
       operationId: createReport
       summary: Denuncia un usuario, una vivienda o un mensaje (RF-63)
+      description: >-
+        Un usuario o una vivienda se identifican por su UUID; un mensaje, por su id de Firestore, y
+        solo se puede denunciar si se participa en su chat (si no, 404, igual que si no existe). La
+        denuncia de un mensaje guarda su texto, su remitente y su fecha como evidencia. No se puede
+        denunciar lo propio (400). Límite de 10 denuncias por usuario y hora (429).
       x-roles: [owner, seeker]
       requestBody:
         required: true
@@ -1030,6 +1035,10 @@ paths:
       tags: [moderacion]
       operationId: blockUser
       summary: Bloquea a un usuario (RF-63)
+      description: >-
+        Idempotente. Desde ese momento ninguno de los dos ve las viviendas del otro en el
+        descubrimiento ni forma matches nuevos con él; los matches existentes no se cierran. Bloquearse
+        a uno mismo es un 400.
       x-roles: [owner, seeker]
       requestBody:
         required: true
@@ -1120,6 +1129,9 @@ paths:
       tags: [administracion]
       operationId: adminListReports
       summary: Denuncias (RF-63, RF-90)
+      description: >-
+        Sin `status` devuelve las abiertas. Siempre de la más antigua a la más reciente, con la
+        evidencia de las denuncias de un mensaje.
       x-roles: [admin]
       parameters:
         - name: status
@@ -1153,6 +1165,10 @@ paths:
       tags: [administracion]
       operationId: adminResolveReport
       summary: Resuelve una denuncia
+      description: >-
+        Resuelve o desestima una denuncia abierta con una nota obligatoria. Queda registrado en el log
+        de auditoría (RF-93), en la misma transacción (`report.resolve` o `report.dismiss`). Una
+        denuncia que ya no está abierta responde 409.
       x-roles: [admin]
       requestBody:
         required: true
@@ -1161,10 +1177,10 @@ paths:
             schema:
               type: object
               additionalProperties: false
-              required: [status]
+              required: [status, resolution]
               properties:
                 status: { type: string, enum: [resolved, dismissed] }
-                resolution: { type: string, maxLength: 2000 }
+                resolution: { type: string, minLength: 1, maxLength: 2000 }
       responses:
         '200':
           description: Denuncia resuelta
@@ -1175,6 +1191,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
   /admin/users:
     get:
       tags: [administracion]
@@ -1882,7 +1899,19 @@ components:
         reason: { type: string }
         status: { $ref: '#/components/schemas/ReportStatus' }
         resolution: { type: [string, 'null'] }
+        evidence:
+          description: Copia del mensaje denunciado; solo en las denuncias de un mensaje.
+          oneOf:
+            - $ref: '#/components/schemas/ReportEvidence'
+            - type: 'null'
         createdAt: { type: string, format: date-time }
+    ReportEvidence:
+      type: object
+      required: [text, senderId, sentAt]
+      properties:
+        text: { type: [string, 'null'], description: Nulo si el mensaje era una imagen }
+        senderId: { type: string, format: uuid }
+        sentAt: { type: string, format: date-time }
 
     AdminUser:
       type: object

@@ -150,6 +150,22 @@ const HOMES_REQUESTS: Record<string, RequestTemplate> = {
     url: `/v1/admin/homes/${MISSING_ID}/moderation`,
     payload: () => ({ decision: 'approve' }),
   },
+  createReport: {
+    method: 'POST',
+    url: '/v1/reports',
+    payload: () => ({ targetType: 'user', targetId: MISSING_ID, reason: 'Acoso' }),
+  },
+  blockUser: {
+    method: 'POST',
+    url: '/v1/me/blocked-users',
+    payload: () => ({ userId: MISSING_ID }),
+  },
+  adminListReports: { method: 'GET', url: '/v1/admin/reports' },
+  adminResolveReport: {
+    method: 'PATCH',
+    url: `/v1/admin/reports/${MISSING_ID}`,
+    payload: () => ({ status: 'resolved', resolution: 'Revisada' }),
+  },
 };
 Object.assign(REQUESTS, HOMES_REQUESTS);
 

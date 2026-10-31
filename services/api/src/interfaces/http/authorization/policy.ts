@@ -89,6 +89,11 @@ export const policy: Policy = {
   // Moderación (RF-18, RF-93): solo el admin; la decisión queda auditada
   adminListHomes: { kind: 'roles', roles: ['admin'] },
   adminModerateHome: { kind: 'roles', roles: ['admin'] },
+  // Denuncias y bloqueos (RF-63): owner y seeker; la cola de denuncias y su resolución, solo el admin
+  createReport: { kind: 'roles', roles: HOME_OWNER_ROLES },
+  blockUser: { kind: 'roles', roles: HOME_OWNER_ROLES },
+  adminListReports: { kind: 'roles', roles: ['admin'] },
+  adminResolveReport: { kind: 'roles', roles: ['admin'] },
 };
 
 /** Único punto de decisión: ¿puede este actor invocar una operación con este acceso? */

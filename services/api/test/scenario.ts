@@ -43,7 +43,7 @@ export function createScenario(context: {
 
   function call(
     user: Pick<EmulatorUser, 'idToken'>,
-    method: 'GET' | 'PUT' | 'POST' | 'DELETE',
+    method: 'GET' | 'PUT' | 'POST' | 'PATCH' | 'DELETE',
     url: string,
     payload?: object,
   ) {

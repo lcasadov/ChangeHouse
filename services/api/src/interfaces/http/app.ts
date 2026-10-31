@@ -6,12 +6,14 @@ import { generateCorrelationId, registerProblemHandling } from './problem.js';
 import { type AccountDataRouteOptions, accountDataRoutes } from './routes/account-data.js';
 import { type AccountRouteOptions, accountRoutes } from './routes/accounts.js';
 import { type AdminHomeRouteOptions, adminHomeRoutes } from './routes/admin-homes.js';
+import { type AdminReportRouteOptions, adminReportRoutes } from './routes/admin-reports.js';
 import { type DecisionRouteOptions, decisionRoutes } from './routes/decisions.js';
 import { type DeviceRouteOptions, deviceRoutes } from './routes/devices.js';
 import { type DiscoveryRouteOptions, discoveryRoutes } from './routes/discovery.js';
 import { type HomeRouteOptions, homeRoutes } from './routes/homes.js';
 import { type MatchRouteOptions, matchRoutes } from './routes/matches.js';
 import { type PhotoRouteOptions, photoRoutes } from './routes/photos.js';
+import { type ReportRouteOptions, reportRoutes } from './routes/reports.js';
 import {
   type SearchPreferencesRouteOptions,
   searchPreferencesRoutes,
@@ -39,6 +41,8 @@ export interface AppOptions {
   discovery?: DiscoveryRouteOptions;
   decisions?: DecisionRouteOptions;
   matches?: MatchRouteOptions;
+  reports?: ReportRouteOptions;
+  adminReports?: AdminReportRouteOptions;
 }
 
 /** Confía solo en los `hops` saltos más cercanos: la IP real es la que añadió el último proxy. */
@@ -116,6 +120,8 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
       if (options.discovery) await versioned.register(discoveryRoutes(options.discovery));
       if (options.decisions) await versioned.register(decisionRoutes(options.decisions));
       if (options.matches) await versioned.register(matchRoutes(options.matches));
+      if (options.reports) await versioned.register(reportRoutes(options.reports));
+      if (options.adminReports) await versioned.register(adminReportRoutes(options.adminReports));
     },
     { prefix: API_PREFIX },
   );
