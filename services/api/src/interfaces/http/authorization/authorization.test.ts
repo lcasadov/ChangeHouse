@@ -129,6 +129,11 @@ describe('política de autorización', () => {
       // Moderación: solo el admin (RF-18, RF-93)
       adminListHomes: { kind: 'roles', roles: ['admin'] },
       adminModerateHome: { kind: 'roles', roles: ['admin'] },
+      // Denuncias y bloqueos (RF-63): owner y seeker; la cola y su resolución, solo el admin
+      createReport: { kind: 'roles', roles: ['seeker', 'owner'] },
+      blockUser: { kind: 'roles', roles: ['seeker', 'owner'] },
+      adminListReports: { kind: 'roles', roles: ['admin'] },
+      adminResolveReport: { kind: 'roles', roles: ['admin'] },
     });
   });
 });

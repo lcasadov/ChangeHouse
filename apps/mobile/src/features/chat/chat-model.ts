@@ -79,6 +79,8 @@ export interface MessageItem {
   key: string;
   mine: boolean;
   senderName: string;
+  /** Quién lo escribió; solo en los mensajes que llegan del canal. */
+  senderId?: string;
   kind: 'text' | 'image';
   text?: string;
   imageId?: string;
@@ -106,6 +108,7 @@ function remoteItem(message: ChatMessage, meId: string | undefined): ChatItem {
     key: message.id,
     mine: message.senderId === meId,
     senderName: message.senderName,
+    senderId: message.senderId,
     kind: message.kind,
     ...(message.kind === 'text' ? { text: message.text } : { imageId: message.imageId }),
     state: 'sent',

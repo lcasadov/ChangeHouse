@@ -20,6 +20,10 @@ interface HomeContext {
   publishedHomeId: string;
   /** Una vivienda ajena en revisión, solo para el admin (moderarla cambia su estado). */
   reviewHomeId: string;
+  /** El propietario de la vivienda publicada ajena: a quien se bloquea. */
+  strangerId: string;
+  /** Una denuncia abierta, solo para el admin (resolverla la cierra). */
+  openReportId: string;
 }
 
 interface RequestTemplate {
@@ -180,6 +184,26 @@ const REQUESTS: Record<string, RequestTemplate> = {
     url: `/v1/matches/${MISSING_HOME}/messages`,
     payload: () => ({ text: 'Hola' }),
   },
+  createReport: {
+    method: 'POST',
+    url: '/v1/reports',
+    payload: (context) => ({
+      targetType: 'home',
+      targetId: context.publishedHomeId,
+      reason: 'Anuncio falso',
+    }),
+  },
+  blockUser: {
+    method: 'POST',
+    url: '/v1/me/blocked-users',
+    payload: (context) => ({ userId: context.strangerId }),
+  },
+  adminListReports: { method: 'GET', url: '/v1/admin/reports' },
+  adminResolveReport: {
+    method: 'PATCH',
+    url: (context) => `/v1/admin/reports/${context.openReportId}`,
+    payload: () => ({ status: 'resolved', resolution: 'Revisada' }),
+  },
   adminListHomes: { method: 'GET', url: '/v1/admin/homes?status=in_review' },
   adminModerateHome: {
     method: 'POST',
@@ -215,6 +239,7 @@ afterAll(async () => {
 });
 
 let publishedHomeId: string | undefined;
+let strangerId = MISSING_HOME;
 
 /** Una vivienda publicada de un tercero, creada una sola vez para todas las filas. */
 async function publishedHome(): Promise<string> {
@@ -230,6 +255,7 @@ async function publishedHome(): Promise<string> {
     payload: COMPLETE_HOME,
   });
   publishedHomeId = created.json<{ id: string }>().id;
+  strangerId = landlordId;
   await sql`UPDATE homes SET status = 'published' WHERE id = ${publishedHomeId}`;
   return publishedHomeId;
 }
@@ -289,6 +315,8 @@ async function authorizationFor(
     ownPhotoId: MISSING_HOME,
     publishedHomeId: await publishedHome(),
     reviewHomeId: MISSING_HOME,
+    strangerId,
+    openReportId: MISSING_HOME,
   };
   if (actor === 'anon') return { headers: {}, context };
   const { uid, email, idToken } = await signUp();
@@ -300,6 +328,11 @@ async function authorizationFor(
   const id = crypto.randomUUID();
   await sql`INSERT INTO users (id, firebase_uid, email, display_name, assigned_role)
             VALUES (${id}, ${uid}, ${email}, 'Actor de prueba', ${assigned})`;
+  if (actor === 'admin') {
+    context.openReportId = crypto.randomUUID();
+    await sql`INSERT INTO reports (id, reporter_id, target_type, target_id, reason)
+              VALUES (${context.openReportId}, ${id}, 'user', ${context.strangerId}, 'Acoso')`;
+  }
   if (actor === 'owner') ownership.owners.add(id);
   if (assigned === null) {
     const created = await api.app.inject({

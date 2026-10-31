@@ -183,8 +183,17 @@ function dismissedByAccount(viewerId: string): SQL {
       AND (h.relevant_changed_at IS NULL OR h.relevant_changed_at <= ad.created_at))`;
 }
 
+/** El dueño de la candidata y yo no nos hemos bloqueado, en ningún sentido (RF-63). */
+function notBlockedWith(viewerId: string): SQL {
+  return sql`NOT EXISTS (
+    SELECT 1 FROM user_blocks ub
+    WHERE (ub.blocker_id = ${viewerId}::uuid AND ub.blocked_id = h.owner_id)
+       OR (ub.blocker_id = h.owner_id AND ub.blocked_id = ${viewerId}::uuid))`;
+}
+
 /**
- * Fase 1 del descubrimiento: viviendas publicadas, ajenas, en mi zona y con mis filtros, sin VPP si
+ * Fase 1 del descubrimiento: viviendas publicadas, ajenas, de usuarios sin bloqueo conmigo (en ningún
+ * sentido), en mi zona y con mis filtros, sin VPP si
  * no se incluyen y, desde una vivienda, sin las descartadas ni las que ya han recibido mi «Me gusta»
  * (en modo `seeker`, sin las descartadas desde la cuenta) y solo si mi vivienda encaja en la zona
  * y los filtros de las preferencias efectivas de su dueño (sin preferencias no es compatible). De
@@ -196,6 +205,7 @@ export function candidateQuerySql(query: CandidateQuery): SQL {
     sql`h.status = 'published'`,
     sql`h.published_at IS NOT NULL`,
     sql`h.owner_id <> ${query.viewerId}::uuid`,
+    notBlockedWith(query.viewerId),
     inMyZone(query.preferences),
     ...meetsMyFilters(query.preferences.filters),
   ];

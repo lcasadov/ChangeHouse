@@ -63,6 +63,57 @@ describe.skipIf(!firestoreAvailable())(
       });
     });
 
+    it('findMessage encuentra un mensaje de texto o de imagen solo en los chats indicados y nunca uno del sistema', async () => {
+      const mine = crypto.randomUUID();
+      const other = crypto.randomUUID();
+      await created.channel.createChat(chat(mine));
+      await created.channel.createChat(chat(other));
+      await created.channel.appendMessage(mine, {
+        id: 'texto-1',
+        kind: 'text',
+        senderId: 'user-beto',
+        senderName: 'Beto',
+        text: 'Hola',
+        createdAt: AT,
+      });
+      await created.channel.appendMessage(mine, {
+        id: 'imagen-1',
+        kind: 'image',
+        senderId: 'user-beto',
+        senderName: 'Beto',
+        imageId: 'foto',
+        createdAt: AT,
+      });
+      await created.channel.appendMessage(other, {
+        id: 'texto-ajeno',
+        kind: 'text',
+        senderId: 'user-carla',
+        senderName: 'Carla',
+        text: 'Ajeno',
+        createdAt: AT,
+      });
+
+      const text = await created.messages.findMessage([other, mine], 'texto-1');
+      const image = await created.messages.findMessage([mine], 'imagen-1');
+      const foreign = await created.messages.findMessage([mine], 'texto-ajeno');
+      const system = await created.messages.findMessage([mine], 'welcome');
+      const noChats = await created.messages.findMessage([], 'texto-1');
+
+      expect(text).toEqual({
+        chatId: mine,
+        message: {
+          id: 'texto-1',
+          kind: 'text',
+          senderId: 'user-beto',
+          senderName: 'Beto',
+          text: 'Hola',
+          createdAt: AT,
+        },
+      });
+      expect(image?.message).toMatchObject({ kind: 'image', imageId: 'foto', createdAt: AT });
+      expect([foreign, system, noChats]).toEqual([null, null, null]);
+    });
+
     it('crearlo otra vez no hace nada: un solo chat, un solo mensaje de bienvenida y los mensajes se conservan', async () => {
       const id = crypto.randomUUID();
       await created.channel.createChat(chat(id));

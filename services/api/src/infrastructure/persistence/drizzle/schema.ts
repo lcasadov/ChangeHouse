@@ -6,6 +6,8 @@ import {
   HOME_TYPES,
   type HomeFeatures,
   LOCATION_VISIBILITIES,
+  REPORT_STATUSES,
+  REPORT_TARGET_TYPES,
   type SearchFilters,
 } from '@changehouse/shared';
 import { sql } from 'drizzle-orm';
@@ -444,3 +446,68 @@ export const userDevices = pgTable('user_devices', {
   platform: devicePlatformEnum('platform').notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+export const reportTargetEnum = pgEnum('report_target', REPORT_TARGET_TYPES);
+export const reportStatusEnum = pgEnum('report_status', REPORT_STATUSES);
+
+/**
+ * Denuncias (RF-63): de un usuario, una vivienda o un mensaje del chat. `target_id` es texto porque
+ * un mensaje se identifica con su id de Firestore. La denuncia de un mensaje guarda su texto, su
+ * remitente y su fecha como evidencia, para que el chat pueda cambiar sin perderla. Resolverla exige
+ * la nota, el admin y la fecha.
+ */
+export const reports = pgTable(
+  'reports',
+  {
+    id: uuid('id').primaryKey(),
+    reporterId: uuid('reporter_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
+    targetType: reportTargetEnum('target_type').notNull(),
+    targetId: text('target_id').notNull(),
+    reason: text('reason').notNull(),
+    status: reportStatusEnum('status').notNull().default('open'),
+    evidenceText: text('evidence_text'),
+    evidenceSenderId: uuid('evidence_sender_id'),
+    evidenceSentAt: timestamp('evidence_sent_at', { withTimezone: true }),
+    resolution: text('resolution'),
+    resolvedBy: uuid('resolved_by').references(() => users.id, { onDelete: 'restrict' }),
+    resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    check(
+      'reports_message_evidence',
+      sql`${table.targetType} <> 'message' OR (${table.evidenceSenderId} IS NOT NULL AND ${table.evidenceSentAt} IS NOT NULL)`,
+    ),
+    check(
+      'reports_resolution_complete',
+      sql`${table.status} = 'open' OR (${table.resolution} IS NOT NULL AND ${table.resolvedBy} IS NOT NULL AND ${table.resolvedAt} IS NOT NULL)`,
+    ),
+    // La cola de revisión: por estado y, dentro de él, de la más antigua a la más reciente
+    index('reports_status_created_idx').on(table.status, table.createdAt, table.id),
+  ],
+);
+
+/**
+ * Bloqueos (RF-63): `blocker_id` bloquea a `blocked_id`. Efecto en los dos sentidos: ninguno ve las
+ * viviendas del otro ni forma matches nuevos con él.
+ */
+export const userBlocks = pgTable(
+  'user_blocks',
+  {
+    blockerId: uuid('blocker_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    blockedId: uuid('blocked_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.blockerId, table.blockedId] }),
+    check('user_blocks_not_self', sql`${table.blockerId} <> ${table.blockedId}`),
+    // «¿Quién me ha bloqueado?»: el otro sentido del filtro
+    index('user_blocks_blocked_idx').on(table.blockedId, table.blockerId),
+  ],
+);

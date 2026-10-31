@@ -1,5 +1,10 @@
 import { deleteApp, initializeApp } from 'firebase-admin/app';
-import { type DocumentReference, type Firestore, getFirestore } from 'firebase-admin/firestore';
+import {
+  type DocumentReference,
+  type DocumentSnapshot,
+  type Firestore,
+  getFirestore,
+} from 'firebase-admin/firestore';
 
 import type {
   ChatChannel,
@@ -7,6 +12,10 @@ import type {
   NewChat,
   ParticipantAnonymization,
 } from '../../application/chat/chat-channel.js';
+import type {
+  ChatMessageLookup,
+  FoundChatMessage,
+} from '../../application/moderation/report-sources.js';
 
 /** Escrituras que admite un lote de Firestore, con margen sobre el máximo de 500. */
 const BATCH_LIMIT = 400;
@@ -47,12 +56,29 @@ function documentOf(message: ChatMessageRecord): Record<string, unknown> {
   }
 }
 
+/** Un mensaje de usuario leído de su documento; `null` si es del sistema o no tiene la forma esperada. */
+function userMessageOf(document: DocumentSnapshot): FoundChatMessage['message'] | null {
+  const data = document.data();
+  const createdAt = (data?.['createdAt'] as { toDate?: () => Date } | undefined)?.toDate?.();
+  const senderId: unknown = data?.['senderId'];
+  const senderName: unknown = data?.['senderName'];
+  if (typeof senderId !== 'string' || typeof senderName !== 'string' || !createdAt) return null;
+  const common = { id: document.id, senderId, senderName, createdAt };
+  if (data?.['kind'] === 'text' && typeof data['text'] === 'string') {
+    return { ...common, kind: 'text', text: data['text'] };
+  }
+  if (data?.['kind'] === 'image' && typeof data['imageId'] === 'string') {
+    return { ...common, kind: 'image', imageId: data['imageId'] };
+  }
+  return null;
+}
+
 /**
  * Adaptador de `ChatChannel` sobre Cloud Firestore con `firebase-admin`: `chats/{chatId}` con los
  * `participantUids` que leen las reglas, y `chats/{chatId}/messages/{messageId}`. Las escrituras de
  * la API no pasan por las reglas; los clientes solo leen.
  */
-export class FirestoreChatChannel implements ChatChannel {
+export class FirestoreChatChannel implements ChatChannel, ChatMessageLookup {
   constructor(private readonly firestore: Firestore) {}
 
   async createChat(chat: NewChat): Promise<void> {
@@ -79,6 +105,27 @@ export class FirestoreChatChannel implements ChatChannel {
       if (!chat.exists) throw new Error(`El chat ${chatId} no existe en Firestore`);
       transaction.create(chatRef.collection('messages').doc(message.id), documentOf(message));
     });
+  }
+
+  /**
+   * Busca el mensaje por id en los chats indicados con una sola lectura por lotes. Solo devuelve
+   * mensajes de usuario, de texto o imagen; los del sistema no se pueden denunciar.
+   */
+  async findMessage(
+    chatIds: readonly string[],
+    messageId: string,
+  ): Promise<FoundChatMessage | null> {
+    if (chatIds.length === 0) return null;
+    const references = chatIds.map((chatId) =>
+      this.firestore.collection('chats').doc(chatId).collection('messages').doc(messageId),
+    );
+    const documents = await this.firestore.getAll(...references);
+    for (const [index, document] of documents.entries()) {
+      const chatId = chatIds[index];
+      const message = chatId === undefined || !document.exists ? null : userMessageOf(document);
+      if (chatId !== undefined && message !== null) return { chatId, message };
+    }
+    return null;
   }
 
   async anonymizeParticipant(
@@ -127,8 +174,6 @@ export function createFirestoreChatChannel(options: FirestoreChatOptions) {
     { projectId: options.projectId },
     `changehouse-chat-${String(instances)}`,
   );
-  return {
-    channel: new FirestoreChatChannel(getFirestore(app)),
-    close: () => deleteApp(app),
-  };
+  const channel = new FirestoreChatChannel(getFirestore(app));
+  return { channel, messages: channel, close: () => deleteApp(app) };
 }

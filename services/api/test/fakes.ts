@@ -62,6 +62,17 @@ import type {
   NewMatch,
 } from '../src/application/matching/matching-repository.js';
 import type { AuditEntry, AuditLog } from '../src/application/moderation/audit-log.js';
+import type { BlockRepository } from '../src/application/moderation/block-repository.js';
+import type { ModerationCursor } from '../src/application/moderation/cursor.js';
+import type {
+  ReportListing,
+  ReportRepository,
+} from '../src/application/moderation/report-repository.js';
+import type {
+  ChatMemberships,
+  ChatMessageLookup,
+  FoundChatMessage,
+} from '../src/application/moderation/report-sources.js';
 import type { ModerationScope, UnitOfWork } from '../src/application/moderation/unit-of-work.js';
 import type {
   Device,
@@ -97,6 +108,7 @@ import type { Home, HomeLocation, RelevantChange } from '../src/domain/home/home
 import { firstFreePosition, type HomePhoto, MAX_PHOTOS } from '../src/domain/home/photo.js';
 import type { CompensationTerms, CycleHome } from '../src/domain/matching/cycle.js';
 import type { MatchState } from '../src/domain/matching/match.js';
+import type { Report } from '../src/domain/moderation/report.js';
 import type { SearchPreferences } from '../src/domain/search-preferences/search-preferences.js';
 
 const DEFAULT_CREATED_AT = new Date('2026-10-01T09:00:00.000Z');
@@ -253,21 +265,82 @@ export class InMemoryAuditLog implements AuditLog {
   }
 }
 
+/** Denuncias en memoria; reproduce el orden de la cola (de la más antigua a la más reciente). */
+export class InMemoryReportRepository implements ReportRepository {
+  reports = new Map<string, Report>();
+
+  insert(report: Report): Promise<void> {
+    this.reports.set(report.id, report);
+    return Promise.resolve();
+  }
+
+  findByIdForUpdate(id: string): Promise<Report | null> {
+    return Promise.resolve(this.reports.get(id) ?? null);
+  }
+
+  save(report: Report): Promise<void> {
+    this.reports.set(report.id, report);
+    return Promise.resolve();
+  }
+
+  listByStatus(query: ReportListing): Promise<Report[]> {
+    const after: ModerationCursor | undefined = query.after;
+    const found = [...this.reports.values()]
+      .filter((report) => report.status === query.status)
+      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime() || a.id.localeCompare(b.id))
+      .filter(
+        (report) =>
+          after === undefined ||
+          report.createdAt.getTime() > after.at.getTime() ||
+          (report.createdAt.getTime() === after.at.getTime() && report.id > after.id),
+      );
+    return Promise.resolve(found.slice(0, query.limit));
+  }
+}
+
+/** Bloqueos en memoria; añadir uno ya existente no cambia nada. */
+export class InMemoryBlockRepository implements BlockRepository {
+  readonly blocks = new Set<string>();
+
+  add(blockerId: string, blockedId: string): Promise<void> {
+    this.blocks.add(`${blockerId}>${blockedId}`);
+    return Promise.resolve();
+  }
+}
+
+/** Chats de cada usuario y mensajes publicados en ellos, para denunciar con evidencia. */
+export class InMemoryChatMessages implements ChatMemberships, ChatMessageLookup {
+  readonly chatsByUser = new Map<string, string[]>();
+  readonly messages = new Map<string, FoundChatMessage>();
+
+  chatIdsOf(userId: string): Promise<string[]> {
+    return Promise.resolve(this.chatsByUser.get(userId) ?? []);
+  }
+
+  findMessage(chatIds: readonly string[], messageId: string): Promise<FoundChatMessage | null> {
+    const found = this.messages.get(messageId);
+    return Promise.resolve(found && chatIds.includes(found.chatId) ? found : null);
+  }
+}
+
 /** Unidad de trabajo en memoria: si el trabajo falla, vuelve al estado anterior (como un `ROLLBACK`). */
 export class InMemoryUnitOfWork implements UnitOfWork {
   constructor(
     private readonly homes: InMemoryHomeRepository,
     private readonly audit: InMemoryAuditLog,
+    private readonly reports: InMemoryReportRepository = new InMemoryReportRepository(),
   ) {}
 
   async run<T>(work: (scope: ModerationScope) => Promise<T>): Promise<T> {
     const homes = new Map(this.homes.homes);
+    const reports = new Map(this.reports.reports);
     const entries = [...this.audit.entries];
     try {
-      return await work({ homes: this.homes, audit: this.audit });
+      return await work({ homes: this.homes, audit: this.audit, reports: this.reports });
     } catch (error) {
       this.homes.homes.clear();
       for (const [id, home] of homes) this.homes.homes.set(id, home);
+      this.reports.reports = reports;
       this.audit.entries = entries;
       throw error;
     }

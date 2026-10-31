@@ -220,12 +220,12 @@ Un `seeker` puede ser participante (por ejemplo, con su vivienda pausada); en la
 matriz como datos, que no crea matches, los actores `seeker` y `owner` obtienen
 404 en estas operaciones y la pertenencia se prueba con matches reales en
 `matches.int.test.ts`.
-| `createReport` | 401 | ✅ | ✅ | 403 | límite de peticiones |
-| `blockUser` | 401 | ✅ | ✅ | 403 | — |
+| `createReport` | 401 | ✅ | ✅ | 403 | 10 por usuario y hora (429); mensaje de un chat ajeno o inexistente → 404; lo propio → 400; la denuncia de un mensaje guarda su evidencia |
+| `blockUser` | 401 | ✅ | ✅ | 403 | idempotente (204); a uno mismo → 400; inexistente → 404; efecto en los dos sentidos |
 | `adminListHomes` | 401 | 403 | 403 | ✅ | cola `in_review` por envío; sin dirección exacta |
 | `adminModerateHome` | 401 | 403 | 403 | ✅ | auditoría en la misma transacción; fuera de revisión → 409; rechazar sin motivo → 400 |
-| `adminListReports` | 401 | 403 | 403 | ✅ | — |
-| `adminResolveReport` | 401 | 403 | 403 | ✅ | auditoría |
+| `adminListReports` | 401 | 403 | 403 | ✅ | abiertas por defecto, de la más antigua a la más reciente, con evidencia |
+| `adminResolveReport` | 401 | 403 | 403 | ✅ | nota obligatoria (400); auditoría `report.resolve`/`report.dismiss` en la misma transacción; ya cerrada → 409 |
 | `adminListUsers` | 401 | 403 | 403 | ✅ | — |
 | `adminSetUserSuspension` | 401 | 403 | 403 | ✅ | auditoría |
 | `adminGetMetrics` | 401 | 403 | 403 | ✅ | — |

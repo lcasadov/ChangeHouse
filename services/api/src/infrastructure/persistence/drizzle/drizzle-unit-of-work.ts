@@ -3,6 +3,7 @@ import type { AddressCipher } from '../../crypto/address-cipher.js';
 import type { Database } from './database.js';
 import { DrizzleAuditLog } from './drizzle-audit-log.js';
 import { DrizzleHomeRepository } from './drizzle-home-repository.js';
+import { DrizzleReportRepository } from './drizzle-report-repository.js';
 
 /** Una transacción de PostgreSQL: los repositorios del `scope` comparten la misma conexión. */
 export class DrizzleUnitOfWork implements UnitOfWork {
@@ -13,7 +14,11 @@ export class DrizzleUnitOfWork implements UnitOfWork {
 
   run<T>(work: (scope: ModerationScope) => Promise<T>): Promise<T> {
     return this.db.transaction((tx) =>
-      work({ homes: new DrizzleHomeRepository(tx, this.cipher), audit: new DrizzleAuditLog(tx) }),
+      work({
+        homes: new DrizzleHomeRepository(tx, this.cipher),
+        audit: new DrizzleAuditLog(tx),
+        reports: new DrizzleReportRepository(tx),
+      }),
     );
   }
 }

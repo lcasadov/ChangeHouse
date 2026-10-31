@@ -738,7 +738,10 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Denuncia un usuario, una vivienda o un mensaje (RF-63) */
+    /**
+     * Denuncia un usuario, una vivienda o un mensaje (RF-63)
+     * @description Un usuario o una vivienda se identifican por su UUID; un mensaje, por su id de Firestore, y solo se puede denunciar si se participa en su chat (si no, 404, igual que si no existe). La denuncia de un mensaje guarda su texto, su remitente y su fecha como evidencia. No se puede denunciar lo propio (400). Límite de 10 denuncias por usuario y hora (429).
+     */
     post: operations['createReport'];
     delete?: never;
     options?: never;
@@ -755,7 +758,10 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Bloquea a un usuario (RF-63) */
+    /**
+     * Bloquea a un usuario (RF-63)
+     * @description Idempotente. Desde ese momento ninguno de los dos ve las viviendas del otro en el descubrimiento ni forma matches nuevos con él; los matches existentes no se cierran. Bloquearse a uno mismo es un 400.
+     */
     post: operations['blockUser'];
     delete?: never;
     options?: never;
@@ -812,7 +818,10 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Denuncias (RF-63, RF-90) */
+    /**
+     * Denuncias (RF-63, RF-90)
+     * @description Sin `status` devuelve las abiertas. Siempre de la más antigua a la más reciente, con la evidencia de las denuncias de un mensaje.
+     */
     get: operations['adminListReports'];
     put?: never;
     post?: never;
@@ -837,7 +846,10 @@ export interface paths {
     delete?: never;
     options?: never;
     head?: never;
-    /** Resuelve una denuncia */
+    /**
+     * Resuelve una denuncia
+     * @description Resuelve o desestima una denuncia abierta con una nota obligatoria. Queda registrado en el log de auditoría (RF-93), en la misma transacción (`report.resolve` o `report.dismiss`). Una denuncia que ya no está abierta responde 409.
+     */
     patch: operations['adminResolveReport'];
     trace?: never;
   };
@@ -1349,8 +1361,18 @@ export interface components {
       reason: string;
       status: components['schemas']['ReportStatus'];
       resolution?: string | null;
+      /** @description Copia del mensaje denunciado; solo en las denuncias de un mensaje. */
+      evidence?: components['schemas']['ReportEvidence'] | null;
       /** Format: date-time */
       createdAt: string;
+    };
+    ReportEvidence: {
+      /** @description Nulo si el mensaje era una imagen */
+      text: string | null;
+      /** Format: uuid */
+      senderId: string;
+      /** Format: date-time */
+      sentAt: string;
     };
     AdminUser: {
       /** Format: uuid */
@@ -2700,7 +2722,7 @@ export interface operations {
         'application/json': {
           /** @enum {string} */
           status: 'resolved' | 'dismissed';
-          resolution?: string;
+          resolution: string;
         };
       };
     };
@@ -2718,6 +2740,7 @@ export interface operations {
       401: components['responses']['Unauthorized'];
       403: components['responses']['Forbidden'];
       404: components['responses']['NotFound'];
+      409: components['responses']['Conflict'];
     };
   };
   adminListUsers: {

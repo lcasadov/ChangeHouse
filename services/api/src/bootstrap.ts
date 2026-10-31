@@ -21,6 +21,8 @@ import type { PhotoStorage } from './application/home/photo-storage.js';
 import type { PlaceResolver } from './application/home/place-resolver.js';
 import { matchOperations } from './application/matching/match-operations.js';
 import { moderationOperations } from './application/moderation/moderation-operations.js';
+import { reportOperations } from './application/moderation/report-operations.js';
+import type { ChatMessageLookup } from './application/moderation/report-sources.js';
 import {
   notificationHandlers,
   notificationOperations,
@@ -40,6 +42,8 @@ import { createFirebaseNotifier } from './infrastructure/notifications/firebase-
 import { createDatabase } from './infrastructure/persistence/drizzle/database.js';
 import { DrizzleAccountDeletionUnitOfWork } from './infrastructure/persistence/drizzle/drizzle-account-deletion-unit-of-work.js';
 import { DrizzleAccountExportReader } from './infrastructure/persistence/drizzle/drizzle-account-export.js';
+import { DrizzleBlockRepository } from './infrastructure/persistence/drizzle/drizzle-block-repository.js';
+import { DrizzleChatMemberships } from './infrastructure/persistence/drizzle/drizzle-chat-memberships.js';
 import { DrizzleChatSetup } from './infrastructure/persistence/drizzle/drizzle-chat-setup.js';
 import { DrizzleDecisionUnitOfWork } from './infrastructure/persistence/drizzle/drizzle-decision-unit-of-work.js';
 import { DrizzleDeviceRepository } from './infrastructure/persistence/drizzle/drizzle-device-repository.js';
@@ -55,6 +59,7 @@ import {
   DrizzleOutboxWriter,
 } from './infrastructure/persistence/drizzle/drizzle-outbox.js';
 import { DrizzlePhotoRepository } from './infrastructure/persistence/drizzle/drizzle-photo-repository.js';
+import { DrizzleReportRepository } from './infrastructure/persistence/drizzle/drizzle-report-repository.js';
 import { DrizzleSearchPreferencesRepository } from './infrastructure/persistence/drizzle/drizzle-search-preferences-repository.js';
 import { DrizzleUnitOfWork } from './infrastructure/persistence/drizzle/drizzle-unit-of-work.js';
 import { DrizzleUserRepository } from './infrastructure/persistence/drizzle/drizzle-user-repository.js';
@@ -82,6 +87,8 @@ export interface ApiAdapters {
   matchLookup?: MatchLookup;
   /** Por defecto, Cloud Firestore (o su emulador si hay `FIRESTORE_EMULATOR_HOST`). */
   chatChannel?: ChatChannel;
+  /** Por defecto, Cloud Firestore (o su emulador): lee el mensaje que se denuncia como evidencia. */
+  chatMessages?: ChatMessageLookup;
   /** Por defecto, el bucket privado de Cloud Storage (o fake-gcs-server). */
   chatImageStorage?: ChatImageStorage;
   /** Por defecto, FCM y la colección `mail` de Firestore (Trigger Email). */
@@ -95,9 +102,16 @@ export interface ApiAdapters {
 const MS_PER_SECOND = 1000;
 
 /** El canal sustituido por las pruebas o, por defecto, Firestore con su propia aplicación de Firebase. */
-function chatChannelFor(config: ApiConfig, override: ChatChannel | undefined) {
-  if (override) return { channel: override, close: () => Promise.resolve() };
-  return createFirestoreChatChannel(config.firebase);
+function chatChannelFor(
+  config: ApiConfig,
+  overrides: { channel?: ChatChannel | undefined; messages?: ChatMessageLookup | undefined },
+) {
+  const firestore = createFirestoreChatChannel(config.firebase);
+  return {
+    channel: overrides.channel ?? firestore.channel,
+    messages: overrides.messages ?? firestore.messages,
+    close: firestore.close,
+  };
 }
 
 function placeResolverFor(config: ApiConfig): PlaceResolver {
@@ -208,7 +222,10 @@ export function createApi(config: ApiConfig, adapters: ApiAdapters = {}) {
       clock: adapters.clock ?? systemClock,
     }),
   };
-  const chatChannel = chatChannelFor(config, adapters.chatChannel);
+  const chatChannel = chatChannelFor(config, {
+    channel: adapters.chatChannel,
+    messages: adapters.chatMessages,
+  });
   const chat = chatOperations({
     matches: matchRepository,
     setup: new DrizzleChatSetup(database.db),
@@ -219,6 +236,17 @@ export function createApi(config: ApiConfig, adapters: ApiAdapters = {}) {
     },
     storage: adapters.chatImageStorage ?? new CloudChatImageStorage(config.storage),
     images: adapters.imageProcessor ?? new SharpImageProcessor(),
+    clock: adapters.clock ?? systemClock,
+    ids: uuidV7Generator,
+  });
+  const reportOps = reportOperations({
+    reports: new DrizzleReportRepository(database.db),
+    units: new DrizzleUnitOfWork(database.db, cipher),
+    homes: homeRepository,
+    users,
+    blocks: new DrizzleBlockRepository(database.db),
+    memberships: new DrizzleChatMemberships(database.db),
+    messages: chatChannel.messages,
     clock: adapters.clock ?? systemClock,
     ids: uuidV7Generator,
   });
@@ -289,6 +317,14 @@ export function createApi(config: ApiConfig, adapters: ApiAdapters = {}) {
     homes,
     photos,
     adminHomes,
+    reports: {
+      createReport: reportOps.createReport,
+      blockUser: reportOps.blockUser,
+    },
+    adminReports: {
+      adminListReports: reportOps.adminListReports,
+      adminResolveReport: reportOps.adminResolveReport,
+    },
     searchPreferences,
     discovery,
     decisions: {

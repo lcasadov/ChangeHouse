@@ -351,6 +351,32 @@ describe('DrizzleDiscoveryRepository: exclusiones', () => {
     expect(await found(query(null))).toEqual([homeId(2)]);
   });
 
+  it.each([
+    ['yo bloqueo al dueño', ME, OWNER_A],
+    ['el dueño me bloquea', OWNER_A, ME],
+  ])(
+    'Scenario: Efecto del bloqueo - si %s, sus viviendas no aparecen en mis tarjetas ni las mías en las suyas',
+    async (_label, blocker, blocked) => {
+      const mine = await myHome();
+      await prefer(OWNER_A, { municipalities: ['Getafe'] });
+      const theirs = await published(homeId(1), OWNER_A, placeIn('Leganés', POINTS.leganes));
+      await published(homeId(2), OWNER_B, placeIn('Leganés', POINTS.leganes));
+      await prefer(OWNER_B, { municipalities: ['Getafe'] });
+      const theirSearch = query(null, {
+        viewerId: OWNER_A,
+        preferences: newSearchPreferences({ ...AMOUNTS, municipalities: ['Getafe'] }),
+      });
+      expect(await found(query(mine))).toEqual([homeId(2), theirs.id]);
+      expect(await found(theirSearch)).toEqual([mine.id]);
+
+      await sql`INSERT INTO user_blocks (blocker_id, blocked_id) VALUES (${blocker}, ${blocked})`;
+
+      expect(await found(query(mine))).toEqual([homeId(2)]);
+      expect(await found(query(null))).toEqual([homeId(2)]);
+      expect(await found(theirSearch)).toEqual([]);
+    },
+  );
+
   it.each(['draft', 'in_review', 'paused', 'in_operation', 'closed'] as const)(
     'Scenario: Vivienda en operación - una vivienda en %s no aparece',
     async (status) => {

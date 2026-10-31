@@ -67,6 +67,24 @@ export {
   validatePhotoUploadInput,
 } from './photo.js';
 export {
+  type BlockUserInput,
+  blockUserInputSchema,
+  MAX_REPORT_REASON,
+  MAX_REPORT_RESOLUTION,
+  MAX_REPORT_TARGET_ID,
+  REPORT_STATUSES,
+  REPORT_TARGET_TYPES,
+  type ReportInput,
+  reportInputSchema,
+  type ReportResolutionInput,
+  reportResolutionInputSchema,
+  type ReportStatus,
+  type ReportTargetType,
+  validateBlockUserInput,
+  validateReportInput,
+  validateReportResolutionInput,
+} from './report.js';
+export {
   DEFAULT_VALUE_REFERENCE_PCT,
   MAX_MUNICIPALITIES,
   MAX_MUNICIPALITY_LENGTH,

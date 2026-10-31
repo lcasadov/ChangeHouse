@@ -7,6 +7,7 @@ import { ActivityIndicator, StyleSheet, useWindowDimensions, View } from 'react-
 
 import { Button, Text } from '../../ui';
 import { formatLocalTime } from '../discovery/decision-time';
+import { MoreOptions } from '../moderation/MoreOptions';
 import { canRetry, formatCount, type MessageItem, type SystemItem } from './chat-model';
 import { useChatImage } from './use-chat-image';
 
@@ -150,6 +151,19 @@ function DeliveryStatus({
   );
 }
 
+/** «Más opciones» de un mensaje ajeno ya entregado: denunciarlo y, si consta quién es, bloquearle. */
+function MessageOptions({ item, time }: Readonly<{ item: MessageItem; time: string }>) {
+  const { t } = useTranslation();
+  if (item.mine || item.state !== 'sent') return null;
+  return (
+    <MoreOptions
+      subject={t('moderation.more.subject.message', { name: item.senderName, time })}
+      report={{ type: 'message', id: item.key }}
+      {...(item.senderId ? { block: { userId: item.senderId, name: item.senderName } } : {})}
+    />
+  );
+}
+
 /**
  * Un mensaje del chat (`MessageBubble` de `docs/style-guide.md` §3): los propios a la derecha con
  * el color de acción, los ajenos a la izquierda con el nombre de quien escribe, y en ambos la hora.
@@ -212,6 +226,7 @@ export function MessageBubble({ item, matchId, onRetry, onDiscard }: Readonly<Me
         </Text>
       </View>
       <DeliveryStatus item={item} onRetry={onRetry} onDiscard={onDiscard} />
+      <MessageOptions item={item} time={time} />
     </View>
   );
 }

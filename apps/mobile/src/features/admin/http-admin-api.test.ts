@@ -1,8 +1,9 @@
 import { createApiClient } from '../../api/client';
 import { FakeBackend, me } from '../../test-support/fake-backend';
 import { completeHome } from '../../test-support/fake-homes';
+import { storedReport } from '../../test-support/fake-reports';
 import { AdminApiError } from './admin-api';
-import { createHttpAdminApi } from './http-admin-api';
+import { createHttpAdminApi, QUEUE_PAGE_SIZE } from './http-admin-api';
 
 const ADMIN = me({ roles: ['admin'] });
 
@@ -153,5 +154,91 @@ describe('moderate', () => {
     expect(
       await failureOf(setup(backend).moderate(home.id, { decision: 'approve' })),
     ).toMatchObject({ kind: 'network' });
+  });
+});
+
+describe('listReports', () => {
+  it('pide las denuncias abiertas (GET /admin/reports?status=open), de la más antigua a la más reciente', async () => {
+    const newer = storedReport({ createdAt: '2026-10-12T10:00:00.000Z' });
+    const older = storedReport({ createdAt: '2026-10-10T10:00:00.000Z' });
+    const done = storedReport({ status: 'resolved' });
+    const backend = new FakeBackend({ profile: ADMIN });
+    backend.reports.seed(newer, older, done);
+
+    const page = await setup(backend).listReports();
+
+    expect(page.items.map((report) => report.id)).toEqual([older.id, newer.id]);
+    expect(page.nextCursor).toBeNull();
+    expect(backend.requests).toMatchObject([
+      { method: 'GET', path: '/admin/reports', authorization: 'Bearer token' },
+    ]);
+    expect(new URLSearchParams(backend.requests[0]?.search).get('status')).toBe('open');
+  });
+
+  it('pagina por cursor', async () => {
+    const backend = new FakeBackend({ profile: ADMIN });
+    backend.reports.seed(...Array.from({ length: QUEUE_PAGE_SIZE + 1 }, () => storedReport()));
+    const api = setup(backend);
+
+    const first = await api.listReports();
+    const second = await api.listReports(first.nextCursor ?? undefined);
+
+    expect(first.items).toHaveLength(QUEUE_PAGE_SIZE);
+    expect(second.items).toHaveLength(1);
+    expect(second.nextCursor).toBeNull();
+  });
+
+  it('traduce un rol insuficiente a «forbidden»', async () => {
+    const backend = new FakeBackend({ profile: me({ roles: ['owner'] }) });
+
+    expect(await failureOf(setup(backend).listReports())).toMatchObject({ kind: 'forbidden' });
+  });
+});
+
+describe('resolveReport', () => {
+  it('envía PATCH /admin/reports/{id} con la decisión y la nota', async () => {
+    const report = storedReport();
+    const backend = new FakeBackend({ profile: ADMIN });
+    backend.reports.seed(report);
+
+    const resolved = await setup(backend).resolveReport(report.id, {
+      status: 'dismissed',
+      resolution: 'Sin indicios',
+    });
+
+    expect(resolved).toMatchObject({
+      id: report.id,
+      status: 'dismissed',
+      resolution: 'Sin indicios',
+    });
+    expect(backend.requests).toMatchObject([
+      {
+        method: 'PATCH',
+        path: `/admin/reports/${report.id}`,
+        body: { status: 'dismissed', resolution: 'Sin indicios' },
+      },
+    ]);
+  });
+
+  it('traduce una denuncia inexistente a «not-found»', async () => {
+    const backend = new FakeBackend({ profile: ADMIN });
+
+    expect(
+      await failureOf(
+        setup(backend).resolveReport('no-existe', { status: 'resolved', resolution: 'x' }),
+      ),
+    ).toMatchObject({ kind: 'not-found' });
+  });
+
+  it('traduce una denuncia ya cerrada a «conflict»', async () => {
+    const report = storedReport({ status: 'resolved' });
+    const backend = new FakeBackend({ profile: ADMIN });
+    backend.reports.seed(report);
+
+    expect(
+      await failureOf(
+        setup(backend).resolveReport(report.id, { status: 'resolved', resolution: 'x' }),
+      ),
+    ).toMatchObject({ kind: 'conflict' });
   });
 });
