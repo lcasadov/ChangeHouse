@@ -378,6 +378,9 @@ Todo el proyecto en **TypeScript**, organizado como **monorepo**.
 | Migraciones | `pnpm db:migrate` |
 | Build | `pnpm build` |
 
+Guía para arrancar todo en local y probar la app en un móvil de la misma Wi-Fi:
+[`docs/desarrollo-local.md`](docs/desarrollo-local.md).
+
 ---
 
 ## 9 · Arquitectura
