@@ -47,5 +47,16 @@ export function createHttpAccountApi(client: ApiClient): AccountApi {
       const { error, response } = await request(() => client.PUT('/me/devices', { body: input }));
       if (!response.ok) throw failureOf(response.status, error);
     },
+
+    async deleteMe(): Promise<void> {
+      const { error, response } = await request(() => client.DELETE('/me'));
+      if (!response.ok) throw failureOf(response.status, error);
+    },
+
+    async exportMyData(): Promise<Record<string, unknown>> {
+      const { data, error, response } = await request(() => client.GET('/me/export'));
+      if (data) return data;
+      throw failureOf(response.status, error);
+    },
   };
 }

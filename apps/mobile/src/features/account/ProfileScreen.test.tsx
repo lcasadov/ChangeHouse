@@ -20,6 +20,8 @@ function renderProfile(getMe: GetMe) {
       getMe,
       upsertMe: () => Promise.resolve(me()),
       registerDevice: () => Promise.resolve(),
+      deleteMe: () => Promise.resolve(),
+      exportMyData: () => Promise.resolve({}),
     },
   });
   function Root() {

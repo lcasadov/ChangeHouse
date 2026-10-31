@@ -78,6 +78,8 @@ export const users = pgTable('users', {
   isOver65: boolean('is_over_65').notNull().default(false),
   assignedRole: assignedRoleEnum('assigned_role'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  // Borrado lógico (RF-05): la fila se conserva anonimizada por las referencias de consentimientos, auditoría y matches
+  deletedAt: timestamp('deleted_at', { withTimezone: true }),
 });
 
 /** Consentimientos aceptados: solo inserción, una fila por (usuario, tipo, versión). */

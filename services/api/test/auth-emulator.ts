@@ -79,3 +79,20 @@ export function tamperedToken(token: string): string {
   const [header = '', payload = ''] = token.split('.');
   return [header, payload, 'firma-alterada'].join('.');
 }
+
+/** ¿Sigue existiendo la cuenta en el emulador de Auth? (API administrativa, credencial `owner`). */
+export async function authUserExists(uid: string): Promise<boolean> {
+  const host = inject('authEmulatorHost');
+  const response = await fetch(
+    `http://${host}/identitytoolkit.googleapis.com/v1/projects/${PROJECT_ID}/accounts:lookup`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: 'Bearer owner' },
+      body: JSON.stringify({ localId: [uid] }),
+    },
+  );
+  if (!response.ok)
+    throw new Error(`El emulador de Auth rechazó la consulta: ${String(response.status)}`);
+  const body = (await response.json()) as { users?: unknown[] };
+  return (body.users?.length ?? 0) > 0;
+}

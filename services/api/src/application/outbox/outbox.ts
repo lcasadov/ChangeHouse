@@ -3,6 +3,8 @@ export const MATCH_CREATED = 'match.created';
 export const MATCH_CONFIRMED = 'match.confirmed';
 export const MATCH_CLOSED = 'match.closed';
 export const MESSAGE_SENT = 'message.sent';
+/** Cuenta eliminada: queda por dar de baja en el proveedor de identidad y limpiar fotos y chats. */
+export const USER_DELETED = 'user.deleted';
 
 /** Identificadores que el manejador necesita además del agregado; nunca datos personales. */
 export type OutboxPayload = Readonly<Record<string, string>>;

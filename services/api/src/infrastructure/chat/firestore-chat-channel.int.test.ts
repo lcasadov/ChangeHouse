@@ -134,5 +134,97 @@ describe.skipIf(!firestoreAvailable())(
 
       expect((await firestore.collection('chats').doc(id).get()).exists).toBe(false);
     });
+
+    describe('anonymizeParticipant', () => {
+      const anonymization = {
+        senderId: 'user-ana',
+        displayName: 'Usuario eliminado',
+        participantNames: ['Usuario eliminado', 'Beto'],
+      };
+
+      async function chatWithMessages(id: string) {
+        await created.channel.createChat(chat(id));
+        for (const [messageId, senderId, senderName] of [
+          ['m-ana', 'user-ana', 'Ana'],
+          ['m-beto', 'user-beto', 'Beto'],
+        ] as const) {
+          await created.channel.appendMessage(id, {
+            id: messageId,
+            kind: 'text',
+            senderId,
+            senderName,
+            text: `Hola de ${senderName}`,
+            createdAt: AT,
+          });
+        }
+      }
+
+      it('renombra los mensajes del remitente y los nombres del mensaje de bienvenida, y conserva el resto', async () => {
+        const id = crypto.randomUUID();
+        await chatWithMessages(id);
+
+        await created.channel.anonymizeParticipant(id, anonymization);
+
+        const byId = new Map((await messages(id)).map((message) => [message.id, message.data()]));
+        expect(byId.get('m-ana')).toMatchObject({
+          senderName: 'Usuario eliminado',
+          senderId: 'user-ana',
+          text: 'Hola de Ana',
+        });
+        expect(byId.get('m-beto')).toMatchObject({ senderName: 'Beto' });
+        expect(byId.get('welcome')?.['participantNames']).toEqual(['Usuario eliminado', 'Beto']);
+      });
+
+      it('es idempotente: repetirlo deja el mismo resultado', async () => {
+        const id = crypto.randomUUID();
+        await chatWithMessages(id);
+
+        await created.channel.anonymizeParticipant(id, anonymization);
+        await created.channel.anonymizeParticipant(id, anonymization);
+
+        const stored = await messages(id);
+        expect(stored).toHaveLength(3);
+        expect(stored.find((m) => m.id === 'm-ana')?.data()['senderName']).toBe(
+          'Usuario eliminado',
+        );
+      });
+
+      it('un chat que no existe no es un error', async () => {
+        await expect(
+          created.channel.anonymizeParticipant(crypto.randomUUID(), anonymization),
+        ).resolves.toBeUndefined();
+      });
+
+      it('procesa más mensajes de los que caben en un lote de Firestore', async () => {
+        const id = crypto.randomUUID();
+        await created.channel.createChat(chat(id));
+        const writer = firestore.batch();
+        const many = 450;
+        for (let index = 0; index < many; index += 1) {
+          writer.create(
+            firestore
+              .collection('chats')
+              .doc(id)
+              .collection('messages')
+              .doc(`bulk-${String(index)}`),
+            {
+              kind: 'text',
+              senderId: 'user-ana',
+              senderName: 'Ana',
+              text: 'x',
+              createdAt: AT,
+            },
+          );
+        }
+        await writer.commit();
+
+        await created.channel.anonymizeParticipant(id, anonymization);
+
+        const renamed = (await messages(id)).filter(
+          (message) => message.data()['senderName'] === 'Usuario eliminado',
+        );
+        expect(renamed).toHaveLength(many);
+      });
+    });
   },
 );

@@ -71,6 +71,8 @@ export class FakeBackend {
   readonly requests: RecordedRequest[] = [];
   registered: boolean;
   failNext: Failure | null = null;
+  /** La cuenta se ha eliminado con `DELETE /me`. */
+  deleted = false;
   profile: Me;
   /** Las viviendas del usuario, con las reglas de la API. */
   readonly homes: FakeHomes;
@@ -214,10 +216,26 @@ export class FakeBackend {
     if (path === '/me/homes' || path.startsWith('/homes')) {
       return this.homes.respond(method, path, body);
     }
+    return this.respondToAccount(method, path, body);
+  }
+
+  private respondToAccount(method: string, path: string, body: unknown): Response {
     if (path === '/me/devices') return new Response(null, { status: 204 });
+    if (path === '/me/export' && method === 'GET') return json(200, this.exportOf());
     if (path !== '/me') return problem(404);
+    if (method === 'DELETE') return this.deleteAccount();
     if (method === 'GET') return this.registered ? json(200, this.profile) : problem(404);
     return this.upsert(body as UpsertBody);
+  }
+
+  private deleteAccount(): Response {
+    this.deleted = true;
+    return new Response(null, { status: 204 });
+  }
+
+  /** Lo que exporta la API: los datos de la cuenta y de sus viviendas, nada de otras personas. */
+  private exportOf(): Record<string, unknown> {
+    return { account: this.profile, homes: this.homes.all() };
   }
 
   private upsert(body: UpsertBody): Response {

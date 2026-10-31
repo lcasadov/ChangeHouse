@@ -1,7 +1,9 @@
+import type { HomeStatus } from '@changehouse/shared';
 import { describe, expect, it } from 'vitest';
 
 import {
   HomeIncompleteError,
+  HomeInOperationError,
   HomeNotEditableError,
   HomeNotInReviewError,
   HomeNotPausableError,
@@ -14,6 +16,7 @@ import {
 } from './errors.js';
 import {
   approveHome,
+  closeHome,
   editHome,
   hasBeenPublished,
   type Home,
@@ -694,5 +697,26 @@ describe('régimen de protección (RF-14, RN-06)', () => {
       draft({ regime: 'libre', vppMaxLegalPriceCents: VPO_LIMIT, valueMaxCents: 900_000_00 })
         .valueMaxCents,
     ).toBe(900_000_00);
+  });
+});
+
+describe('closeHome', () => {
+  const homeIn = (status: HomeStatus): Home => ({ ...draft(), status });
+
+  it.each(['draft', 'in_review', 'published', 'paused'] as const)(
+    'cierra una vivienda en %s',
+    (status) => {
+      expect(closeHome(homeIn(status)).status).toBe('closed');
+    },
+  );
+
+  it('cerrar una vivienda ya cerrada no cambia nada', () => {
+    const closed = homeIn('closed');
+
+    expect(closeHome(closed)).toBe(closed);
+  });
+
+  it('una vivienda en operación no se puede cerrar', () => {
+    expect(() => closeHome(homeIn('in_operation'))).toThrow(HomeInOperationError);
   });
 });

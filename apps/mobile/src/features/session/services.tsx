@@ -1,6 +1,7 @@
 import { createContext, type ReactNode, useContext } from 'react';
 
 import type { AccountApi } from '../account/account-api';
+import type { DataExporter } from '../account/data-exporter';
 import type { AdminApi } from '../admin/admin-api';
 import type { AuthService, SocialSignIn } from '../auth/auth-service';
 import type { ChatApi } from '../chat/chat-api';
@@ -19,6 +20,8 @@ import type { ZoneSuggestions } from '../search/zone-suggestions';
 export interface AppServices {
   auth: AuthService;
   accountApi: AccountApi;
+  /** La entrega del fichero de «Descargar mis datos»: compartir en el móvil, descarga en la web. */
+  dataExporter: DataExporter;
   homesApi: HomesApi;
   /** La cola de moderación y las decisiones del equipo de administración. */
   adminApi: AdminApi;

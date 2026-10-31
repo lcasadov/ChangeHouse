@@ -24,6 +24,7 @@ import MatchChatRoute from '../../app/match/[matchId]/chat';
 import MatchDetailRoute from '../../app/match/[matchId]/index';
 import OnboardingRoute from '../../app/onboarding';
 import { createApiClient } from '../api/client';
+import type { DataExporter } from '../features/account/data-exporter';
 import { createHttpAccountApi } from '../features/account/http-account-api';
 import { createHttpAdminApi } from '../features/admin/http-admin-api';
 import type { SocialSignIn } from '../features/auth/auth-service';
@@ -46,6 +47,7 @@ import { AppThemeProvider } from '../theme/AppThemeProvider';
 import { authUser, FakeAuthService } from './fake-auth-service';
 import { DEFAULT_SEARCH_PREFERENCES, type FakeBackend, me } from './fake-backend';
 import { FakeChatApi, FakeChatMessages } from './fake-chat';
+import { FakeDataExporter } from './fake-data-exporter';
 import { FakePhotoPicker, FakePhotoUploader } from './fake-photos';
 import { FakePushNotifications } from './fake-push';
 
@@ -62,7 +64,10 @@ export function fakeServices(overrides: Partial<AppServices> = {}): AppServices 
       getMe: () => Promise.resolve(me()),
       upsertMe: () => Promise.resolve(me()),
       registerDevice: () => Promise.resolve(),
+      deleteMe: () => Promise.resolve(),
+      exportMyData: () => Promise.resolve({}),
     },
+    dataExporter: new FakeDataExporter(),
     adminApi: {
       listPending: () => Promise.resolve({ items: [], nextCursor: null }),
       moderate: () => Promise.reject(new Error('Sin moderación en este doble')),
@@ -131,6 +136,8 @@ export interface SessionAppOptions {
   chatApi?: ChatApi;
   /** Los avisos push del dispositivo; por defecto, un dispositivo sin permiso decidido. */
   pushNotifications?: PushNotifications;
+  /** Entrega del fichero de «Descargar mis datos»; por defecto, uno que lo guarda en memoria. */
+  dataExporter?: DataExporter;
   theme?: ThemeName;
   /** Ruta a la que se abre la app (por defecto la raíz, que es una pestaña protegida). */
   url?: string;
@@ -148,6 +155,7 @@ export function renderSessionApp({
   chatMessages = new FakeChatMessages(),
   chatApi = new FakeChatApi(),
   pushNotifications = new FakePushNotifications(),
+  dataExporter = new FakeDataExporter(),
   theme = 'light',
   url = '/',
 }: SessionAppOptions) {
@@ -159,6 +167,7 @@ export function renderSessionApp({
   const services: AppServices = {
     auth,
     accountApi: createHttpAccountApi(client),
+    dataExporter,
     homesApi: createHttpHomesApi(client),
     adminApi: createHttpAdminApi(client),
     addressSuggestions,

@@ -61,6 +61,11 @@ export function confirmInterest<T extends MatchState>(match: T, userId: string):
   return { ...match, status: everyone ? 'confirmed' : match.status, participants };
 }
 
+/** Un match vivo (`open` o `confirmed`) admite retiradas; el resto ya no. */
+export function isLiveMatch(match: MatchState): boolean {
+  return match.status === 'open' || match.status === 'confirmed';
+}
+
 /** El participante se retira: queda `withdrawn` y el match se cierra para todos (RN-10). */
 export function withdrawFromMatch<T extends MatchState>(match: T, userId: string): T {
   participantsOf(match, userId);

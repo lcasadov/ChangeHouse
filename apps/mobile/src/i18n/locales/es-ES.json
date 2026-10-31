@@ -600,6 +600,32 @@
       "description": "Tendrás que volver a identificarte para entrar en ChangeHouse.",
       "confirm": "Sí, cerrar sesión",
       "cancel": "Cancelar"
+    },
+    "export": {
+      "action": "Descargar mis datos",
+      "description": "Recibe en un fichero JSON tus datos personales: cuenta, casas, preferencias, me gusta, descartes, matches y consentimientos.",
+      "done": "Tus datos están listos. Guarda o comparte el fichero.",
+      "errors": {
+        "network": "No hemos podido preparar tus datos. Comprueba tu conexión y vuelve a intentarlo.",
+        "unknown": "No hemos podido preparar tus datos. Vuelve a intentarlo en unos minutos.",
+        "delivery": "No hemos podido guardar o compartir el fichero. Vuelve a intentarlo."
+      }
+    },
+    "deleteAccount": {
+      "action": "Eliminar mi cuenta",
+      "explainTitle": "¿Eliminar tu cuenta?",
+      "explainDescription": "Se borrarán tu email, tu nombre visible y tu teléfono, tus preferencias y tus dispositivos. Tus casas dejarán de publicarse y tus matches abiertos se cerrarán para todas las personas. Se conservan tus consentimientos y el registro de auditoría, como exige la ley.",
+      "continue": "Continuar",
+      "cancel": "Cancelar",
+      "confirmTitle": "Confirma que quieres eliminar tu cuenta",
+      "confirmDescription": "Esta acción no se puede deshacer. Escribe ELIMINAR para continuar.",
+      "confirmField": "Escribe ELIMINAR",
+      "confirmWord": "ELIMINAR",
+      "confirm": "Eliminar definitivamente",
+      "errors": {
+        "network": "No hemos podido eliminar tu cuenta. Comprueba tu conexión y vuelve a intentarlo.",
+        "unknown": "No hemos podido eliminar tu cuenta. Vuelve a intentarlo en unos minutos."
+      }
     }
   },
   "auth": {

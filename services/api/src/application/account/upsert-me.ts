@@ -73,6 +73,7 @@ function newUser(deps: UpsertMeDeps, command: UpsertMeCommand, email: string): U
     isOver65: input.isOver65 ?? false,
     assignedRole: null,
     createdAt: deps.clock.now(),
+    deletedAt: null,
   };
 }
 

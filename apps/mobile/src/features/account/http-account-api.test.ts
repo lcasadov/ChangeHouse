@@ -115,3 +115,48 @@ describe('registerDevice', () => {
     ).toBe(kind);
   });
 });
+
+describe('deleteMe', () => {
+  it('elimina la cuenta (DELETE /me)', async () => {
+    const backend = new FakeBackend({ registered: true });
+
+    await setup(backend).deleteMe();
+
+    expect(backend.requests).toMatchObject([{ method: 'DELETE', path: '/me' }]);
+    expect(backend.deleted).toBe(true);
+  });
+
+  it.each([
+    ['unauthorized', 'unauthorized'],
+    ['server', 'server'],
+    ['network', 'network'],
+  ] as const)('un fallo %s se normaliza a %s', async (failure, kind) => {
+    const backend = new FakeBackend({ registered: true });
+    backend.failNext = failure;
+
+    expect(await kindOf(setup(backend).deleteMe())).toBe(kind);
+    expect(backend.deleted).toBe(false);
+  });
+});
+
+describe('exportMyData', () => {
+  it('devuelve el JSON de la exportación (GET /me/export)', async () => {
+    const backend = new FakeBackend({ registered: true, profile: me({ displayName: 'Lucía' }) });
+
+    const data = await setup(backend).exportMyData();
+
+    expect(data).toMatchObject({ account: { displayName: 'Lucía' } });
+    expect(backend.requests).toMatchObject([{ method: 'GET', path: '/me/export' }]);
+  });
+
+  it.each([
+    ['unauthorized', 'unauthorized'],
+    ['server', 'server'],
+    ['network', 'network'],
+  ] as const)('un fallo %s se normaliza a %s', async (failure, kind) => {
+    const backend = new FakeBackend({ registered: true });
+    backend.failNext = failure;
+
+    expect(await kindOf(setup(backend).exportMyData())).toBe(kind);
+  });
+});
