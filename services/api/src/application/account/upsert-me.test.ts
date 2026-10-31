@@ -50,6 +50,7 @@ describe('upsertMe', () => {
       isOver65: true,
       roles: ['seeker'],
       hasPublishedHome: false,
+      suspended: false,
     });
     expect(repository.users.get('id-1')).toMatchObject({
       firebaseUid: 'uid-1',

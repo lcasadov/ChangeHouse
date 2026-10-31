@@ -1,4 +1,5 @@
 import { deriveRole, type Role } from '../../domain/account/role.js';
+import { isSuspended } from '../../domain/account/suspension.js';
 import type { User } from '../../domain/account/user.js';
 import type { HomeOwnership } from './home-ownership.js';
 
@@ -13,6 +14,8 @@ export interface Me {
   isOver65: boolean;
   roles: Role[];
   hasPublishedHome: boolean;
+  /** La cuenta está suspendida; el motivo es interno y no se incluye. */
+  suspended: boolean;
 }
 
 /** Calcula el rol con las viviendas actuales y construye la vista de la cuenta. */
@@ -31,5 +34,6 @@ export async function buildMe(ownership: HomeOwnership, user: User): Promise<Me>
     isOver65: user.isOver65,
     roles: [role],
     hasPublishedHome: role === 'owner',
+    suspended: isSuspended(user),
   };
 }

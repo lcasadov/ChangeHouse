@@ -10,6 +10,7 @@ import type {
   MatchWriter,
   NewMatch,
 } from '../../../application/matching/matching-repository.js';
+import type { SuspensionMatchStore } from '../../../application/moderation/user-suspension.js';
 import type { CycleType } from '../../../domain/matching/cycle.js';
 import {
   type MatchState,
@@ -26,7 +27,7 @@ type MatchRow = typeof matches.$inferSelect;
  * match recién creado) que fuera de ella (listar y consultar si un me gusta forma parte de uno).
  */
 export class DrizzleMatchRepository
-  implements MatchWriter, MatchReader, MatchLookup, MatchDecisionStore
+  implements MatchWriter, MatchReader, MatchLookup, MatchDecisionStore, SuspensionMatchStore
 {
   constructor(private readonly db: Executor) {}
 
@@ -80,6 +81,23 @@ export class DrizzleMatchRepository
     const rows = await this.db.select().from(matches).where(eq(matches.id, id)).for('update');
     const [record] = await this.withParticipants(rows);
     return record ?? null;
+  }
+
+  async findActiveForUpdate(userId: string): Promise<MatchRecord[]> {
+    // Bloquea los matches activos del usuario: una confirmación simultánea espera al cierre
+    const rows = await this.db
+      .select()
+      .from(matches)
+      .where(
+        and(
+          inArray(matches.status, ['open', 'confirmed']),
+          sql`EXISTS (SELECT 1 FROM match_participants p
+                      WHERE p.match_id = ${matches.id} AND p.user_id = ${userId}::uuid)`,
+        ),
+      )
+      .orderBy(asc(matches.createdAt), asc(matches.id))
+      .for('update');
+    return this.withParticipants(rows);
   }
 
   async saveState(id: string, state: MatchState): Promise<void> {

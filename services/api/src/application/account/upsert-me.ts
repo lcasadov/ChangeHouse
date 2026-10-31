@@ -72,6 +72,8 @@ function newUser(deps: UpsertMeDeps, command: UpsertMeCommand, email: string): U
     meetsVppRequirements: input.meetsVppRequirements ?? false,
     isOver65: input.isOver65 ?? false,
     assignedRole: null,
+    suspendedAt: null,
+    suspensionReason: null,
     createdAt: deps.clock.now(),
   };
 }

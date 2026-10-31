@@ -11,14 +11,15 @@ import type { SessionState } from './session-state';
 import { useSession } from './use-session';
 
 /** Estados en los que se sabe a qué parte de la app pertenece la persona. */
-type Destination = Extract<SessionState, 'signedOut' | 'unregistered' | 'ready'>;
+type Destination = Extract<SessionState, 'signedOut' | 'unregistered' | 'ready' | 'suspended'>;
 
 const isDestination = (state: SessionState): state is Destination =>
-  state === 'signedOut' || state === 'unregistered' || state === 'ready';
+  state !== 'loading' && state !== 'error';
 
 /**
- * Protección de rutas: sin sesión solo existe el acceso, sin alta solo el alta y con alta solo las
- * pestañas. Una ruta fuera de la parte que le toca redirige a la primera disponible.
+ * Protección de rutas: sin sesión solo existe el acceso, sin alta solo el alta, con la cuenta
+ * suspendida solo su pantalla y con alta solo las pestañas. Una ruta fuera de la parte que le toca
+ * redirige a la primera disponible.
  */
 export function SessionNavigator() {
   const theme = useTheme();
@@ -46,6 +47,9 @@ export function SessionNavigator() {
           </Stack.Protected>
           <Stack.Protected guard={destination === 'unregistered'}>
             <Stack.Screen name="onboarding" />
+          </Stack.Protected>
+          <Stack.Protected guard={destination === 'suspended'}>
+            <Stack.Screen name="suspended" />
           </Stack.Protected>
           <Stack.Protected guard={destination === 'ready'}>
             <Stack.Screen name="(tabs)" />

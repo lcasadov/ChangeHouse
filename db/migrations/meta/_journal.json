@@ -78,6 +78,13 @@
       "when": 1792680011999,
       "tag": "0010_vpp_regime",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1792735041947,
+      "tag": "0011_user_suspension",
+      "breakpoints": true
     }
   ]
 }

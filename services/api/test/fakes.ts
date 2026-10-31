@@ -40,6 +40,10 @@ import type {
 import type { AuditEntry, AuditLog } from '../src/application/moderation/audit-log.js';
 import type { ModerationScope, UnitOfWork } from '../src/application/moderation/unit-of-work.js';
 import type {
+  SuspensionScope,
+  SuspensionUnitOfWork,
+} from '../src/application/moderation/user-suspension.js';
+import type {
   PreferencesScope,
   SearchPreferencesRepository,
 } from '../src/application/search-preferences/search-preferences-repository.js';
@@ -66,6 +70,8 @@ export function makeUser(overrides: Partial<User> = {}): User {
     meetsVppRequirements: false,
     isOver65: false,
     assignedRole: null,
+    suspendedAt: null,
+    suspensionReason: null,
     createdAt: DEFAULT_CREATED_AT,
     ...overrides,
   };
@@ -764,5 +770,57 @@ export class FakeMatchLookup implements MatchLookup {
 
   isLikeInMatch(from: string, to: string): Promise<boolean> {
     return Promise.resolve(this.inMatch.has(`${from}>${to}`));
+  }
+}
+
+/**
+ * Transacción de suspensión en memoria sobre los usuarios y los matches: si el trabajo falla, vuelve
+ * al estado anterior (como un `ROLLBACK`). `locked` anota los usuarios cuyos matches se bloquearon.
+ */
+export class InMemorySuspensionUnitOfWork implements SuspensionUnitOfWork {
+  readonly locked: string[] = [];
+
+  constructor(
+    private readonly users: InMemoryUserRepository,
+    private readonly reader: InMemoryMatchReader,
+    private readonly audit: InMemoryAuditLog,
+  ) {}
+
+  async run<T>(work: (scope: SuspensionScope) => Promise<T>): Promise<T> {
+    const users = new Map(this.users.users);
+    const records = [...this.reader.records];
+    const entries = [...this.audit.entries];
+    const matchUnit = new InMemoryMatchUnitOfWork(this.reader, this.audit);
+    try {
+      return await work({
+        users: {
+          findForUpdate: (id) => this.users.findById(id),
+          saveSuspension: (user) => {
+            this.users.users.set(user.id, user);
+            return Promise.resolve();
+          },
+        },
+        matches: {
+          findActiveForUpdate: (userId) => {
+            this.locked.push(userId);
+            return Promise.resolve(
+              this.reader.records.filter(
+                (record) =>
+                  (record.status === 'open' || record.status === 'confirmed') &&
+                  record.participants.some((participant) => participant.userId === userId),
+              ),
+            );
+          },
+          saveState: (id, state) => matchUnit.saveState(id, state),
+        },
+        audit: this.audit,
+      });
+    } catch (error) {
+      this.users.users.clear();
+      for (const [id, user] of users) this.users.users.set(id, user);
+      this.reader.records.splice(0, this.reader.records.length, ...records);
+      this.audit.entries = entries;
+      throw error;
+    }
   }
 }

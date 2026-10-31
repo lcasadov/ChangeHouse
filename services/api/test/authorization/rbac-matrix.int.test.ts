@@ -6,7 +6,7 @@ import { emulatorAvailable, signUp, uniqueEmail } from '../auth-emulator.js';
 import { FixedHomeOwnership } from '../fakes.js';
 import { openSql, testConfig } from '../fixtures.js';
 import { jpeg } from '../images.js';
-import { loadMatrix, type MatrixActor, matrixGaps, type MatrixRow } from './matrix.js';
+import { ACTORS, loadMatrix, type MatrixActor, matrixGaps, type MatrixRow } from './matrix.js';
 
 /** Viviendas que la matriz necesita: una propia del actor (borrador completo) y una publicada ajena. */
 interface HomeContext {
@@ -18,6 +18,8 @@ interface HomeContext {
   publishedHomeId: string;
   /** Una vivienda ajena en revisión, solo para el admin (moderarla cambia su estado). */
   reviewHomeId: string;
+  /** Un usuario ajeno sin suspender, solo para el admin (suspenderlo cambia su estado). */
+  targetUserId: string;
 }
 
 interface RequestTemplate {
@@ -159,6 +161,11 @@ const REQUESTS: Record<string, RequestTemplate> = {
     url: (context) => `/v1/admin/homes/${context.reviewHomeId}/moderation`,
     payload: () => ({ decision: 'approve' }),
   },
+  adminSetUserSuspension: {
+    method: 'PUT',
+    url: (context) => `/v1/admin/users/${context.targetUserId}/suspension`,
+    payload: () => ({ suspended: true, reason: 'Fraude reiterado' }),
+  },
   acceptConsent: {
     method: 'POST',
     url: '/v1/me/consents',
@@ -220,6 +227,15 @@ async function homeInReview(): Promise<string> {
   return homeId;
 }
 
+/** Un usuario dado de alta y sin suspender, nuevo en cada caso: suspenderlo lo cambia. */
+async function userToSuspend(): Promise<string> {
+  const target = await signUp();
+  const id = crypto.randomUUID();
+  await sql`INSERT INTO users (id, firebase_uid, email, display_name)
+            VALUES (${id}, ${target.uid}, ${target.email}, 'Usuario a suspender')`;
+  return id;
+}
+
 /** Tres fotos ya procesadas: con ellas la vivienda propia puede enviarse a revisión (RF-11). */
 async function addReadyPhotos(homeId: string): Promise<void> {
   for (let position = 1; position <= 3; position += 1) {
@@ -256,6 +272,7 @@ async function authorizationFor(
     ownPhotoId: MISSING_HOME,
     publishedHomeId: await publishedHome(),
     reviewHomeId: MISSING_HOME,
+    targetUserId: MISSING_HOME,
   };
   if (actor === 'anon') return { headers: {}, context };
   const { uid, email, idToken } = await signUp();
@@ -263,11 +280,15 @@ async function authorizationFor(
   if (actor === 'unregistered') return { headers, context };
 
   const assigned = actor === 'agency' || actor === 'admin' ? actor : null;
-  if (actor === 'admin') context.reviewHomeId = await homeInReview();
+  if (actor === 'admin') {
+    context.reviewHomeId = await homeInReview();
+    context.targetUserId = await userToSuspend();
+  }
   const id = crypto.randomUUID();
   await sql`INSERT INTO users (id, firebase_uid, email, display_name, assigned_role)
             VALUES (${id}, ${uid}, ${email}, 'Actor de prueba', ${assigned})`;
-  if (actor === 'owner') ownership.owners.add(id);
+  // La cuenta suspendida es un owner con todo preparado: lo único que cambia es la suspensión
+  if (actor === 'owner' || actor === 'suspended') ownership.owners.add(id);
   if (assigned === null) {
     const created = await api.app.inject({
       method: 'POST',
@@ -295,6 +316,10 @@ async function authorizationFor(
       await api.app.inject({ method: 'PUT', url, headers, payload: PREFERENCES });
     }
   }
+  if (actor === 'suspended') {
+    await sql`UPDATE users SET suspended_at = now(), suspension_reason = 'Fraude reiterado'
+              WHERE id = ${id}`;
+  }
   return { headers, context };
 }
 
@@ -306,7 +331,7 @@ describe('matriz de permisos (docs/rbac-matrix.md)', () => {
   it('Scenario: La matriz se cumple entera - una operación implementada sin filas hace fallar la prueba y la nombra', () => {
     const gaps = matrixGaps([...api.app.operations, 'operacionSinFilas'], rows);
 
-    expect(gaps).toHaveLength(6);
+    expect(gaps).toHaveLength(ACTORS.length);
     expect(gaps.every((gap) => gap.startsWith('operacionSinFilas:'))).toBe(true);
   });
 

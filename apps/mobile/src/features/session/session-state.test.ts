@@ -25,4 +25,10 @@ describe('deriveSessionState', () => {
     expect(deriveSessionState('signedIn', { status: 'success', data: null })).toBe('unregistered');
     expect(deriveSessionState('signedIn', { status: 'success', data: me() })).toBe('ready');
   });
+
+  it('Scenario: Usuario suspendido usa la app - con la cuenta suspendida toca la pantalla de cuenta suspendida', () => {
+    expect(
+      deriveSessionState('signedIn', { status: 'success', data: me({ suspended: true }) }),
+    ).toBe('suspended');
+  });
 });

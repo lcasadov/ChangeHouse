@@ -160,6 +160,10 @@ function meetsTheirFilters(origin: Home): SQL {
   );
 }
 
+/** Su dueño está suspendido: sus viviendas no aparecen en el descubrimiento (RF-90). */
+const OWNER_SUSPENDED = sql`EXISTS (
+  SELECT 1 FROM users owner WHERE owner.id = h.owner_id AND owner.suspended_at IS NOT NULL)`;
+
 /** Descartada desde mi vivienda y sin cambio relevante posterior al descarte (RF-44). */
 function dismissedFrom(origin: Home): SQL {
   return sql`EXISTS (
@@ -184,7 +188,7 @@ function dismissedByAccount(viewerId: string): SQL {
 }
 
 /**
- * Fase 1 del descubrimiento: viviendas publicadas, ajenas, en mi zona y con mis filtros, sin VPP si
+ * Fase 1 del descubrimiento: viviendas publicadas, ajenas, de dueños no suspendidos, en mi zona y con mis filtros, sin VPP si
  * no se incluyen y, desde una vivienda, sin las descartadas ni las que ya han recibido mi «Me gusta»
  * (en modo `seeker`, sin las descartadas desde la cuenta) y solo si mi vivienda encaja en la zona
  * y los filtros de las preferencias efectivas de su dueño (sin preferencias no es compatible). De
@@ -196,6 +200,7 @@ export function candidateQuerySql(query: CandidateQuery): SQL {
     sql`h.status = 'published'`,
     sql`h.published_at IS NOT NULL`,
     sql`h.owner_id <> ${query.viewerId}::uuid`,
+    sql`NOT ${OWNER_SUSPENDED}`,
     inMyZone(query.preferences),
     ...meetsMyFilters(query.preferences.filters),
   ];

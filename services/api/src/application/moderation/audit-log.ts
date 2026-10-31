@@ -1,5 +1,12 @@
 /** Acciones que se auditan (`audit_log.action`). */
-export type AuditAction = 'home.approve' | 'home.reject' | 'match.withdraw';
+export type AuditAction =
+  | 'home.approve'
+  | 'home.reject'
+  | 'match.withdraw'
+  /** Un match cerrado por la suspensión de uno de sus participantes; el actor es el admin. */
+  | 'match.close'
+  | 'user.suspend'
+  | 'user.reactivate';
 
 /**
  * Una entrada del registro de auditoría: quién, qué, sobre qué y cuándo. Nunca lleva datos de la
@@ -8,7 +15,7 @@ export type AuditAction = 'home.approve' | 'home.reject' | 'match.withdraw';
 export interface AuditEntry {
   actorId: string;
   action: AuditAction;
-  entity: 'home' | 'match';
+  entity: 'home' | 'match' | 'user';
   entityId: string;
   at: Date;
 }

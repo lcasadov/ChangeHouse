@@ -5,6 +5,8 @@ import type { VerifiedIdentity } from './identity-verifier.js';
 export interface Account {
   readonly userId: string;
   readonly role: Role;
+  /** Suspendida por un admin: la política central le deniega casi todo (`ACCOUNT_SUSPENDED`). */
+  readonly suspended: boolean;
 }
 
 /** Quién hace la petición: la identidad verificada y, si ya se dio de alta, su cuenta. */

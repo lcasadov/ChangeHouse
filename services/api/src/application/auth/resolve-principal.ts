@@ -1,4 +1,5 @@
 import { deriveRole } from '../../domain/account/role.js';
+import { isSuspended } from '../../domain/account/suspension.js';
 import type { HomeOwnership } from '../account/home-ownership.js';
 import type { UserRepository } from '../account/user-repository.js';
 import type { IdentityVerifier } from './identity-verifier.js';
@@ -26,5 +27,6 @@ export async function resolvePrincipal(
   const hasPublishedHome =
     user.assignedRole === null ? await deps.ownership.hasPublishedHome(user.id) : false;
   const role = deriveRole(user.assignedRole, hasPublishedHome);
-  return { identity, account: { userId: user.id, role } };
+  // La suspensión sale de la misma lectura por clave del usuario: no cuesta otra consulta
+  return { identity, account: { userId: user.id, role, suspended: isSuspended(user) } };
 }

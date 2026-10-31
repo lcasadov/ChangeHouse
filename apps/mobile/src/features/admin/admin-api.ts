@@ -1,4 +1,8 @@
+import type { components } from '../../api/schema';
 import type { Home } from '../homes/homes-api';
+
+/** Un usuario tal como lo ve el admin (`AdminUser` del contrato). */
+export type AdminUser = components['schemas']['AdminUser'];
 
 export type AdminApiErrorKind =
   /** Sin respuesta del servidor: red caída o tiempo agotado. */
@@ -7,12 +11,16 @@ export type AdminApiErrorKind =
   | 'unauthorized'
   /** La persona no tiene el rol `admin` (403). */
   | 'forbidden'
-  /** La vivienda no existe (404). */
+  /** La vivienda o el usuario no existen (404). */
   | 'not-found'
   /** La vivienda no está en revisión: otra persona ya la moderó (409). */
   | 'conflict'
   /** El servidor rechaza la decisión, p. ej. un rechazo sin motivo (400). */
   | 'invalid'
+  /** El admin intenta suspenderse a sí mismo (409 `CANNOT_SUSPEND_SELF`). */
+  | 'cannot-suspend-self'
+  /** El admin intenta suspender a otro admin (409 `CANNOT_SUSPEND_ADMIN`). */
+  | 'cannot-suspend-admin'
   | 'server';
 
 export class AdminApiError extends Error {
@@ -32,10 +40,18 @@ export interface ModerationPage {
 /** La decisión sobre una vivienda en revisión (`adminModerateHome`); rechazar exige motivo. */
 export type ModerationDecision = { decision: 'approve' } | { decision: 'reject'; reason: string };
 
+/** Suspender o reactivar a un usuario (`adminSetUserSuspension`); el motivo es siempre obligatorio. */
+export interface SuspensionDecision {
+  suspended: boolean;
+  reason: string;
+}
+
 /** Puerto de salida de la administración; el adaptador HTTP vive en `http-admin-api.ts`. */
 export interface AdminApi {
   /** La cola: viviendas en revisión de la enviada antes a la enviada después. */
   listPending: (cursor?: string) => Promise<ModerationPage>;
   /** Aprueba o rechaza una vivienda en revisión y devuelve su ficha ya actualizada. */
   moderate: (homeId: string, decision: ModerationDecision) => Promise<Home>;
+  /** Suspende o reactiva a un usuario y lo devuelve ya actualizado. */
+  setUserSuspension: (userId: string, decision: SuspensionDecision) => Promise<AdminUser>;
 }

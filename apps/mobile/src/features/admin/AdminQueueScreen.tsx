@@ -11,13 +11,20 @@ import { homesOf, useModerationQueue } from './use-moderation';
 
 /**
  * Pestaña «Administración»: la cola de viviendas en revisión, la más antigua primero. Se carga por
- * páginas («Cargar más») y se refresca tirando hacia abajo. Sin nada pendiente, lo dice.
+ * páginas («Cargar más») y se refresca tirando hacia abajo. Sin nada pendiente, lo dice. En todos los
+ * casos ofrece la suspensión de usuarios.
  */
 export function AdminQueueScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
   const router = useRouter();
   const queue = useModerationQueue();
+  const openUsers = () => {
+    router.push(adminRoutes.users);
+  };
+  const usersEntry = (
+    <Button variant="secondary" label={t('admin.users.entry')} onPress={openUsers} />
+  );
 
   if (queue.isPending) return <LoadingView />;
 
@@ -36,6 +43,7 @@ export function AdminQueueScreen() {
           >
             {t('admin.queue.loadFailed')}
           </Notice>
+          {usersEntry}
         </View>
       </Screen>
     );
@@ -49,6 +57,7 @@ export function AdminQueueScreen() {
           icon="checkmark-done-outline"
           title={t('admin.queue.empty.title')}
           description={t('admin.queue.empty.description')}
+          secondaryAction={{ label: t('admin.users.entry'), onPress: openUsers }}
         />
       </Screen>
     );
@@ -75,6 +84,7 @@ export function AdminQueueScreen() {
               {t('admin.title')}
             </Text>
             <Text tone="textMuted">{t('admin.queue.intro')}</Text>
+            {usersEntry}
           </View>
         }
         renderItem={({ item }) => (

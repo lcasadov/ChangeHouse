@@ -118,13 +118,17 @@ function extraOf(error: unknown): { code?: string; errors?: FieldError[] } {
   return {};
 }
 
-/** Responde con un `Problem` sin cuerpo de error propio: lo usan los hooks de seguridad. */
+/**
+ * Responde con un `Problem` sin cuerpo de error propio, con un código estable si lo hay: lo usan
+ * los hooks de seguridad.
+ */
 export function replyWithProblem(
   request: FastifyRequest,
   reply: FastifyReply,
   status: number,
+  code?: string,
 ): FastifyReply {
-  return sendProblem(reply, buildProblem(status, request.id));
+  return sendProblem(reply, buildProblem(status, request.id, code ? { code } : {}));
 }
 
 function handleError(error: unknown, request: FastifyRequest, reply: FastifyReply): FastifyReply {

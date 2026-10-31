@@ -4,6 +4,7 @@ import { InvalidTokenError } from '../../../application/auth/identity-verifier.j
 import type { Principal } from '../../../application/auth/principal.js';
 import { replyWithProblem } from '../problem.js';
 import {
+  ACCOUNT_SUSPENDED,
   type Actor,
   decide,
   type Decision,
@@ -49,6 +50,10 @@ function actorOf(principal: Principal): Actor {
   return principal.account?.role ?? 'unregistered';
 }
 
+function isSuspended(principal: Principal): boolean {
+  return principal.account?.suspended ?? false;
+}
+
 /** Una identidad no verificable es «sin autenticar»; un fallo técnico no se disfraza de 401. */
 async function authenticateOrNull(
   authenticate: (token: string) => Promise<Principal>,
@@ -63,15 +68,27 @@ async function authenticateOrNull(
   }
 }
 
-function deny(request: FastifyRequest, reply: FastifyReply, status: number): FastifyReply {
+function deny(
+  request: FastifyRequest,
+  reply: FastifyReply,
+  status: number,
+  code?: string,
+): FastifyReply {
   if (status === UNAUTHORIZED) void reply.header('www-authenticate', 'Bearer');
-  return replyWithProblem(request, reply, status);
+  return replyWithProblem(request, reply, status, code);
 }
 
-function logDenial(request: FastifyRequest, operationId: string | undefined, status: number): void {
+function logDenial(
+  request: FastifyRequest,
+  operationId: string | undefined,
+  status: number,
+  code?: string,
+): void {
   // Nunca el token ni datos personales: solo con qué operación y quién (identificador interno)
   const context = { status, operationId, userId: request.principal?.account?.userId };
-  if (status === UNAUTHORIZED) {
+  if (code === ACCOUNT_SUSPENDED) {
+    request.log.warn({ event: 'auth.suspended', ...context }, 'Cuenta suspendida');
+  } else if (status === UNAUTHORIZED) {
     request.log.warn(
       { event: 'auth.unauthenticated', status, route: request.routeOptions.url, ip: request.ip },
       'Petición sin autenticar',
@@ -120,10 +137,10 @@ export function registerSecurity(app: FastifyInstance, options?: SecurityOptions
 
     // Una operación sin regla se deniega: nada se permite por omisión
     const decision: Decision = access
-      ? decide(access, actorOf(principal))
+      ? decide(access, actorOf(principal), isSuspended(principal))
       : { allowed: false, status: FORBIDDEN };
     if (decision.allowed) return;
-    logDenial(request, operationId, decision.status);
-    return deny(request, reply, decision.status);
+    logDenial(request, operationId, decision.status, decision.code);
+    return deny(request, reply, decision.status, decision.code);
   });
 }

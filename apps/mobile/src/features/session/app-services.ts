@@ -17,6 +17,7 @@ import { createXhrPhotoUploader } from '../homes/xhr-photo-uploader';
 import { createHttpMatchesApi } from '../matches/http-matches-api';
 import { createFixtureZoneSuggestions } from '../search/fixture-zone-suggestions';
 import { createHttpSearchPreferencesApi } from '../search/http-search-preferences-api';
+import { createAccountSuspensionSignal } from './account-suspension';
 import type { AppServices } from './services';
 
 export interface AppEnv extends FirebaseEnv, GoogleEnv, AddressSuggestionsEnv {
@@ -41,9 +42,13 @@ export function createAppServices(
 ): AppServices {
   authService ??= createFirebaseAuthService(createFirebaseAuth(readFirebaseConfig(env)));
   const auth = authService;
+  const accountSuspension = createAccountSuspensionSignal();
   const client = createApiClient({
     baseUrl: withoutTrailingSlash(env.EXPO_PUBLIC_API_URL || DEFAULT_API_URL),
     getToken: () => auth.getIdToken(),
+    onAccountSuspended: () => {
+      accountSuspension.notify();
+    },
   });
   const legalBase = withoutTrailingSlash(env.EXPO_PUBLIC_LEGAL_BASE_URL || DEFAULT_LEGAL_BASE_URL);
 
@@ -62,6 +67,7 @@ export function createAppServices(
     zoneSuggestions: createFixtureZoneSuggestions(),
     social,
     legalUrls: { terms: `${legalBase}/terminos`, privacy: `${legalBase}/privacidad` },
+    accountSuspension,
   };
 }
 

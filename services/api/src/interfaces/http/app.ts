@@ -5,6 +5,7 @@ import { registerSecurity, type SecurityOptions } from './authorization/security
 import { generateCorrelationId, registerProblemHandling } from './problem.js';
 import { type AccountRouteOptions, accountRoutes } from './routes/accounts.js';
 import { type AdminHomeRouteOptions, adminHomeRoutes } from './routes/admin-homes.js';
+import { type AdminUserRouteOptions, adminUserRoutes } from './routes/admin-users.js';
 import { type DecisionRouteOptions, decisionRoutes } from './routes/decisions.js';
 import { type DiscoveryRouteOptions, discoveryRoutes } from './routes/discovery.js';
 import { type HomeRouteOptions, homeRoutes } from './routes/homes.js';
@@ -31,6 +32,7 @@ export interface AppOptions {
   homes?: HomeRouteOptions;
   photos?: PhotoRouteOptions;
   adminHomes?: AdminHomeRouteOptions;
+  adminUsers?: AdminUserRouteOptions;
   searchPreferences?: SearchPreferencesRouteOptions;
   discovery?: DiscoveryRouteOptions;
   decisions?: DecisionRouteOptions;
@@ -104,6 +106,7 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
       if (options.homes) await versioned.register(homeRoutes(options.homes));
       if (options.photos) await versioned.register(photoRoutes(options.photos));
       if (options.adminHomes) await versioned.register(adminHomeRoutes(options.adminHomes));
+      if (options.adminUsers) await versioned.register(adminUserRoutes(options.adminUsers));
       if (options.searchPreferences) {
         await versioned.register(searchPreferencesRoutes(options.searchPreferences));
       }

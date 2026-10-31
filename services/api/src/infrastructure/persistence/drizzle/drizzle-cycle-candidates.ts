@@ -40,6 +40,11 @@ interface CandidateRow extends Record<string, unknown> {
   third_id: string | null;
 }
 
+/** El dueño de la vivienda `alias` no está suspendido: sus viviendas no forman matches (RF-90). */
+const ownerActive = (alias: string) =>
+  sql.raw(`NOT EXISTS (SELECT 1 FROM users u
+                        WHERE u.id = ${alias}.owner_id AND u.suspended_at IS NOT NULL)`);
+
 /**
  * Cadenas candidatas que se leen como mucho por cada me gusta: en un grafo denso alrededor de una
  * vivienda, las demás siguen disponibles para me gusta posteriores (design.md).
@@ -56,8 +61,8 @@ export class DrizzleCycleCandidates implements CycleCandidates {
   /**
    * Primero el ciclo de 2 (X → Y → X) y después los de 3 (X → Y → Z → X) cuya tercera vivienda está
    * publicada y es de un tercer propietario, del que lleva más tiempo esperando (su me gusta más
-   * reciente, el más antiguo) al que menos y, a igualdad, por vivienda. No hay recursión: nunca se
-   * buscan ciclos de más de 3 (RN-05).
+   * reciente, el más antiguo) al que menos y, a igualdad, por vivienda. Ninguna vivienda de un
+   * propietario suspendido forma ciclo. No hay recursión: nunca se buscan ciclos de más de 3 (RN-05).
    */
   async findCycles(fromHomeId: string, toHomeId: string): Promise<CycleHome[][]> {
     const x = sql`${fromHomeId}::uuid`;
@@ -66,7 +71,9 @@ export class DrizzleCycleCandidates implements CycleCandidates {
       SELECT third_id FROM (
         SELECT NULL::uuid AS third_id, NULL::timestamptz AS waiting
         FROM likes back
+        JOIN homes hy ON hy.id = ${y}
         WHERE back.from_home_id = ${y} AND back.to_home_id = ${x}
+          AND ${ownerActive('hy')}
         UNION ALL
         (SELECT l1.to_home_id, GREATEST(l1.created_at, l2.created_at)
          FROM likes l1
@@ -79,6 +86,8 @@ export class DrizzleCycleCandidates implements CycleCandidates {
            AND hz.status = 'published'
            AND hz.owner_id <> hx.owner_id
            AND hz.owner_id <> hy.owner_id
+           AND ${ownerActive('hy')}
+           AND ${ownerActive('hz')}
          ORDER BY 2, 1
          LIMIT ${MAX_CHAIN_CANDIDATES})
       ) candidates

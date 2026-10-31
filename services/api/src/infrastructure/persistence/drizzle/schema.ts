@@ -63,19 +63,33 @@ export const waitlist = pgTable('waitlist', {
 export const assignedRoleEnum = pgEnum('assigned_role', ['agency', 'admin']);
 export const consentTypeEnum = pgEnum('consent_type', CONSENT_TYPES);
 
-/** Personas dadas de alta (`docs/datamodel.md`). `owner` y `seeker` no se guardan: se derivan. */
-export const users = pgTable('users', {
-  id: uuid('id').primaryKey(),
-  firebaseUid: text('firebase_uid').notNull().unique(),
-  email: citext('email').notNull().unique(),
-  displayName: text('display_name').notNull(),
-  phone: text('phone'),
-  municipality: text('municipality'),
-  meetsVppRequirements: boolean('meets_vpp_requirements').notNull().default(false),
-  isOver65: boolean('is_over_65').notNull().default(false),
-  assignedRole: assignedRoleEnum('assigned_role'),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-});
+/**
+ * Personas dadas de alta (`docs/datamodel.md`). `owner` y `seeker` no se guardan: se derivan. Una
+ * suspensión guarda siempre su instante y su motivo, o ninguno de los dos.
+ */
+export const users = pgTable(
+  'users',
+  {
+    id: uuid('id').primaryKey(),
+    firebaseUid: text('firebase_uid').notNull().unique(),
+    email: citext('email').notNull().unique(),
+    displayName: text('display_name').notNull(),
+    phone: text('phone'),
+    municipality: text('municipality'),
+    meetsVppRequirements: boolean('meets_vpp_requirements').notNull().default(false),
+    isOver65: boolean('is_over_65').notNull().default(false),
+    assignedRole: assignedRoleEnum('assigned_role'),
+    suspendedAt: timestamp('suspended_at', { withTimezone: true }),
+    suspensionReason: text('suspension_reason'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    check(
+      'users_suspension_complete',
+      sql`(${table.suspendedAt} IS NULL) = (${table.suspensionReason} IS NULL)`,
+    ),
+  ],
+);
 
 /** Consentimientos aceptados: solo inserción, una fila por (usuario, tipo, versión). */
 export const consents = pgTable(

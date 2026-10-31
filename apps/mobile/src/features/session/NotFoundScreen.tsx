@@ -8,6 +8,7 @@ const HOME: Record<SessionState, Href | null> = {
   signedOut: '/welcome',
   unregistered: '/onboarding',
   ready: '/',
+  suspended: '/suspended',
   loading: null,
   error: null,
 };

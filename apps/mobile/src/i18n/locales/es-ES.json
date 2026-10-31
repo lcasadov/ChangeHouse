@@ -654,6 +654,12 @@
         "network": "No hemos podido guardar tu alta. Comprueba tu conexión y vuelve a intentarlo.",
         "unknown": "No hemos podido completar tu alta. Vuelve a intentarlo en unos minutos."
       }
+    },
+    "suspended": {
+      "title": "Tu cuenta está suspendida",
+      "reason": "El equipo de ChangeHouse ha suspendido tu cuenta por no cumplir las condiciones de uso. Mientras dure la suspensión no puedes usar la app y tus casas no se muestran a nadie.",
+      "contact": "Si crees que se trata de un error, escríbenos usando los datos de contacto de nuestra política de privacidad.",
+      "contactLink": "Ver cómo contactar"
     }
   },
   "session": {
@@ -729,6 +735,37 @@
     "failure": {
       "network": "No hemos podido guardar tu decisión. Comprueba tu conexión y vuelve a intentarlo.",
       "unknown": "No hemos podido guardar tu decisión. Inténtalo de nuevo en unos minutos."
+    },
+    "users": {
+      "entry": "Suspender o reactivar un usuario",
+      "title": "Suspender o reactivar un usuario",
+      "intro": "Al suspender una cuenta, la persona deja de poder usar la app, sus casas desaparecen de Explorar y sus matches abiertos se cierran para todos. Reactivarla le devuelve el acceso, pero no reabre esos matches.",
+      "userIdLabel": "Identificador del usuario",
+      "userIdHint": "El identificador interno de la cuenta (UUID).",
+      "reasonLabel": "Motivo",
+      "reasonHint": "Obligatorio, entre 1 y 1000 caracteres. Queda registrado y la persona no lo ve.",
+      "suspend": "Suspender",
+      "reactivate": "Reactivar",
+      "confirm": {
+        "title": "¿Suspender esta cuenta?",
+        "description": "La persona no podrá usar la app, sus casas dejarán de mostrarse y sus matches abiertos se cerrarán para todos. Reactivarla no los reabre.",
+        "confirm": "Suspender cuenta",
+        "cancel": "Cancelar"
+      },
+      "outcome": {
+        "suspended": "Cuenta de {{name}} ({{email}}) suspendida.",
+        "reactivated": "Cuenta de {{name}} ({{email}}) reactivada."
+      },
+      "errors": {
+        "userIdInvalid": "Escribe un identificador válido.",
+        "required": "Escribe el motivo.",
+        "tooLong": "El motivo no puede superar los 1000 caracteres.",
+        "not-found": "No existe ninguna cuenta con ese identificador.",
+        "cannot-suspend-self": "No puedes suspender tu propia cuenta.",
+        "cannot-suspend-admin": "No se puede suspender a otra persona administradora sin quitarle antes el rol.",
+        "network": "No hemos podido guardar tu decisión. Comprueba tu conexión y vuelve a intentarlo.",
+        "unknown": "No hemos podido guardar tu decisión. Inténtalo de nuevo en unos minutos."
+      }
     }
   },
   "search": {

@@ -1,11 +1,22 @@
 import type { ApiClient } from '../../api/client';
+import type { components } from '../../api/schema';
 import type { Home } from '../homes/homes-api';
 import {
   type AdminApi,
   AdminApiError,
+  type AdminUser,
   type ModerationDecision,
   type ModerationPage,
+  type SuspensionDecision,
 } from './admin-api';
+
+type Problem = components['schemas']['Problem'];
+
+/** Los 409 de `adminSetUserSuspension`, por su código estable. */
+const SUSPENSION_CONFLICTS: Record<string, AdminApiError['kind']> = {
+  CANNOT_SUSPEND_SELF: 'cannot-suspend-self',
+  CANNOT_SUSPEND_ADMIN: 'cannot-suspend-admin',
+};
 
 const BAD_REQUEST = 400;
 const UNAUTHORIZED = 401;
@@ -16,7 +27,9 @@ const CONFLICT = 409;
 /** Tamaño de página de la cola; el contrato admite de 1 a 50. */
 export const QUEUE_PAGE_SIZE = 10;
 
-function failureOf(status: number): AdminApiError {
+function failureOf(status: number, problem?: Problem): AdminApiError {
+  const conflict = status === CONFLICT ? SUSPENSION_CONFLICTS[problem?.code ?? ''] : undefined;
+  if (conflict) return new AdminApiError(conflict);
   if (status === UNAUTHORIZED) return new AdminApiError('unauthorized');
   if (status === FORBIDDEN) return new AdminApiError('forbidden');
   if (status === NOT_FOUND) return new AdminApiError('not-found');
@@ -33,7 +46,10 @@ async function request<T>(call: () => Promise<T>): Promise<T> {
   }
 }
 
-/** Adaptador HTTP del puerto `AdminApi` sobre el cliente tipado (`adminListHomes`, `adminModerateHome`). */
+/**
+ * Adaptador HTTP del puerto `AdminApi` sobre el cliente tipado (`adminListHomes`,
+ * `adminModerateHome`, `adminSetUserSuspension`).
+ */
 export function createHttpAdminApi(client: ApiClient): AdminApi {
   return {
     async listPending(cursor?: string): Promise<ModerationPage> {
@@ -60,6 +76,17 @@ export function createHttpAdminApi(client: ApiClient): AdminApi {
         }),
       );
       if (!data) throw failureOf(response.status);
+      return data;
+    },
+
+    async setUserSuspension(userId: string, decision: SuspensionDecision): Promise<AdminUser> {
+      const { data, error, response } = await request(() =>
+        client.PUT('/admin/users/{userId}/suspension', {
+          params: { path: { userId } },
+          body: decision,
+        }),
+      );
+      if (!data) throw failureOf(response.status, error);
       return data;
     },
   };

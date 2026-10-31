@@ -20,6 +20,7 @@ const ME: Me = {
   isOver65: false,
   roles: ['seeker'],
   hasPublishedHome: false,
+  suspended: false,
 };
 const ACCEPTED_AT = new Date('2026-10-19T10:00:00.000Z');
 const PRIVACY: Consent = { type: 'privacy', version: '2026-10', acceptedAt: ACCEPTED_AT };

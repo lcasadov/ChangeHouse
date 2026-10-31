@@ -14,6 +14,7 @@ import type { PhotoStorage } from './application/home/photo-storage.js';
 import type { PlaceResolver } from './application/home/place-resolver.js';
 import { matchOperations } from './application/matching/match-operations.js';
 import { moderationOperations } from './application/moderation/moderation-operations.js';
+import { userSuspensionOperations } from './application/moderation/user-suspension.js';
 import { searchPreferencesOperations } from './application/search-preferences/search-preferences-operations.js';
 import { joinWaitlist } from './application/waitlist/join-waitlist.js';
 import type { ApiConfig } from './config.js';
@@ -30,6 +31,7 @@ import { DrizzleMatchRepository } from './infrastructure/persistence/drizzle/dri
 import { DrizzleMatchUnitOfWork } from './infrastructure/persistence/drizzle/drizzle-match-unit-of-work.js';
 import { DrizzlePhotoRepository } from './infrastructure/persistence/drizzle/drizzle-photo-repository.js';
 import { DrizzleSearchPreferencesRepository } from './infrastructure/persistence/drizzle/drizzle-search-preferences-repository.js';
+import { DrizzleSuspensionUnitOfWork } from './infrastructure/persistence/drizzle/drizzle-suspension-unit-of-work.js';
 import { DrizzleUnitOfWork } from './infrastructure/persistence/drizzle/drizzle-unit-of-work.js';
 import { DrizzleUserRepository } from './infrastructure/persistence/drizzle/drizzle-user-repository.js';
 import { DrizzleWaitlistRepository } from './infrastructure/persistence/drizzle/drizzle-waitlist-repository.js';
@@ -109,6 +111,11 @@ export function createApi(config: ApiConfig, adapters: ApiAdapters = {}) {
     storage: photoStorage,
     clock: systemClock,
   });
+  const adminUsers = userSuspensionOperations({
+    units: new DrizzleSuspensionUnitOfWork(database.db),
+    ownership,
+    clock: systemClock,
+  });
   const preferencesRepository = new DrizzleSearchPreferencesRepository(database.db);
   const searchPreferences = searchPreferencesOperations({
     homes: homeRepository,
@@ -157,6 +164,7 @@ export function createApi(config: ApiConfig, adapters: ApiAdapters = {}) {
     homes,
     photos,
     adminHomes,
+    adminUsers,
     searchPreferences,
     discovery,
     decisions,

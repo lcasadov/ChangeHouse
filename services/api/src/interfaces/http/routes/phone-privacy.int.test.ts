@@ -125,6 +125,11 @@ const HOMES_REQUESTS: Record<string, RequestTemplate> = {
     url: `/v1/admin/homes/${MISSING_ID}/moderation`,
     payload: () => ({ decision: 'approve' }),
   },
+  adminSetUserSuspension: {
+    method: 'PUT',
+    url: `/v1/admin/users/${MISSING_ID}/suspension`,
+    payload: () => ({ suspended: true, reason: 'Fraude reiterado' }),
+  },
 };
 Object.assign(REQUESTS, HOMES_REQUESTS);
 

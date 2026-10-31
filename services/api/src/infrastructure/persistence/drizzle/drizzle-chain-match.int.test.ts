@@ -583,3 +583,45 @@ describe('Scenario: Cadena compatible - con me gusta simultáneos en PostgreSQL 
     }
   });
 });
+
+describe('DrizzleCycleCandidates con propietarios suspendidos', () => {
+  const suspend = (userId: string) =>
+    sql`UPDATE users SET suspended_at = now(), suspension_reason = 'Fraude' WHERE id = ${userId}`;
+
+  it('Scenario: Sus viviendas desaparecen - el directo con la vivienda de un suspendido no es candidato', async () => {
+    const a = await home(ANA, 200_000);
+    const b = await home(BETO, 200_000);
+    await like(b, a);
+    await suspend(BETO);
+    await like(a, b);
+
+    expect(await cycles.findCycles(a, b)).toEqual([]);
+  });
+
+  it('Scenario: Sus viviendas desaparecen - una cadena cuya tercera vivienda es de un suspendido no es candidata', async () => {
+    const { a, b, c } = await chain();
+    const d = await home(DANI, 230_000);
+    await preferences(DANI, { maxToPay: 50_000, minToReceive: 0 });
+    for (const z of [c, d]) {
+      await like(b, z);
+      await like(z, a);
+    }
+    await suspend(CARLA);
+    await like(a, b);
+
+    const found = await cycles.findCycles(a, b);
+
+    expect(found.map((cycle) => cycle.map((member) => member.homeId))).toEqual([[a, b, d]]);
+  });
+
+  it('al reactivar al propietario, su vivienda vuelve a formar ciclos', async () => {
+    const a = await home(ANA, 200_000);
+    const b = await home(BETO, 200_000);
+    await like(b, a);
+    await suspend(BETO);
+    await sql`UPDATE users SET suspended_at = NULL, suspension_reason = NULL WHERE id = ${BETO}`;
+    await like(a, b);
+
+    expect((await cycles.findCycles(a, b)).map((cycle) => cycle.length)).toEqual([2]);
+  });
+});

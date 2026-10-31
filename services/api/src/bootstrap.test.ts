@@ -53,6 +53,7 @@ describe('createApi', () => {
       'acceptConsent',
       'adminListHomes',
       'adminModerateHome',
+      'adminSetUserSuspension',
       'completeHomePhotoUpload',
       'confirmMatch',
       'createHome',
