@@ -11,6 +11,7 @@ import type { HomesApi } from '../homes/homes-api';
 import type { PhotoPicker } from '../homes/photo-picker';
 import type { PhotoUploader } from '../homes/photo-uploader';
 import type { MatchesApi } from '../matches/matches-api';
+import type { PushNotifications } from '../notifications/push-notifications';
 import type { SearchPreferencesApi } from '../search/search-preferences-api';
 import type { ZoneSuggestions } from '../search/zone-suggestions';
 
@@ -35,6 +36,8 @@ export interface AppServices {
   chatApi: ChatApi;
   /** Los mensajes del chat de un match en tiempo real (Firestore, solo lectura). */
   chatMessages: ChatMessages;
+  /** Los avisos push del dispositivo: permiso, token y toques sobre un aviso. */
+  pushNotifications: PushNotifications;
   /** Las preferencias de búsqueda del usuario y las propias de cada vivienda. */
   searchPreferencesApi: SearchPreferencesApi;
   /** Autocompletado de la zona de búsqueda: municipios y lugares (sugerencias de prueba sin clave). */

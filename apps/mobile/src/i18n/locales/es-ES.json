@@ -894,5 +894,13 @@
       "received": "{{name}}: {{text}}",
       "receivedImage": "{{name}} ha enviado una imagen"
     }
+  },
+  "notifications": {
+    "permission": {
+      "title": "¿Quieres recibir avisos?",
+      "description": "Te avisaremos cuando tengas un match, llegue un mensaje nuevo o tu match se confirme o se cierre. Sin avisos tendrías que abrir la app para enterarte.",
+      "confirm": "Activar avisos",
+      "cancel": "Ahora no"
+    }
   }
 }

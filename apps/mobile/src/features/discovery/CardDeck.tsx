@@ -6,6 +6,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { Notice } from '../../ui';
 import { MatchCelebrationHost } from '../matches/MatchCelebrationHost';
+import { NotificationPermissionDialog } from '../notifications/NotificationPermissionDialog';
 import { CardStack } from './CardStack';
 import { DecisionActions } from './DecisionActions';
 import { DecisionBar } from './DecisionBar';
@@ -135,6 +136,13 @@ export function CardDeck({
         />
       ) : null}
       <PublishHomeSheet visible={decisions.needsHome} onClose={decisions.closeNeedsHome} />
+      <NotificationPermissionDialog
+        visible={decisions.notifications.explaining && !decisions.celebration}
+        onAccept={() => {
+          decisions.notifications.accept().catch(() => undefined);
+        }}
+        onDecline={decisions.notifications.decline}
+      />
       <MatchCelebrationHost
         celebration={decisions.celebration}
         onClose={decisions.closeCelebration}
