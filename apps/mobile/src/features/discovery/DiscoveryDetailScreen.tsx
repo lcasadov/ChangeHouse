@@ -11,6 +11,7 @@ import { useFocusRing } from '../../ui/useFocusRing';
 import { FEATURE_FLAGS } from '../homes/home-form';
 import { useHomeTitle } from '../homes/HomeCard';
 import { VppNotice } from '../homes/VppNotice';
+import { MoreOptions } from '../moderation/MoreOptions';
 import { LoadingView } from '../session/LoadingView';
 import { AreaCard } from './AreaCard';
 import { factsOf } from './card-summary';
@@ -125,6 +126,7 @@ function Detail({ home, compensation }: Readonly<DetailProps>) {
           <Text variant="title" accessibilityRole="header">
             {title}
           </Text>
+          <MoreOptions subject={title} report={{ type: 'home', id: home.id }} />
           {compensation ? (
             <View style={[styles.row, { gap: theme.space[2] }]}>
               <CompensationPill compensation={compensation} />

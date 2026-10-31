@@ -1,9 +1,13 @@
+import type { HomeStatus } from '@changehouse/shared';
 import { describe, expect, it } from 'vitest';
 
 import {
   HomeIncompleteError,
+  HomeInOperationError,
   HomeNotEditableError,
   HomeNotInReviewError,
+  HomeNotPausableError,
+  HomeNotResumableError,
   HomeNotSubmittableError,
   InvalidModerationReasonError,
   InvalidValueRangeError,
@@ -12,14 +16,19 @@ import {
 } from './errors.js';
 import {
   approveHome,
+  closeHome,
   editHome,
   hasBeenPublished,
   type Home,
+  type HomeChanges,
   type HomeDetails,
   type HomeLocation,
   missingFields,
   newDraft,
+  pauseHome,
   rejectHome,
+  relevantChangeOf,
+  resumeHome,
   submitHome,
 } from './home.js';
 
@@ -179,7 +188,13 @@ describe('editHome', () => {
 
     const edited = editHome(
       published,
-      { floor: '5ª', features: { terrace: true }, locationVisibility: 'exact' },
+      {
+        locationVisibility: 'exact',
+        energyRating: 'B',
+        yearBuilt: 1990,
+        isPrimaryResidence: false,
+        mortgageOutstandingCents: 100_000_00,
+      },
       LATER,
     );
 
@@ -195,12 +210,13 @@ describe('editHome', () => {
     expect(edited.status).toBe('published');
   });
 
-  it('una vivienda pausada con un cambio relevante sigue pausada pero anota el cambio', () => {
+  it('una vivienda pausada con un cambio relevante vuelve a in_review, se encola y anota el cambio', () => {
     const paused = withStatus(draft(COMPLETE), 'paused');
 
     const edited = editHome(paused, { bedrooms: 5 }, LATER);
 
-    expect(edited.status).toBe('paused');
+    expect(edited.status).toBe('in_review');
+    expect(edited.submittedAt).toEqual(LATER);
     expect(edited.relevantChangedAt).toEqual(LATER);
   });
 
@@ -301,12 +317,12 @@ describe('submittedAt', () => {
     expect(edited.submittedAt).toBe(LATER);
   });
 
-  it('un cambio no relevante o en una vivienda pausada no cambia la fecha de envío', () => {
+  it('un cambio no relevante no cambia la fecha de envío, tampoco en una vivienda pausada', () => {
     const published = { ...withStatus(draft(COMPLETE), 'published'), submittedAt: NOW };
     const paused = { ...withStatus(draft(COMPLETE), 'paused'), submittedAt: NOW };
 
-    expect(editHome(published, { floor: '2ª' }, LATER).submittedAt).toBe(NOW);
-    expect(editHome(paused, { bedrooms: 5 }, LATER).submittedAt).toBe(NOW);
+    expect(editHome(published, { energyRating: 'A' }, LATER).submittedAt).toBe(NOW);
+    expect(editHome(paused, { locationVisibility: 'exact' }, LATER).submittedAt).toBe(NOW);
   });
 });
 
@@ -431,6 +447,143 @@ describe('publicación y cambio relevante (descubrimiento)', () => {
   });
 });
 
+describe('pauseHome y resumeHome', () => {
+  it('Scenario: Pausar - una vivienda publicada pasa a paused sin perder su fecha de publicación', () => {
+    const published = { ...withStatus(draft(COMPLETE), 'published'), publishedAt: NOW };
+
+    const paused = pauseHome(published);
+
+    expect(paused.status).toBe('paused');
+    expect(paused.publishedAt).toBe(NOW);
+    expect(published.status).toBe('published');
+  });
+
+  it('Scenario: Reactivar - una vivienda pausada vuelve a published sin pasar por moderación', () => {
+    const paused = { ...withStatus(draft(COMPLETE), 'paused'), publishedAt: NOW, submittedAt: NOW };
+
+    const resumed = resumeHome(paused);
+
+    expect(resumed.status).toBe('published');
+    expect(resumed.publishedAt).toBe(NOW);
+    expect(resumed.submittedAt).toBe(NOW);
+  });
+
+  it.each(['draft', 'in_review', 'paused', 'in_operation', 'closed'] as const)(
+    'Scenario: Pausar un borrador - pausar una vivienda en %s es un conflicto',
+    (status) => {
+      const home = withStatus(draft(COMPLETE), status);
+
+      expect(() => pauseHome(home)).toThrow(HomeNotPausableError);
+      expect(() => pauseHome(home)).toThrow(expect.objectContaining({ kind: 'conflict' }));
+    },
+  );
+
+  it.each(['draft', 'in_review', 'published', 'in_operation', 'closed'] as const)(
+    'reactivar una vivienda en %s es un conflicto',
+    (status) => {
+      const home = withStatus(draft(COMPLETE), status);
+
+      expect(() => resumeHome(home)).toThrow(HomeNotResumableError);
+      expect(() => resumeHome(home)).toThrow(expect.objectContaining({ kind: 'conflict' }));
+    },
+  );
+});
+
+describe('vuelta a revisión tras cambios relevantes', () => {
+  it('Scenario: Cambiar el valor de una vivienda publicada - pasa a in_review con la fecha de envío y la de cambio relevante', () => {
+    const published = { ...withStatus(draft(COMPLETE), 'published'), publishedAt: NOW };
+
+    const edited = editHome(published, { valueMinCents: 260_000_00 }, LATER);
+
+    expect(edited).toMatchObject({
+      status: 'in_review',
+      submittedAt: LATER,
+      relevantChangedAt: LATER,
+      publishedAt: NOW,
+    });
+  });
+
+  it('Scenario: Cambiar solo la visibilidad de la ubicación - de zona a ubicación exacta sigue publicada sin anotar nada', () => {
+    const published = { ...withStatus(draft(COMPLETE), 'published'), publishedAt: NOW };
+
+    const edited = editHome(published, { locationVisibility: 'exact' }, LATER);
+
+    expect(edited.status).toBe('published');
+    expect(edited.locationVisibility).toBe('exact');
+    expect(edited.submittedAt).toBeNull();
+    expect(edited.relevantChangedAt).toBeNull();
+  });
+
+  const RELEVANT_CHANGES: readonly [string, HomeChanges][] = [
+    ['el rango de valor máximo', { valueMaxCents: 300_000_00 }],
+    ['el tipo', { type: 'atico' }],
+    ['la superficie útil', { usefulM2: 81 }],
+    ['la superficie construida', { builtM2: 96 }],
+    ['los dormitorios', { bedrooms: 4 }],
+    ['los baños', { bathrooms: 1 }],
+    ['la planta', { floor: '3ª' }],
+    ['el ascensor', { hasLift: false }],
+    ['el garaje', { garage: true }],
+    ['el trastero', { storageRoom: true }],
+    ['las características', { features: { terrace: true } }],
+    ['el régimen', { regime: 'VPPB', vppQualificationDate: '2010-01-01' }],
+    ['la fecha de calificación VPP', { vppQualificationDate: '2010-01-01' }],
+    ['el fin de la protección VPP', { vppProtectionEnd: '2040-01-01' }],
+    ['el precio máximo legal VPP', { vppMaxLegalPriceCents: 900_000_00 }],
+  ];
+
+  it.each(RELEVANT_CHANGES)(
+    'cambiar %s de una vivienda publicada o pausada la devuelve a in_review',
+    (_, changes) => {
+      for (const status of ['published', 'paused'] as const) {
+        const edited = editHome(withStatus(draft(COMPLETE), status), changes, LATER);
+
+        expect(edited.status).toBe('in_review');
+        expect(edited.submittedAt).toBe(LATER);
+        expect(edited.relevantChangedAt).toBe(LATER);
+      }
+    },
+  );
+
+  it('volver a guardar las mismas características no es un cambio relevante', () => {
+    const published = { ...withStatus(draft(COMPLETE), 'published'), features: { terrace: true } };
+
+    expect(editHome(published, { features: { terrace: true } }, LATER).status).toBe('published');
+  });
+
+  it('un cambio relevante en un borrador o en revisión no cambia su estado', () => {
+    for (const status of ['draft', 'in_review'] as const) {
+      expect(editHome(withStatus(draft(COMPLETE), status), { bedrooms: 5 }, LATER).status).toBe(
+        status,
+      );
+    }
+  });
+});
+
+describe('relevantChangeOf (fotos)', () => {
+  it('en una vivienda publicada o pausada anota el cambio y la devuelve a revisión', () => {
+    for (const status of ['published', 'paused'] as const) {
+      expect(relevantChangeOf(withStatus(draft(COMPLETE), status), LATER)).toEqual({
+        relevantChangedAt: LATER,
+        status: 'in_review',
+        submittedAt: LATER,
+      });
+    }
+  });
+
+  it('en una vivienda ya publicada que está en revisión o en borrador solo anota el cambio', () => {
+    for (const status of ['in_review', 'draft'] as const) {
+      const home = { ...withStatus(draft(COMPLETE), status), publishedAt: NOW };
+
+      expect(relevantChangeOf(home, LATER)).toEqual({ relevantChangedAt: LATER });
+    }
+  });
+
+  it('en una vivienda que nunca se publicó no hay cambio relevante', () => {
+    expect(relevantChangeOf(draft(COMPLETE), LATER)).toBeNull();
+  });
+});
+
 describe('régimen de protección (RF-14, RN-06)', () => {
   const VPO_LIMIT = 180_000_00;
   const PROTECTED = { regime: 'VPPL', vppQualificationDate: '2015-03-10' } as const;
@@ -544,5 +697,26 @@ describe('régimen de protección (RF-14, RN-06)', () => {
       draft({ regime: 'libre', vppMaxLegalPriceCents: VPO_LIMIT, valueMaxCents: 900_000_00 })
         .valueMaxCents,
     ).toBe(900_000_00);
+  });
+});
+
+describe('closeHome', () => {
+  const homeIn = (status: HomeStatus): Home => ({ ...draft(), status });
+
+  it.each(['draft', 'in_review', 'published', 'paused'] as const)(
+    'cierra una vivienda en %s',
+    (status) => {
+      expect(closeHome(homeIn(status)).status).toBe('closed');
+    },
+  );
+
+  it('cerrar una vivienda ya cerrada no cambia nada', () => {
+    const closed = homeIn('closed');
+
+    expect(closeHome(closed)).toBe(closed);
+  });
+
+  it('una vivienda en operación no se puede cerrar', () => {
+    expect(() => closeHome(homeIn('in_operation'))).toThrow(HomeInOperationError);
   });
 });

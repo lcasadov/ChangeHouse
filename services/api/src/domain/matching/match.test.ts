@@ -3,7 +3,10 @@ import { describe, expect, it } from 'vitest';
 import { MatchNotFoundError, MatchNotOpenError } from './errors.js';
 import {
   confirmInterest,
+  ensureCanChat,
   ensureCanSharePhone,
+  ensureParticipant,
+  isLiveMatch,
   type MatchState,
   type ParticipantStatus,
   withdrawFromMatch,
@@ -127,5 +130,59 @@ describe('ensureCanSharePhone', () => {
     expect(() => {
       ensureCanSharePhone(match('open', 'pending', 'pending'), 'user-c');
     }).toThrow(MatchNotFoundError);
+  });
+});
+
+describe('ensureCanChat', () => {
+  it('se puede escribir en el chat de un match open o confirmed', () => {
+    expect(() => {
+      ensureCanChat(match('open', 'pending', 'pending'), 'user-a');
+      ensureCanChat(match('confirmed', 'confirmed', 'confirmed'), 'user-b');
+    }).not.toThrow();
+  });
+
+  it.each(['closed', 'expired'] as const)(
+    'Scenario: Match cerrado - en un match %s lanza MatchNotOpenError',
+    (status) => {
+      expect(() => {
+        ensureCanChat(match(status, 'withdrawn', 'pending'), 'user-b');
+      }).toThrow(MatchNotOpenError);
+    },
+  );
+
+  it('Scenario: Usuario ajeno - a quien no participa le lanza MatchNotFoundError, también si está cerrado', () => {
+    expect(() => {
+      ensureCanChat(match('open', 'pending', 'pending'), 'user-c');
+    }).toThrow(MatchNotFoundError);
+    expect(() => {
+      ensureCanChat(match('closed', 'pending', 'pending'), 'user-c');
+    }).toThrow(MatchNotFoundError);
+  });
+});
+
+describe('ensureParticipant', () => {
+  it('deja pasar a un participante en cualquier estado, también con el match cerrado', () => {
+    expect(() => {
+      ensureParticipant(match('closed', 'withdrawn', 'pending'), 'user-b');
+      ensureParticipant(match('open', 'pending', 'pending'), 'user-a');
+    }).not.toThrow();
+  });
+
+  it('a quien no participa le lanza MatchNotFoundError', () => {
+    expect(() => {
+      ensureParticipant(match('open', 'pending', 'pending'), 'user-c');
+    }).toThrow(MatchNotFoundError);
+  });
+});
+
+describe('isLiveMatch', () => {
+  it.each([
+    ['open', true],
+    ['confirmed', true],
+    ['in_operation', false],
+    ['closed', false],
+    ['expired', false],
+  ] as const)('un match %s: vivo = %s', (status, live) => {
+    expect(isLiveMatch({ status, participants: [] })).toBe(live);
   });
 });

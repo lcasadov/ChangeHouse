@@ -193,7 +193,7 @@ operación de la API sin filas en ese fichero hace fallar la prueba.
 | `getHome` | 401 | ✅ pública / 404 | ✅ pública / 404 | ✅ completa | completa si `resourceOwner`; pública si `published`; si no, 404 |
 | `updateHome` | 401 | `resourceOwner` | `resourceOwner` | 403 | ajena → 404; estado → 409 |
 | `submitHome` | 401 | `resourceOwner` | `resourceOwner` | 403 | ídem |
-| `pauseHome` | 401 | — | `resourceOwner` | 403 | ídem |
+| `pauseHome` | 401 | `resourceOwner` | `resourceOwner` | 403 | ídem (un `seeker` solo tiene viviendas sin publicar: 409) |
 | `resumeHome` | 401 | `resourceOwner` | `resourceOwner` | 403 | ídem |
 | `createHomePhotoUpload` | 401 | `resourceOwner` | `resourceOwner` | 403 | ajena → 404 |
 | `completeHomePhotoUpload` | 401 | `resourceOwner` | `resourceOwner` | 403 | ajena → 404 |
@@ -212,17 +212,20 @@ operación de la API sin filas en ese fichero hace fallar la prueba.
 | `confirmMatch` | 401 | `participant` / 404 | `participant` / 404 | 403 | no participante → 404; estado → 409 (`MATCH_NOT_OPEN`); confirmar de nuevo es idempotente |
 | `withdrawFromMatch` | 401 | `participant` / 404 | `participant` / 404 | 403 | no participante → 404; estado → 409 (`MATCH_NOT_OPEN`); queda en `audit_log` |
 | `setPhoneSharing` | 401 | `participant` / 404 | `participant` / 404 | 403 | solo la fila propia; match `closed` → 409 |
+| `sendMatchMessage` | 401 | `participant` / 404 | `participant` / 404 | 403 | no participante → 404; match no `open`/`confirmed` → 409 (`MATCH_NOT_OPEN`, chat de solo lectura); chat sin crear → 409 (`CHAT_NOT_READY`); texto vacío o de más de 2.000 caracteres → 400 |
+| `getChatImageUrl` | 401 | `participant` / 404 | `participant` / 404 | 403 | no participante, imagen desconocida o id que no es UUID → 404; vale con el match cerrado |
+| `createChatImageUpload` | 401 | `participant` / 404 | `participant` / 404 | 403 | no participante → 404; match no `open`/`confirmed` → 409 (`MATCH_NOT_OPEN`) |
 
 Un `seeker` puede ser participante (por ejemplo, con su vivienda pausada); en la
 matriz como datos, que no crea matches, los actores `seeker` y `owner` obtienen
-404 en estas cuatro operaciones y la pertenencia se prueba con matches reales en
+404 en estas operaciones y la pertenencia se prueba con matches reales en
 `matches.int.test.ts`.
-| `createReport` | 401 | ✅ | ✅ | 403 | límite de peticiones |
-| `blockUser` | 401 | ✅ | ✅ | 403 | — |
+| `createReport` | 401 | ✅ | ✅ | 403 | 10 por usuario y hora (429); mensaje de un chat ajeno o inexistente → 404; lo propio → 400; la denuncia de un mensaje guarda su evidencia |
+| `blockUser` | 401 | ✅ | ✅ | 403 | idempotente (204); a uno mismo → 400; inexistente → 404; efecto en los dos sentidos |
 | `adminListHomes` | 401 | 403 | 403 | ✅ | cola `in_review` por envío; sin dirección exacta |
 | `adminModerateHome` | 401 | 403 | 403 | ✅ | auditoría en la misma transacción; fuera de revisión → 409; rechazar sin motivo → 400 |
-| `adminListReports` | 401 | 403 | 403 | ✅ | — |
-| `adminResolveReport` | 401 | 403 | 403 | ✅ | auditoría |
+| `adminListReports` | 401 | 403 | 403 | ✅ | abiertas por defecto, de la más antigua a la más reciente, con evidencia |
+| `adminResolveReport` | 401 | 403 | 403 | ✅ | nota obligatoria (400); auditoría `report.resolve`/`report.dismiss` en la misma transacción; ya cerrada → 409 |
 | `adminListUsers` | 401 | 403 | 403 | ✅ | — |
 | `adminSetUserSuspension` | 401 | 403 | 403 | ✅ | motivo obligatorio (sin él, 400); auditoría en la misma transacción; a sí mismo u otro admin → 409 |
 | `adminGetMetrics` | 401 | 403 | 403 | ✅ | — |
@@ -235,7 +238,7 @@ matriz como datos, que no crea matches, los actores `seeker` y `owner` obtienen
 
 **Cuenta suspendida** (actor `suspended` en la matriz como datos: un `owner` suspendido). Toda
 operación autenticada le devuelve **403** con `code: ACCOUNT_SUSPENDED`, sea cual sea su rol, salvo
-`getMe` (200, con `suspended: true`) y `exportMyData` (cuando se implemente). Las operaciones
+`getMe` (200, con `suspended: true`) y `exportMyData`. Las operaciones
 públicas (`joinWaitlist`) no cambian. La regla vive en la política central (`allowSuspended` en
 `policy.ts`), no en cada caso de uso.
 
@@ -267,5 +270,9 @@ y en `services/api/test/authorization/rbac-matrix.json`:
 - La autorización corre en `onRequest`, antes de leer el cuerpo: sin token siempre es 401, aunque el
   cuerpo sea inválido.
 - **Usuario suspendido** (403 `ACCOUNT_SUSPENDED`): implementado con `add-user-suspension`
-  (2026-10-23). `getMe` es la única operación implementada que lo admite; `exportMyData` lo admitirá
-  cuando exista. ⚠️ PENDIENTE: usuario borrado (llega con `deleteMe`).
+  (2026-10-23). `getMe` y `exportMyData` son las únicas operaciones que lo admiten; el resto, incluidas
+  `deleteMe`, las denuncias, los bloqueos y el chat, lo deniegan.
+- **Cuenta eliminada** (`add-account-deletion-and-export`): su token se trata como no válido (401) desde
+  que se confirma la eliminación, aunque Firebase Auth tarde en darla de baja. `deleteMe` y
+  `exportMyData` niegan con 403 a quien no tiene el rol (incluido `unregistered`); `deleteMe` no admite
+  `agency` ni `admin` y `exportMyData` no admite `admin`. `exportMyData` limita a 5 por hora y usuario (429).

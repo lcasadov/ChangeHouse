@@ -105,13 +105,13 @@ describe('decide con una cuenta suspendida', () => {
     expect(decide({ kind: 'public' }, 'seeker', true)).toEqual({ allowed: true });
   });
 
-  it('en la política real solo getMe admite cuentas suspendidas (exportMyData aún no existe)', () => {
+  it('en la política real solo getMe y exportMyData admiten cuentas suspendidas', () => {
     const allowing = Object.entries(realPolicy)
       .filter(([, access]) => decide(access, 'seeker', true).allowed)
       .map(([operationId]) => operationId)
       .filter((operationId) => realPolicy[operationId]?.kind !== 'public');
 
-    expect(allowing).toEqual(['getMe']);
+    expect(allowing).toEqual(['getMe', 'exportMyData']);
   });
 });
 
@@ -122,15 +122,22 @@ describe('política de autorización', () => {
     expect(realPolicy).toEqual({
       joinWaitlist: { kind: 'public' },
       upsertMe: { kind: 'authenticated' },
-      // La única que admite una cuenta suspendida: la app la usa para mostrar la suspensión
+      // Admite una cuenta suspendida: la app la usa para mostrar la suspensión
       getMe: { kind: 'roles', roles: everyone, denyStatus: 404, allowSuspended: true },
       listMyConsents: { kind: 'roles', roles: everyone, denyStatus: 404 },
       acceptConsent: { kind: 'roles', roles: everyone, denyStatus: 404 },
+      registerDevice: { kind: 'roles', roles: everyone, denyStatus: 404 },
+      // Eliminar la cuenta y exportar los datos (RF-05): la propia; agency solo puede exportar
+      deleteMe: { kind: 'roles', roles: ['seeker', 'owner'] },
+      exportMyData: { kind: 'roles', roles: ['seeker', 'owner', 'agency'], allowSuspended: true },
       // RC-19: agency y admin no publican ni gestionan viviendas; getHome añade al admin (forma pública)
       listMyHomes: { kind: 'roles', roles: ['seeker', 'owner'] },
       createHome: { kind: 'roles', roles: ['seeker', 'owner'] },
       updateHome: { kind: 'roles', roles: ['seeker', 'owner'] },
       submitHome: { kind: 'roles', roles: ['seeker', 'owner'] },
+      // Pausar y reactivar: mismos roles que la vivienda; el estado (409) lo resuelve el caso de uso
+      pauseHome: { kind: 'roles', roles: ['seeker', 'owner'] },
+      resumeHome: { kind: 'roles', roles: ['seeker', 'owner'] },
       createHomePhotoUpload: { kind: 'roles', roles: ['seeker', 'owner'] },
       completeHomePhotoUpload: { kind: 'roles', roles: ['seeker', 'owner'] },
       deleteHomePhoto: { kind: 'roles', roles: ['seeker', 'owner'] },
@@ -156,11 +163,20 @@ describe('política de autorización', () => {
       confirmMatch: { kind: 'roles', roles: ['seeker', 'owner'] },
       withdrawFromMatch: { kind: 'roles', roles: ['seeker', 'owner'] },
       setPhoneSharing: { kind: 'roles', roles: ['seeker', 'owner'] },
+      // Chat: solo participantes (seeker u owner); la pertenencia la resuelve el caso de uso con un 404
+      getChatImageUrl: { kind: 'roles', roles: ['seeker', 'owner'] },
+      createChatImageUpload: { kind: 'roles', roles: ['seeker', 'owner'] },
+      sendMatchMessage: { kind: 'roles', roles: ['seeker', 'owner'] },
       // Moderación: solo el admin (RF-18, RF-93)
       adminListHomes: { kind: 'roles', roles: ['admin'] },
       adminModerateHome: { kind: 'roles', roles: ['admin'] },
       // Suspensión de usuarios: solo el admin (RF-90, RF-93)
       adminSetUserSuspension: { kind: 'roles', roles: ['admin'] },
+      // Denuncias y bloqueos (RF-63): owner y seeker; la cola y su resolución, solo el admin
+      createReport: { kind: 'roles', roles: ['seeker', 'owner'] },
+      blockUser: { kind: 'roles', roles: ['seeker', 'owner'] },
+      adminListReports: { kind: 'roles', roles: ['admin'] },
+      adminResolveReport: { kind: 'roles', roles: ['admin'] },
     });
   });
 });

@@ -177,6 +177,8 @@ beforeAll(() => {
 });
 
 beforeEach(async () => {
+  // Un despacho lanzado por la petición anterior no puede seguir en curso al vaciar las tablas
+  await api.outbox.idle();
   await sql`TRUNCATE matches, users CASCADE`;
 });
 

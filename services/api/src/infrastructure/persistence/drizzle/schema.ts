@@ -1,10 +1,13 @@
 import {
   CONSENT_TYPES,
+  DEVICE_PLATFORMS,
   HOME_REGIMES,
   HOME_STATUSES,
   HOME_TYPES,
   type HomeFeatures,
   LOCATION_VISIBILITIES,
+  REPORT_STATUSES,
+  REPORT_TARGET_TYPES,
   type SearchFilters,
 } from '@changehouse/shared';
 import { sql } from 'drizzle-orm';
@@ -15,6 +18,7 @@ import {
   customType,
   date,
   index,
+  integer,
   jsonb,
   numeric,
   pgEnum,
@@ -39,6 +43,7 @@ export const homeTypeEnum = pgEnum('home_type', HOME_TYPES);
 export const homeStatusEnum = pgEnum('home_status', HOME_STATUSES);
 export const homeRegimeEnum = pgEnum('home_regime', HOME_REGIMES);
 export const photoStatusEnum = pgEnum('photo_status', PHOTO_STATUSES);
+export const devicePlatformEnum = pgEnum('device_platform', DEVICE_PLATFORMS);
 export const locationVisibilityEnum = pgEnum('location_visibility', LOCATION_VISIBILITIES);
 
 /** Dirección cifrada (`bytea`): se lee y se escribe como `Buffer`. */
@@ -82,6 +87,8 @@ export const users = pgTable(
     suspendedAt: timestamp('suspended_at', { withTimezone: true }),
     suspensionReason: text('suspension_reason'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    // Borrado lógico (RF-05): la fila se conserva anonimizada por las referencias de consentimientos, auditoría y matches
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
   },
   (table) => [
     check(
@@ -369,7 +376,7 @@ export const matches = pgTable(
     type: smallint('type').notNull(),
     status: matchStatusEnum('status').notNull().default('open'),
     cycleKey: text('cycle_key').notNull().unique(),
-    // Chat de grupo en Firestore: llega con `add-match-chat`
+    // Chat de grupo en Firestore: lo rellena el despachador del outbox cuando lo crea (`add-match-chat`)
     chatId: text('chat_id'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -411,5 +418,110 @@ export const matchParticipants = pgTable(
     // Mis matches (`listMyMatches`) y ¿este me gusta forma parte de un match? (deshacer)
     index('match_participants_user_idx').on(table.userId, table.matchId),
     index('match_participants_gives_receives_idx').on(table.givesHomeId, table.receivesHomeId),
+  ],
+);
+
+/**
+ * Bandeja de salida (patrón *outbox*): eventos de negocio que hay que propagar a un sistema externo
+ * (por ahora, crear el chat de Firestore de un match nuevo). Se insertan en la misma transacción
+ * que el cambio de negocio y un despachador los procesa después; `processed_at` nulo = pendiente.
+ * Un mismo hecho (`type` sobre `aggregate_id`) se registra una sola vez.
+ */
+export const outbox = pgTable(
+  'outbox',
+  {
+    id: uuid('id').primaryKey(),
+    type: text('type').notNull(),
+    aggregateId: uuid('aggregate_id').notNull(),
+    // Identificadores que el manejador necesita además del agregado (p. ej. el match y el remitente de un mensaje)
+    payload: jsonb('payload').$type<Record<string, string>>(),
+    attempts: integer('attempts').notNull().default(0),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    processedAt: timestamp('processed_at', { withTimezone: true }),
+  },
+  (table) => [
+    unique('outbox_type_aggregate_key').on(table.type, table.aggregateId),
+    // Los pendientes, en orden de llegada: es lo único que lee el despachador
+    index('outbox_pending_idx')
+      .on(table.createdAt)
+      .where(sql`${table.processedAt} IS NULL`),
+  ],
+);
+
+/**
+ * Dispositivos con notificaciones push (RF-61): el token FCM es la clave, así que registrarlo de nuevo
+ * lo refresca y, si ahora lo usa otra cuenta, pasa a ella. Se borran los tokens que FCM da por inválidos.
+ */
+export const userDevices = pgTable('user_devices', {
+  fcmToken: text('fcm_token').primaryKey(),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  platform: devicePlatformEnum('platform').notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const reportTargetEnum = pgEnum('report_target', REPORT_TARGET_TYPES);
+export const reportStatusEnum = pgEnum('report_status', REPORT_STATUSES);
+
+/**
+ * Denuncias (RF-63): de un usuario, una vivienda o un mensaje del chat. `target_id` es texto porque
+ * un mensaje se identifica con su id de Firestore. La denuncia de un mensaje guarda su texto, su
+ * remitente y su fecha como evidencia, para que el chat pueda cambiar sin perderla. Resolverla exige
+ * la nota, el admin y la fecha.
+ */
+export const reports = pgTable(
+  'reports',
+  {
+    id: uuid('id').primaryKey(),
+    reporterId: uuid('reporter_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
+    targetType: reportTargetEnum('target_type').notNull(),
+    targetId: text('target_id').notNull(),
+    reason: text('reason').notNull(),
+    status: reportStatusEnum('status').notNull().default('open'),
+    evidenceText: text('evidence_text'),
+    evidenceSenderId: uuid('evidence_sender_id'),
+    evidenceSentAt: timestamp('evidence_sent_at', { withTimezone: true }),
+    resolution: text('resolution'),
+    resolvedBy: uuid('resolved_by').references(() => users.id, { onDelete: 'restrict' }),
+    resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    check(
+      'reports_message_evidence',
+      sql`${table.targetType} <> 'message' OR (${table.evidenceSenderId} IS NOT NULL AND ${table.evidenceSentAt} IS NOT NULL)`,
+    ),
+    check(
+      'reports_resolution_complete',
+      sql`${table.status} = 'open' OR (${table.resolution} IS NOT NULL AND ${table.resolvedBy} IS NOT NULL AND ${table.resolvedAt} IS NOT NULL)`,
+    ),
+    // La cola de revisión: por estado y, dentro de él, de la más antigua a la más reciente
+    index('reports_status_created_idx').on(table.status, table.createdAt, table.id),
+  ],
+);
+
+/**
+ * Bloqueos (RF-63): `blocker_id` bloquea a `blocked_id`. Efecto en los dos sentidos: ninguno ve las
+ * viviendas del otro ni forma matches nuevos con él.
+ */
+export const userBlocks = pgTable(
+  'user_blocks',
+  {
+    blockerId: uuid('blocker_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    blockedId: uuid('blocked_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.blockerId, table.blockedId] }),
+    check('user_blocks_not_self', sql`${table.blockerId} <> ${table.blockedId}`),
+    // «¿Quién me ha bloqueado?»: el otro sentido del filtro
+    index('user_blocks_blocked_idx').on(table.blockedId, table.blockerId),
   ],
 );

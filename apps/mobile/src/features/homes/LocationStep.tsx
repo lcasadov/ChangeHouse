@@ -16,7 +16,7 @@ import { useStepSubmit } from './use-step-submit';
  * Paso 4, ubicación visible: el propietario decide si las demás personas ven el barrio o zona
  * (por defecto) o el punto exacto. La dirección postal es privada en ambos casos.
  */
-export function LocationStep({ home, onSaved, onBack, onExit }: Readonly<StepProps>) {
+export function LocationStep({ home, onSaved, onBack, onExit, confirmSave }: Readonly<StepProps>) {
   const { t } = useTranslation();
   const theme = useTheme();
   const update = useUpdateHome(home?.id ?? '');
@@ -26,6 +26,7 @@ export function LocationStep({ home, onSaved, onBack, onExit }: Readonly<StepPro
   });
   const visibility = useWatch({ control: form.control, name: 'locationVisibility' });
   const { submit, saving, failure } = useStepSubmit(form, async (patch) => {
+    if (confirmSave && !(await confirmSave(patch))) return;
     onSaved(await update.mutateAsync(patch));
   });
   const area = home?.location.areaName ?? '';

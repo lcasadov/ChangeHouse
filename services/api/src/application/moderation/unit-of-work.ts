@@ -1,10 +1,12 @@
 import type { HomeRepository } from '../home/home-repository.js';
 import type { AuditLog } from './audit-log.js';
+import type { ReportRepository } from './report-repository.js';
 
-/** Lo que una decisión de moderación toca; todo ello dentro de la misma transacción. */
+/** Lo que una decisión de moderación (vivienda o denuncia) toca; todo ello dentro de la misma transacción. */
 export interface ModerationScope {
   homes: HomeRepository;
   audit: AuditLog;
+  reports: ReportRepository;
 }
 
 /**

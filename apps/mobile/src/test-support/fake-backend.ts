@@ -9,6 +9,7 @@ import { FakeDiscovery } from './fake-discovery';
 import { FakeHomes } from './fake-homes';
 import { FakeMatches, type Match } from './fake-matches';
 import { FakeModeration } from './fake-moderation';
+import { FakeReports } from './fake-reports';
 import { FakeSearchPreferences } from './fake-search-preferences';
 import { json, problem } from './http-responses';
 
@@ -88,6 +89,8 @@ export class FakeBackend {
   readonly requests: RecordedRequest[] = [];
   registered: boolean;
   failNext: Failure | null = null;
+  /** La cuenta se ha eliminado con `DELETE /me`. */
+  deleted = false;
   profile: Me;
   /** Las viviendas del usuario, con las reglas de la API. */
   readonly homes: FakeHomes;
@@ -99,6 +102,8 @@ export class FakeBackend {
   readonly decisions: FakeDecisions;
   /** Los matches del usuario y los «Me gusta» que cierran uno. */
   readonly matches: FakeMatches;
+  /** Las denuncias y los bloqueos, y la cola de denuncias del admin. */
+  readonly reports = new FakeReports();
   /** La cola de moderación sobre esas mismas viviendas. */
   private readonly moderation: FakeModeration;
   /** Los usuarios que el admin puede suspender o reactivar, por id. */
@@ -217,7 +222,10 @@ export class FakeBackend {
       if (suspension && method === 'PUT') {
         return this.setSuspension(suspension[1] ?? '', body as { suspended: boolean });
       }
-      return this.moderation.respond(path, method, search, body);
+      return (
+        this.reports.respondAdmin(path, method, search, body) ??
+        this.moderation.respond(path, method, search, body)
+      );
     }
     if (path.endsWith('/search-preferences')) {
       return this.searchPreferences.respond(method, path, body);
@@ -232,6 +240,8 @@ export class FakeBackend {
     search: URLSearchParams,
     body: unknown,
   ): Response {
+    const report = this.reports.respond(method, path, body);
+    if (report) return report;
     const decision = this.decisions.respond(method, path, search, body);
     if (decision) return decision;
     if (path === '/discover') return this.discovery.respond(search);
@@ -244,7 +254,14 @@ export class FakeBackend {
     if (path === '/me/homes' || path.startsWith('/homes')) {
       return this.homes.respond(method, path, body);
     }
+    return this.respondToAccount(method, path, body);
+  }
+
+  private respondToAccount(method: string, path: string, body: unknown): Response {
+    if (path === '/me/devices') return new Response(null, { status: 204 });
+    if (path === '/me/export' && method === 'GET') return json(200, this.exportOf());
     if (path !== '/me') return problem(404);
+    if (method === 'DELETE') return this.deleteAccount();
     if (method === 'GET') return this.registered ? json(200, this.profile) : problem(404);
     return this.upsert(body as UpsertBody);
   }
@@ -258,6 +275,16 @@ export class FakeBackend {
     const updated = { ...user, suspended: body.suspended };
     this.users.set(userId, updated);
     return json(200, updated);
+  }
+
+  private deleteAccount(): Response {
+    this.deleted = true;
+    return new Response(null, { status: 204 });
+  }
+
+  /** Lo que exporta la API: los datos de la cuenta y de sus viviendas, nada de otras personas. */
+  private exportOf(): Record<string, unknown> {
+    return { account: this.profile, homes: this.homes.all() };
   }
 
   private upsert(body: UpsertBody): Response {

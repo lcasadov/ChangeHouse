@@ -250,6 +250,9 @@
         "server": "No hemos podido completar la acción. Inténtalo de nuevo en unos minutos.",
         "conflict": "Este match ha cambiado y ya no admite esta acción. Hemos actualizado la pantalla con su estado actual.",
         "phone": "No hemos podido guardar tu preferencia de teléfono. Inténtalo de nuevo."
+      },
+      "chat": {
+        "open": "Abrir chat"
       }
     }
   },
@@ -474,7 +477,17 @@
         "closed": "Esta casa ya no está activa."
       },
       "managePhotos": "Gestionar fotos",
-      "photosTitle": "Fotos"
+      "photosTitle": "Fotos",
+      "pause": {
+        "action": "Pausar",
+        "hint": "No aparecerá en Explorar ni hará matches nuevos; tus matches siguen abiertos."
+      },
+      "resume": {
+        "action": "Reactivar",
+        "hint": "Volverá a aparecer en Explorar sin pasar otra vez por revisión."
+      },
+      "actionFailed": "No hemos podido cambiar el estado de tu casa. Comprueba tu conexión y vuelve a intentarlo.",
+      "stateChanged": "Tu casa ha cambiado de estado mientras tanto. Vuelve a Mis casas para ver cómo está ahora."
     },
     "vpp": {
       "title": "Vivienda protegida: {{regime}}",
@@ -546,6 +559,13 @@
       "notice": "No hemos podido publicar tu casa. Motivo: {{reason}}",
       "action": "Corregir y reenviar",
       "actionLabel": "Corregir y reenviar: {{title}}"
+    },
+    "reReview": {
+      "title": "Volverá a revisión antes de mostrarse",
+      "description": "Has cambiado datos que revisamos antes de publicar. Mientras la revisamos, tu casa no aparecerá en Explorar; tus matches siguen abiertos.",
+      "confirm": "Guardar y enviar a revisión",
+      "cancel": "Seguir editando",
+      "photosNotice": "Volverá a revisión antes de mostrarse: si añades o quitas fotos, revisaremos tu casa antes de volver a mostrarla en Explorar."
     }
   },
   "profile": {
@@ -580,6 +600,32 @@
       "description": "Tendrás que volver a identificarte para entrar en ChangeHouse.",
       "confirm": "Sí, cerrar sesión",
       "cancel": "Cancelar"
+    },
+    "export": {
+      "action": "Descargar mis datos",
+      "description": "Recibe en un fichero JSON tus datos personales: cuenta, casas, preferencias, me gusta, descartes, matches y consentimientos.",
+      "done": "Tus datos están listos. Guarda o comparte el fichero.",
+      "errors": {
+        "network": "No hemos podido preparar tus datos. Comprueba tu conexión y vuelve a intentarlo.",
+        "unknown": "No hemos podido preparar tus datos. Vuelve a intentarlo en unos minutos.",
+        "delivery": "No hemos podido guardar o compartir el fichero. Vuelve a intentarlo."
+      }
+    },
+    "deleteAccount": {
+      "action": "Eliminar mi cuenta",
+      "explainTitle": "¿Eliminar tu cuenta?",
+      "explainDescription": "Se borrarán tu email, tu nombre visible y tu teléfono, tus preferencias y tus dispositivos. Tus casas dejarán de publicarse y tus matches abiertos se cerrarán para todas las personas. Se conservan tus consentimientos y el registro de auditoría, como exige la ley.",
+      "continue": "Continuar",
+      "cancel": "Cancelar",
+      "confirmTitle": "Confirma que quieres eliminar tu cuenta",
+      "confirmDescription": "Esta acción no se puede deshacer. Escribe ELIMINAR para continuar.",
+      "confirmField": "Escribe ELIMINAR",
+      "confirmWord": "ELIMINAR",
+      "confirm": "Eliminar definitivamente",
+      "errors": {
+        "network": "No hemos podido eliminar tu cuenta. Comprueba tu conexión y vuelve a intentarlo.",
+        "unknown": "No hemos podido eliminar tu cuenta. Vuelve a intentarlo en unos minutos."
+      }
     }
   },
   "auth": {
@@ -766,6 +812,65 @@
         "network": "No hemos podido guardar tu decisión. Comprueba tu conexión y vuelve a intentarlo.",
         "unknown": "No hemos podido guardar tu decisión. Inténtalo de nuevo en unos minutos."
       }
+    },
+    "reports": {
+      "open": "Denuncias",
+      "back": "Viviendas en revisión",
+      "title": "Denuncias",
+      "intro": "Las abiertas, de la más antigua a la más reciente.",
+      "empty": {
+        "title": "No hay denuncias abiertas",
+        "description": "Cuando alguien denuncie un usuario, una vivienda o un mensaje, aparecerá aquí."
+      },
+      "loadFailed": "No hemos podido cargar las denuncias. Comprueba tu conexión y vuelve a intentarlo.",
+      "retry": "Reintentar",
+      "loadMore": "Cargar más",
+      "loadMoreFailed": "No hemos podido cargar más denuncias. Inténtalo de nuevo.",
+      "item": {
+        "targetType": {
+          "user": "Usuario",
+          "home": "Vivienda",
+          "message": "Mensaje"
+        },
+        "target": "{{type}} denunciado (referencia {{id}})",
+        "reason": "Motivo: {{reason}}",
+        "created": "Denunciada el {{date}}",
+        "resolveLabel": "Resolver la denuncia «{{reason}}»",
+        "dismissLabel": "Desestimar la denuncia «{{reason}}»",
+        "evidence": {
+          "title": "Copia del mensaje",
+          "text": "«{{text}}»",
+          "image": "Imagen",
+          "sent": "Enviado el {{date}}"
+        }
+      },
+      "resolve": {
+        "action": "Resolver",
+        "title": "Resolver la denuncia",
+        "confirm": "Resolver denuncia"
+      },
+      "dismiss": {
+        "action": "Desestimar",
+        "title": "Desestimar la denuncia",
+        "confirm": "Desestimar denuncia"
+      },
+      "note": {
+        "description": "Escribe una nota con lo que has comprobado. Quedará en el registro de auditoría.",
+        "label": "Nota de la resolución",
+        "hint": "Obligatoria, hasta 2000 caracteres.",
+        "cancel": "Cancelar",
+        "errors": {
+          "required": "Escribe la nota de la resolución.",
+          "tooLong": "La nota no puede superar los 2000 caracteres.",
+          "invalid": "El servidor no ha aceptado la nota. Revísala e inténtalo de nuevo."
+        }
+      },
+      "outcome": {
+        "resolved": "Denuncia resuelta: ya no aparece en la cola.",
+        "dismissed": "Denuncia desestimada: ya no aparece en la cola.",
+        "gone": "Esta denuncia ya no existe o la ha resuelto otra persona. La cola se ha actualizado.",
+        "conflict": "Esta denuncia ya se resolvió. La cola se ha actualizado."
+      }
     }
   },
   "search": {
@@ -866,5 +971,127 @@
       "deleteFailed": "No hemos podido eliminar las preferencias propias. Inténtalo de nuevo.",
       "notFound": "Esta vivienda ya no existe."
     }
+  },
+  "chat": {
+    "title": "Chat con {{names}}",
+    "back": "Volver al match",
+    "loading": "Cargando mensajes",
+    "empty": "Todavía no hay mensajes. Escribe el primero.",
+    "welcome": "Este es el chat del match entre {{names}}. Poneos de acuerdo para visitar las casas.",
+    "loadFailed": {
+      "title": "No hemos podido cargar el chat",
+      "description": "Comprueba tu conexión y vuelve a intentarlo.",
+      "retry": "Reintentar"
+    },
+    "preparing": {
+      "title": "El chat se está preparando",
+      "description": "Estará listo en unos segundos. Vuelve a comprobarlo enseguida.",
+      "retry": "Comprobar de nuevo"
+    },
+    "message": {
+      "from": "{{name}}, {{time}}: {{text}}",
+      "fromMe": "Tú, {{time}}: {{text}}",
+      "imageFrom": "Imagen de {{name}}, {{time}}",
+      "imageFromMe": "Tu imagen, {{time}}",
+      "imageLoading": "Cargando imagen",
+      "imageFailed": "No hemos podido cargar la imagen.",
+      "imageRetry": "Reintentar imagen"
+    },
+    "status": {
+      "sending": "Enviando…",
+      "failed": "No enviado · {{reason}}",
+      "retry": "Reintentar",
+      "discard": "Descartar"
+    },
+    "failure": {
+      "network": "Sin conexión. Comprueba tu conexión y reintenta.",
+      "server": "Ha habido un problema. Inténtalo de nuevo.",
+      "notReady": "El chat se está preparando. Reintenta en unos segundos.",
+      "tooLong": "Supera el límite de {{max}} caracteres. Descártalo y escribe uno más corto.",
+      "invalidImage": "La imagen no es válida. Elige otra foto.",
+      "closed": "El match está cerrado."
+    },
+    "composer": {
+      "label": "Escribe un mensaje",
+      "send": "Enviar",
+      "attach": "Adjuntar imagen",
+      "counter": "{{length}}/{{max}}",
+      "tooLong": "Máximo {{max}} caracteres. Acorta el mensaje para poder enviarlo."
+    },
+    "attach": {
+      "unsupported": "Esa imagen no se puede enviar. Elige una foto JPG, PNG, WebP o HEIC.",
+      "galleryFailed": "No hemos podido abrir la galería. Revisa los permisos e inténtalo de nuevo."
+    },
+    "readOnly": {
+      "closed": "Este match está cerrado. Puedes leer el historial, pero ya no se pueden enviar mensajes.",
+      "closedBy": "{{name}} se ha retirado y el match está cerrado. Puedes leer el historial, pero ya no se pueden enviar mensajes.",
+      "closedByYou": "Te has retirado y el match está cerrado. Puedes leer el historial, pero ya no se pueden enviar mensajes.",
+      "expired": "Este match ha caducado. Puedes leer el historial, pero ya no se pueden enviar mensajes.",
+      "in_operation": "Este match está en operación. Puedes leer el historial, pero ya no se pueden enviar mensajes aquí."
+    },
+    "announce": {
+      "received": "{{name}}: {{text}}",
+      "receivedImage": "{{name}} ha enviado una imagen"
+    }
+  },
+  "notifications": {
+    "permission": {
+      "title": "¿Quieres recibir avisos?",
+      "description": "Te avisaremos cuando tengas un match, llegue un mensaje nuevo o tu match se confirme o se cierre. Sin avisos tendrías que abrir la app para enterarte.",
+      "confirm": "Activar avisos",
+      "cancel": "Ahora no"
+    }
+  },
+  "moderation": {
+    "more": {
+      "action": "Más opciones",
+      "label": "Más opciones de {{subject}}",
+      "title": "Más opciones de {{subject}}",
+      "close": "Cerrar",
+      "report": "Denunciar",
+      "block": "Bloquear",
+      "subject": {
+        "message": "un mensaje de {{name}} a las {{time}}"
+      }
+    },
+    "report": {
+      "title": "Denunciar",
+      "description": "Cuéntanos qué ocurre. El equipo de ChangeHouse lo revisará.",
+      "shortcuts": "Motivos frecuentes",
+      "reasons": {
+        "fake": "Anuncio falso",
+        "inappropriate": "Contenido inapropiado",
+        "harassment": "Acoso o trato ofensivo",
+        "scam": "Posible estafa"
+      },
+      "reasonLabel": "Motivo de la denuncia",
+      "reasonHint": "Elige un motivo frecuente o descríbelo con tus palabras (hasta 1000 caracteres).",
+      "send": "Enviar denuncia",
+      "cancel": "Cancelar",
+      "sent": "Gracias. Hemos recibido tu denuncia y el equipo la revisará.",
+      "errors": {
+        "required": "Indica el motivo de la denuncia.",
+        "tooLong": "El motivo no puede superar los 1000 caracteres.",
+        "rateLimited": "Has enviado muchas denuncias en poco tiempo. Inténtalo de nuevo dentro de una hora.",
+        "network": "No hemos podido enviar la denuncia. Comprueba tu conexión e inténtalo de nuevo.",
+        "notFound": "Ya no encontramos lo que quieres denunciar.",
+        "invalid": "El servidor no ha aceptado el motivo. Revísalo e inténtalo de nuevo.",
+        "unknown": "No hemos podido enviar la denuncia. Inténtalo de nuevo en unos minutos."
+      }
+    },
+    "block": {
+      "title": "Bloquear a {{name}}",
+      "description": "Dejaréis de veros: no verás sus viviendas ni esa persona verá las tuyas, y no podréis formar matches nuevos. Los matches que ya tenéis siguen abiertos; puedes retirarte desde su detalle.",
+      "confirm": "Bloquear",
+      "cancel": "Cancelar",
+      "done": "Has bloqueado a {{name}}. Dejaréis de veros.",
+      "retry": "Reintentar",
+      "errors": {
+        "network": "No hemos podido bloquear a {{name}}. Comprueba tu conexión e inténtalo de nuevo.",
+        "notFound": "Ya no encontramos a {{name}}.",
+        "unknown": "No hemos podido bloquear a {{name}}. Inténtalo de nuevo en unos minutos."
+      }
+    },
+    "dismiss": "Entendido"
   }
 }

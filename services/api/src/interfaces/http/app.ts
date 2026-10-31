@@ -3,14 +3,18 @@ import Fastify, { type FastifyInstance, type FastifyServerOptions, LogController
 
 import { registerSecurity, type SecurityOptions } from './authorization/security.js';
 import { generateCorrelationId, registerProblemHandling } from './problem.js';
+import { type AccountDataRouteOptions, accountDataRoutes } from './routes/account-data.js';
 import { type AccountRouteOptions, accountRoutes } from './routes/accounts.js';
 import { type AdminHomeRouteOptions, adminHomeRoutes } from './routes/admin-homes.js';
+import { type AdminReportRouteOptions, adminReportRoutes } from './routes/admin-reports.js';
 import { type AdminUserRouteOptions, adminUserRoutes } from './routes/admin-users.js';
 import { type DecisionRouteOptions, decisionRoutes } from './routes/decisions.js';
+import { type DeviceRouteOptions, deviceRoutes } from './routes/devices.js';
 import { type DiscoveryRouteOptions, discoveryRoutes } from './routes/discovery.js';
 import { type HomeRouteOptions, homeRoutes } from './routes/homes.js';
 import { type MatchRouteOptions, matchRoutes } from './routes/matches.js';
 import { type PhotoRouteOptions, photoRoutes } from './routes/photos.js';
+import { type ReportRouteOptions, reportRoutes } from './routes/reports.js';
 import {
   type SearchPreferencesRouteOptions,
   searchPreferencesRoutes,
@@ -29,6 +33,8 @@ export interface AppOptions {
   security?: SecurityOptions;
   waitlist?: WaitlistRouteOptions;
   accounts?: AccountRouteOptions;
+  accountData?: AccountDataRouteOptions;
+  devices?: DeviceRouteOptions;
   homes?: HomeRouteOptions;
   photos?: PhotoRouteOptions;
   adminHomes?: AdminHomeRouteOptions;
@@ -37,6 +43,8 @@ export interface AppOptions {
   discovery?: DiscoveryRouteOptions;
   decisions?: DecisionRouteOptions;
   matches?: MatchRouteOptions;
+  reports?: ReportRouteOptions;
+  adminReports?: AdminReportRouteOptions;
 }
 
 /** Confía solo en los `hops` saltos más cercanos: la IP real es la que añadió el último proxy. */
@@ -70,7 +78,7 @@ function registerCors(
     callback(null, {
       ...profile,
       origin: fromApp || (origin !== undefined && origin === landingOrigin),
-      exposedHeaders: ['Retry-After', 'X-Correlation-Id'],
+      exposedHeaders: ['Retry-After', 'X-Correlation-Id', 'Content-Disposition'],
     });
   };
   void app.register(cors, () => delegate);
@@ -103,6 +111,8 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
     async (versioned) => {
       if (options.waitlist) await versioned.register(waitlistRoutes(options.waitlist));
       if (options.accounts) await versioned.register(accountRoutes(options.accounts));
+      if (options.accountData) await versioned.register(accountDataRoutes(options.accountData));
+      if (options.devices) await versioned.register(deviceRoutes(options.devices));
       if (options.homes) await versioned.register(homeRoutes(options.homes));
       if (options.photos) await versioned.register(photoRoutes(options.photos));
       if (options.adminHomes) await versioned.register(adminHomeRoutes(options.adminHomes));
@@ -113,6 +123,8 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
       if (options.discovery) await versioned.register(discoveryRoutes(options.discovery));
       if (options.decisions) await versioned.register(decisionRoutes(options.decisions));
       if (options.matches) await versioned.register(matchRoutes(options.matches));
+      if (options.reports) await versioned.register(reportRoutes(options.reports));
+      if (options.adminReports) await versioned.register(adminReportRoutes(options.adminReports));
     },
     { prefix: API_PREFIX },
   );

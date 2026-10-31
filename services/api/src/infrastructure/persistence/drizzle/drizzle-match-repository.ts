@@ -208,6 +208,7 @@ export class DrizzleMatchRepository
       type: row.type as CycleType,
       status: row.status,
       createdAt: row.createdAt,
+      chatId: row.chatId,
       participants: byMatch.get(row.id) ?? [],
     }));
   }

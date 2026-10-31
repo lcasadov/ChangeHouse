@@ -46,6 +46,17 @@ export class HomeNotEditableError extends DomainError {
   }
 }
 
+/** Una vivienda en operación no se cierra: hay una operación en curso sobre ella (409). */
+export class HomeInOperationError extends DomainError {
+  readonly code = 'HOME_IN_OPERATION';
+  override readonly kind: DomainErrorKind = 'conflict';
+
+  constructor() {
+    super('Una vivienda en operación no se puede cerrar mientras la operación siga en curso');
+    this.name = 'HomeInOperationError';
+  }
+}
+
 export class HomeNotSubmittableError extends DomainError {
   readonly code = 'HOME_NOT_SUBMITTABLE';
   override readonly kind: DomainErrorKind = 'conflict';
@@ -117,5 +128,23 @@ export class HomeMinPhotosError extends DomainError {
   constructor() {
     super('Una vivienda enviada a revisión o publicada no puede quedarse con menos de 3 fotos');
     this.name = 'HomeMinPhotosError';
+  }
+}
+
+export class HomeNotPausableError extends DomainError {
+  readonly code = 'HOME_NOT_PAUSABLE';
+  override readonly kind: DomainErrorKind = 'conflict';
+  constructor() {
+    super('Solo una vivienda publicada se puede pausar');
+    this.name = 'HomeNotPausableError';
+  }
+}
+
+export class HomeNotResumableError extends DomainError {
+  readonly code = 'HOME_NOT_RESUMABLE';
+  override readonly kind: DomainErrorKind = 'conflict';
+  constructor() {
+    super('Solo una vivienda pausada se puede reactivar');
+    this.name = 'HomeNotResumableError';
   }
 }

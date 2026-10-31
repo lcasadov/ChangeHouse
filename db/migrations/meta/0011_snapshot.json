@@ -1,5 +1,5 @@
 {
-  "id": "347730b0-4438-4c0c-bee9-7636ef95ea83",
+  "id": "5c0a7e13-964f-416d-8716-7a9beaac7c03",
   "prevId": "0649dc9c-098a-4bf2-a2e5-c9b10538aca2",
   "version": "7",
   "dialect": "postgresql",
@@ -1160,6 +1160,83 @@
       },
       "isRLSEnabled": false
     },
+    "public.outbox": {
+      "name": "outbox",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "aggregate_id": {
+          "name": "aggregate_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "attempts": {
+          "name": "attempts",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "processed_at": {
+          "name": "processed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "outbox_pending_idx": {
+          "name": "outbox_pending_idx",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"outbox\".\"processed_at\" IS NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "outbox_type_aggregate_key": {
+          "name": "outbox_type_aggregate_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "type",
+            "aggregate_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.search_preferences": {
       "name": "search_preferences",
       "schema": "",
@@ -1413,18 +1490,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "suspended_at": {
-          "name": "suspended_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "suspension_reason": {
-          "name": "suspension_reason",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -1453,12 +1518,7 @@
         }
       },
       "policies": {},
-      "checkConstraints": {
-        "users_suspension_complete": {
-          "name": "users_suspension_complete",
-          "value": "(\"users\".\"suspended_at\" IS NULL) = (\"users\".\"suspension_reason\" IS NULL)"
-        }
-      },
+      "checkConstraints": {},
       "isRLSEnabled": false
     },
     "public.waitlist": {

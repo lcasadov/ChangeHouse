@@ -17,4 +17,6 @@ export interface User {
   /** Motivo interno de la suspensión (evidencia para el equipo); nunca se muestra al usuario. */
   readonly suspensionReason: string | null;
   readonly createdAt: Date;
+  /** Borrado lógico: desde cuándo la cuenta está eliminada y anonimizada; `null` si sigue activa. */
+  readonly deletedAt: Date | null;
 }

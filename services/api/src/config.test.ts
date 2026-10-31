@@ -10,6 +10,7 @@ const base = {
   // Obligatorios en Cloud Run; en local tienen valor por defecto
   STORAGE_PRIVATE_BUCKET: 'changehouse-des-photos-private',
   STORAGE_PUBLIC_BUCKET: 'changehouse-des-photos-public',
+  APP_PUBLIC_URL: 'https://des.changehouse.app',
 };
 
 describe('loadConfig', () => {
@@ -24,7 +25,12 @@ describe('loadConfig', () => {
       trustProxyHops: 0,
       waitlistRateLimit: { max: 5, windowSeconds: 600 },
       likesPerDay: 10,
-      firebase: { projectId: 'changehouse-des', authEmulatorHost: undefined },
+      firebase: {
+        projectId: 'changehouse-des',
+        authEmulatorHost: undefined,
+        firestoreEmulatorHost: undefined,
+      },
+      outbox: { intervalSeconds: 30 },
       addressEncryptionKey: ADDRESS_KEY,
       places: { serverKey: undefined },
       logger: true,
@@ -66,6 +72,28 @@ describe('loadConfig', () => {
       /APP_ORIGIN/,
     );
     expect(() => loadConfig({ ...base, APP_ORIGIN: 'https://x.test/ruta' })).toThrow(/APP_ORIGIN/);
+  });
+
+  it('APP_PUBLIC_URL: lee la URL pública de la app sin barra final, por defecto la local, y rechaza lo que no es una URL', () => {
+    expect(loadConfig({ ...base }).appPublicUrl).toBe('https://des.changehouse.app');
+    expect(
+      loadConfig({ ...base, APP_PUBLIC_URL: 'https://app.changehouse.app/' }).appPublicUrl,
+    ).toBe('https://app.changehouse.app');
+    const withoutUrl: Record<string, string> = { ...base };
+    delete withoutUrl['APP_PUBLIC_URL'];
+    expect(loadConfig(withoutUrl).appPublicUrl).toBe('http://localhost:8081');
+    for (const invalid of ['no-es-url', 'ftp://x.test', '']) {
+      expect(() => loadConfig({ ...base, APP_PUBLIC_URL: invalid })).toThrow(/APP_PUBLIC_URL/);
+    }
+  });
+
+  it('APP_PUBLIC_URL es obligatoria en Cloud Run', () => {
+    const withoutUrl: Record<string, string> = { ...base };
+    delete withoutUrl['APP_PUBLIC_URL'];
+
+    expect(() =>
+      loadConfig({ ...withoutUrl, K_SERVICE: 'api', GOOGLE_PLACES_SERVER_KEY: 'k' }),
+    ).toThrow(/APP_PUBLIC_URL/);
   });
 
   it('confía en un salto de proxy en Cloud Run (K_SERVICE) y se puede fijar a mano', () => {
@@ -138,7 +166,33 @@ describe('loadConfig', () => {
     expect(config.firebase).toEqual({
       projectId: 'changehouse-des',
       authEmulatorHost: 'localhost:9099',
+      firestoreEmulatorHost: undefined,
     });
+  });
+
+  it('lee el emulador de Firestore del entorno y se niega a usarlo en Cloud Run', () => {
+    const config = loadConfig({ ...base, FIRESTORE_EMULATOR_HOST: 'localhost:8085' });
+
+    expect(config.firebase.firestoreEmulatorHost).toBe('localhost:8085');
+    expect(() =>
+      loadConfig({
+        ...base,
+        K_SERVICE: 'api',
+        GOOGLE_PLACES_SERVER_KEY: 'k',
+        FIRESTORE_EMULATOR_HOST: 'localhost:8085',
+      }),
+    ).toThrow(/FIRESTORE_EMULATOR_HOST/);
+  });
+
+  it('lee el intervalo de reintento del outbox (OUTBOX_INTERVAL_SECONDS) y rechaza los valores no válidos', () => {
+    expect(loadConfig({ ...base, OUTBOX_INTERVAL_SECONDS: '5' }).outbox).toEqual({
+      intervalSeconds: 5,
+    });
+    for (const invalid of ['0', '-1', 'rápido', '']) {
+      expect(() => loadConfig({ ...base, OUTBOX_INTERVAL_SECONDS: invalid })).toThrow(
+        /OUTBOX_INTERVAL_SECONDS/,
+      );
+    }
   });
 
   it('se niega a arrancar en Cloud Run con el emulador de Auth: aceptaría tokens sin firma', () => {

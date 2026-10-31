@@ -16,6 +16,8 @@ export interface HomeRouteOptions {
   listMyHomes: (userId: string) => Promise<HomeView[]>;
   getHome: (userId: string, homeId: string) => Promise<HomeView | HomePublicView>;
   submitHome: (userId: string, homeId: string) => Promise<HomeView>;
+  pauseHome: (userId: string, homeId: string) => Promise<HomeView>;
+  resumeHome: (userId: string, homeId: string) => Promise<HomeView>;
 }
 
 interface HomeParams {
@@ -27,7 +29,8 @@ function homeIdOf(request: FastifyRequest<{ Params: HomeParams }>): string {
 }
 
 /**
- * `listMyHomes`, `createHome`, `getHome`, `updateHome` y `submitHome` del contrato (RF-10, RF-20).
+ * `listMyHomes`, `createHome`, `getHome`, `updateHome`, `submitHome`, `pauseHome` y `resumeHome`
+ * del contrato (RF-10, RF-17, RF-20).
  * Solo transporte: la política central decide el acceso por rol y los casos de uso, la propiedad.
  */
 export function homeRoutes(options: HomeRouteOptions): FastifyPluginCallback {
@@ -63,6 +66,18 @@ export function homeRoutes(options: HomeRouteOptions): FastifyPluginCallback {
       '/homes/:homeId/submit',
       { config: { operationId: 'submitHome' } },
       (request) => options.submitHome(accountId(request), homeIdOf(request)),
+    );
+
+    app.post<{ Params: HomeParams }>(
+      '/homes/:homeId/pause',
+      { config: { operationId: 'pauseHome' } },
+      (request) => options.pauseHome(accountId(request), homeIdOf(request)),
+    );
+
+    app.post<{ Params: HomeParams }>(
+      '/homes/:homeId/resume',
+      { config: { operationId: 'resumeHome' } },
+      (request) => options.resumeHome(accountId(request), homeIdOf(request)),
     );
     done();
   };

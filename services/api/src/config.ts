@@ -5,6 +5,8 @@ export interface ApiConfig {
   landingOrigin: string;
   /** Orígenes de la app web que pueden llamar a la API con credenciales (CORS). */
   appOrigins: string[];
+  /** URL pública de la app (sin barra final): base de los enlaces de los emails, `<url>/match/<id>`. */
+  appPublicUrl: string;
   /** Saltos de proxy de confianza para obtener la IP real del cliente. */
   trustProxyHops: number;
   waitlistRateLimit: { max: number; windowSeconds: number };
@@ -15,7 +17,11 @@ export interface ApiConfig {
     projectId: string;
     /** `host:puerto` del emulador de Auth. Solo en local y en las pruebas. */
     authEmulatorHost: string | undefined;
+    /** `host:puerto` del emulador de Firestore (chat). Solo en local y en las pruebas. */
+    firestoreEmulatorHost: string | undefined;
   };
+  /** Reintento periódico de los hechos pendientes de la bandeja de salida (creación de chats). */
+  outbox: { intervalSeconds: number };
   /** Clave AES-256 (base64, 32 bytes) con la que se cifra la dirección postal de las viviendas. */
   addressEncryptionKey: string;
   places: {
@@ -44,6 +50,7 @@ const DEFAULT_APP_ORIGIN = 'http://localhost:8081'; // `expo start --web`
 const DEFAULT_WAITLIST_MAX = 5;
 const DEFAULT_WAITLIST_WINDOW_SECONDS = 600; // 10 minutos
 const DEFAULT_LIKES_PER_DAY = 10;
+const DEFAULT_OUTBOX_INTERVAL_SECONDS = 30;
 const CLOUD_RUN_PROXY_HOPS = 1;
 const DEFAULT_PRIVATE_BUCKET = 'changehouse-photos-private'; // docker-compose.yml
 const DEFAULT_PUBLIC_BUCKET = 'changehouse-photos-public'; // docker-compose.yml
@@ -63,6 +70,15 @@ function origin(env: Env, name: string, fallback: string): string {
   const valid = URL.canParse(raw) && new URL(raw).origin === raw;
   if (!valid) throw new Error(`La variable ${name} debe ser un origen (esquema, host y puerto)`);
   return raw;
+}
+
+/** URL http(s) sin barra final. Obligatoria en Cloud Run; en local, la de `expo start --web`. */
+function publicUrl(env: Env, name: string, fallback: string): string {
+  const raw = env[name] ?? (env['K_SERVICE'] ? undefined : fallback);
+  if (raw === undefined) throw new Error(`Falta la variable ${name} en Cloud Run`);
+  const valid = URL.canParse(raw) && /^https?:$/.test(new URL(raw).protocol);
+  if (!valid) throw new Error(`La variable ${name} debe ser una URL http o https`);
+  return raw.replace(/\/+$/, '');
 }
 
 function origins(env: Env, name: string, fallback: string): string[] {
@@ -114,6 +130,12 @@ export function loadConfig(env: Env = process.env): ApiConfig {
     throw new Error('FIREBASE_AUTH_EMULATOR_HOST no puede definirse en Cloud Run');
   }
 
+  const firestoreEmulatorHost = env['FIRESTORE_EMULATOR_HOST'] || undefined;
+  // El emulador no aplica las reglas de producción: en Cloud Run escribiría el chat en un servidor falso
+  if (firestoreEmulatorHost && env['K_SERVICE']) {
+    throw new Error('FIRESTORE_EMULATOR_HOST no puede definirse en Cloud Run');
+  }
+
   const addressEncryptionKey = env['ADDRESS_ENCRYPTION_KEY'];
   if (!addressEncryptionKey) throw new Error('Falta la variable ADDRESS_ENCRYPTION_KEY');
   const placesServerKey = env['GOOGLE_PLACES_SERVER_KEY'] || undefined;
@@ -127,6 +149,7 @@ export function loadConfig(env: Env = process.env): ApiConfig {
     databaseUrl,
     landingOrigin: origin(env, 'LANDING_ORIGIN', DEFAULT_LANDING_ORIGIN),
     appOrigins: origins(env, 'APP_ORIGIN', DEFAULT_APP_ORIGIN),
+    appPublicUrl: publicUrl(env, 'APP_PUBLIC_URL', DEFAULT_APP_ORIGIN),
     // Cloud Run añade la IP del cliente al final de X-Forwarded-For: se confía solo en ese salto
     trustProxyHops: integer(
       env,
@@ -139,7 +162,10 @@ export function loadConfig(env: Env = process.env): ApiConfig {
       windowSeconds: integer(env, 'WAITLIST_RATE_LIMIT_WINDOW', DEFAULT_WAITLIST_WINDOW_SECONDS, 1),
     },
     likesPerDay: integer(env, 'LIKES_PER_DAY', DEFAULT_LIKES_PER_DAY, 1),
-    firebase: { projectId, authEmulatorHost },
+    firebase: { projectId, authEmulatorHost, firestoreEmulatorHost },
+    outbox: {
+      intervalSeconds: integer(env, 'OUTBOX_INTERVAL_SECONDS', DEFAULT_OUTBOX_INTERVAL_SECONDS, 1),
+    },
     addressEncryptionKey,
     places: { serverKey: placesServerKey },
     storage: storageConfig(env),

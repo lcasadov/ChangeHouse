@@ -6,6 +6,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { EmptyState } from '../../ui';
 import { VerifyEmailBanner } from '../auth/VerifyEmailBanner';
+import { useNotificationLinks } from '../notifications/use-notification-links';
 import { LoadingView } from './LoadingView';
 import type { SessionState } from './session-state';
 import { useSession } from './use-session';
@@ -27,6 +28,8 @@ export function SessionNavigator() {
   // La parte de la app que se enseña no cambia mientras se consulta: así la navegación no se reinicia
   const [destination, setDestination] = useState<Destination | null>(null);
   if (isDestination(state) && state !== destination) setDestination(state);
+
+  useNotificationLinks(destination === 'ready');
 
   if (destination === null) {
     return state === 'error' ? <LoadError onRetry={retry} /> : <LoadingView />;

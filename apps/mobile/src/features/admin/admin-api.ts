@@ -4,6 +4,9 @@ import type { Home } from '../homes/homes-api';
 /** Un usuario tal como lo ve el admin (`AdminUser` del contrato). */
 export type AdminUser = components['schemas']['AdminUser'];
 
+/** Una denuncia (`Report`): lo que se denuncia, el motivo y su estado de revisión. */
+export type Report = components['schemas']['Report'];
+
 export type AdminApiErrorKind =
   /** Sin respuesta del servidor: red caída o tiempo agotado. */
   | 'network'
@@ -11,9 +14,9 @@ export type AdminApiErrorKind =
   | 'unauthorized'
   /** La persona no tiene el rol `admin` (403). */
   | 'forbidden'
-  /** La vivienda o el usuario no existen (404). */
+  /** La vivienda, el usuario o la denuncia no existen (404). */
   | 'not-found'
-  /** La vivienda no está en revisión: otra persona ya la moderó (409). */
+  /** La vivienda no está en revisión o la denuncia ya está cerrada: otra persona la resolvió (409). */
   | 'conflict'
   /** El servidor rechaza la decisión, p. ej. un rechazo sin motivo (400). */
   | 'invalid'
@@ -46,6 +49,18 @@ export interface SuspensionDecision {
   reason: string;
 }
 
+/** Una página de la cola de denuncias abiertas (`adminListReports`). */
+export interface ReportsPage {
+  items: Report[];
+  nextCursor: string | null;
+}
+
+/** Cómo cierra el admin una denuncia, siempre con nota (`adminResolveReport`). */
+export interface ReportResolution {
+  status: 'resolved' | 'dismissed';
+  resolution: string;
+}
+
 /** Puerto de salida de la administración; el adaptador HTTP vive en `http-admin-api.ts`. */
 export interface AdminApi {
   /** La cola: viviendas en revisión de la enviada antes a la enviada después. */
@@ -54,4 +69,8 @@ export interface AdminApi {
   moderate: (homeId: string, decision: ModerationDecision) => Promise<Home>;
   /** Suspende o reactiva a un usuario y lo devuelve ya actualizado. */
   setUserSuspension: (userId: string, decision: SuspensionDecision) => Promise<AdminUser>;
+  /** Las denuncias abiertas, de la más antigua a la más reciente. */
+  listReports: (cursor?: string) => Promise<ReportsPage>;
+  /** Resuelve o desestima una denuncia con su nota y devuelve la denuncia ya cerrada. */
+  resolveReport: (reportId: string, resolution: ReportResolution) => Promise<Report>;
 }

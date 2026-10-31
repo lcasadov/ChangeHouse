@@ -7,6 +7,9 @@ import {
   type AdminUser,
   type ModerationDecision,
   type ModerationPage,
+  type Report,
+  type ReportResolution,
+  type ReportsPage,
   type SuspensionDecision,
 } from './admin-api';
 
@@ -48,7 +51,7 @@ async function request<T>(call: () => Promise<T>): Promise<T> {
 
 /**
  * Adaptador HTTP del puerto `AdminApi` sobre el cliente tipado (`adminListHomes`,
- * `adminModerateHome`, `adminSetUserSuspension`).
+ * `adminModerateHome`, `adminSetUserSuspension`, `adminListReports`, `adminResolveReport`).
  */
 export function createHttpAdminApi(client: ApiClient): AdminApi {
   return {
@@ -87,6 +90,29 @@ export function createHttpAdminApi(client: ApiClient): AdminApi {
         }),
       );
       if (!data) throw failureOf(response.status, error);
+      return data;
+    },
+
+    async listReports(cursor?: string): Promise<ReportsPage> {
+      const { data, response } = await request(() =>
+        client.GET('/admin/reports', {
+          params: {
+            query: { status: 'open', limit: QUEUE_PAGE_SIZE, ...(cursor ? { cursor } : {}) },
+          },
+        }),
+      );
+      if (!data) throw failureOf(response.status);
+      return { items: data.items, nextCursor: data.nextCursor ?? null };
+    },
+
+    async resolveReport(reportId: string, resolution: ReportResolution): Promise<Report> {
+      const { data, response } = await request(() =>
+        client.PATCH('/admin/reports/{reportId}', {
+          params: { path: { reportId } },
+          body: resolution,
+        }),
+      );
+      if (!data) throw failureOf(response.status);
       return data;
     },
   };

@@ -16,7 +16,13 @@ type GetMe = () => Promise<ReturnType<typeof me> | null>;
 
 function renderProfile(getMe: GetMe) {
   const services = fakeServices({
-    accountApi: { getMe, upsertMe: () => Promise.resolve(me()) },
+    accountApi: {
+      getMe,
+      upsertMe: () => Promise.resolve(me()),
+      registerDevice: () => Promise.resolve(),
+      deleteMe: () => Promise.resolve(),
+      exportMyData: () => Promise.resolve({}),
+    },
   });
   function Root() {
     return (

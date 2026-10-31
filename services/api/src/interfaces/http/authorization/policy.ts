@@ -38,17 +38,27 @@ export const policy: Policy = {
   // `self`: cualquier usuario autenticado, también sin alta previa (es lo que crea la cuenta)
   upsertMe: { kind: 'authenticated' },
   // `self`: sin cuenta no hay nada que consultar, y no se distingue de un recurso inexistente. Es
-  // la única operación que admite una cuenta suspendida: la app la usa para mostrar la suspensión
-  // (`exportMyData`, que también la admitirá según la matriz, aún no está implementada)
+  // una de las dos operaciones que admite una cuenta suspendida (la app la usa para mostrar la
+  // suspensión; la otra es `exportMyData`)
   getMe: { kind: 'roles', roles: ALL_ACCOUNT_ROLES, denyStatus: 404, allowSuspended: true },
   listMyConsents: { kind: 'roles', roles: ALL_ACCOUNT_ROLES, denyStatus: 404 },
   acceptConsent: { kind: 'roles', roles: ALL_ACCOUNT_ROLES, denyStatus: 404 },
+  // Eliminar la cuenta (RF-05): solo owner y seeker, como el resto de la gestión de viviendas; la
+  // exportación también la hace `agency`. Siempre sobre la cuenta propia (`self`)
+  deleteMe: { kind: 'roles', roles: HOME_OWNER_ROLES },
+  // Admite una cuenta suspendida: la persona conserva el derecho a llevarse sus datos
+  exportMyData: { kind: 'roles', roles: [...HOME_OWNER_ROLES, 'agency'], allowSuspended: true },
+  registerDevice: { kind: 'roles', roles: ALL_ACCOUNT_ROLES, denyStatus: 404 },
   // Viviendas: `agency` y `admin` no publican ni gestionan viviendas propias (RC-19); la propiedad
   // de cada vivienda (`resourceOwner`) y su visibilidad las resuelve el caso de uso con un 404
   listMyHomes: { kind: 'roles', roles: HOME_OWNER_ROLES },
   createHome: { kind: 'roles', roles: HOME_OWNER_ROLES },
   updateHome: { kind: 'roles', roles: HOME_OWNER_ROLES },
   submitHome: { kind: 'roles', roles: HOME_OWNER_ROLES },
+  // Pausar y reactivar: mismos roles que el resto de la vivienda; un seeker solo tiene borradores o
+  // viviendas en revisión, y pausarlos es un conflicto de estado (409) que resuelve el caso de uso
+  pauseHome: { kind: 'roles', roles: HOME_OWNER_ROLES },
+  resumeHome: { kind: 'roles', roles: HOME_OWNER_ROLES },
   // Fotos: mismas reglas que la vivienda a la que pertenecen (la propiedad la resuelve el caso de uso)
   createHomePhotoUpload: { kind: 'roles', roles: HOME_OWNER_ROLES },
   completeHomePhotoUpload: { kind: 'roles', roles: HOME_OWNER_ROLES },
@@ -81,11 +91,21 @@ export const policy: Policy = {
   confirmMatch: { kind: 'roles', roles: HOME_OWNER_ROLES },
   withdrawFromMatch: { kind: 'roles', roles: HOME_OWNER_ROLES },
   setPhoneSharing: { kind: 'roles', roles: HOME_OWNER_ROLES },
+  // Chat (RF-52, RF-60): solo participantes; el admin no escribe. La pertenencia (`participant`) y el
+  // estado del match los resuelve el caso de uso (404 / 409)
+  getChatImageUrl: { kind: 'roles', roles: HOME_OWNER_ROLES },
+  createChatImageUpload: { kind: 'roles', roles: HOME_OWNER_ROLES },
+  sendMatchMessage: { kind: 'roles', roles: HOME_OWNER_ROLES },
   // Moderación (RF-18, RF-93): solo el admin; la decisión queda auditada
   adminListHomes: { kind: 'roles', roles: ['admin'] },
   adminModerateHome: { kind: 'roles', roles: ['admin'] },
   // Suspensión de usuarios (RF-90, RF-93): solo el admin; la decisión queda auditada
   adminSetUserSuspension: { kind: 'roles', roles: ['admin'] },
+  // Denuncias y bloqueos (RF-63): owner y seeker; la cola de denuncias y su resolución, solo el admin
+  createReport: { kind: 'roles', roles: HOME_OWNER_ROLES },
+  blockUser: { kind: 'roles', roles: HOME_OWNER_ROLES },
+  adminListReports: { kind: 'roles', roles: ['admin'] },
+  adminResolveReport: { kind: 'roles', roles: ['admin'] },
 };
 
 /**

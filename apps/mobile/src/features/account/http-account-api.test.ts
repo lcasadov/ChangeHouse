@@ -89,3 +89,74 @@ describe('upsertMe', () => {
     expect(await kindOf(setup(backend).upsertMe(input))).toBe(kind);
   });
 });
+
+describe('registerDevice', () => {
+  it('registra el token y el sistema del dispositivo (PUT /me/devices)', async () => {
+    const backend = new FakeBackend({ registered: true });
+
+    await setup(backend).registerDevice({ fcmToken: 'fcm-1', platform: 'android' });
+
+    expect(backend.requests).toMatchObject([
+      { method: 'PUT', path: '/me/devices', body: { fcmToken: 'fcm-1', platform: 'android' } },
+    ]);
+  });
+
+  it.each([
+    ['unauthorized', 'unauthorized'],
+    ['invalid', 'invalid'],
+    ['server', 'server'],
+    ['network', 'network'],
+  ] as const)('traduce el fallo %s a %s', async (failure, kind) => {
+    const backend = new FakeBackend({ registered: true });
+    backend.failNext = failure;
+
+    expect(
+      await kindOf(setup(backend).registerDevice({ fcmToken: 'fcm-1', platform: 'ios' })),
+    ).toBe(kind);
+  });
+});
+
+describe('deleteMe', () => {
+  it('elimina la cuenta (DELETE /me)', async () => {
+    const backend = new FakeBackend({ registered: true });
+
+    await setup(backend).deleteMe();
+
+    expect(backend.requests).toMatchObject([{ method: 'DELETE', path: '/me' }]);
+    expect(backend.deleted).toBe(true);
+  });
+
+  it.each([
+    ['unauthorized', 'unauthorized'],
+    ['server', 'server'],
+    ['network', 'network'],
+  ] as const)('un fallo %s se normaliza a %s', async (failure, kind) => {
+    const backend = new FakeBackend({ registered: true });
+    backend.failNext = failure;
+
+    expect(await kindOf(setup(backend).deleteMe())).toBe(kind);
+    expect(backend.deleted).toBe(false);
+  });
+});
+
+describe('exportMyData', () => {
+  it('devuelve el JSON de la exportación (GET /me/export)', async () => {
+    const backend = new FakeBackend({ registered: true, profile: me({ displayName: 'Lucía' }) });
+
+    const data = await setup(backend).exportMyData();
+
+    expect(data).toMatchObject({ account: { displayName: 'Lucía' } });
+    expect(backend.requests).toMatchObject([{ method: 'GET', path: '/me/export' }]);
+  });
+
+  it.each([
+    ['unauthorized', 'unauthorized'],
+    ['server', 'server'],
+    ['network', 'network'],
+  ] as const)('un fallo %s se normaliza a %s', async (failure, kind) => {
+    const backend = new FakeBackend({ registered: true });
+    backend.failNext = failure;
+
+    expect(await kindOf(setup(backend).exportMyData())).toBe(kind);
+  });
+});

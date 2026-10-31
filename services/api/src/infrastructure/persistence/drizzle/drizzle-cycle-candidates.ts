@@ -1,9 +1,17 @@
 import type { HomeStatus } from '@changehouse/shared';
-import { sql } from 'drizzle-orm';
+import { type SQL, sql } from 'drizzle-orm';
 
 import type { CycleCandidates } from '../../../application/matching/matching-repository.js';
 import type { CycleHome } from '../../../domain/matching/cycle.js';
 import type { Executor } from './database.js';
+
+/** Hay un bloqueo, en cualquiera de los dos sentidos, entre dos usuarios (columnas o expresiones SQL). */
+function blockedBetween(a: SQL, b: SQL): SQL {
+  return sql`EXISTS (
+    SELECT 1 FROM user_blocks ub
+    WHERE (ub.blocker_id = ${a} AND ub.blocked_id = ${b})
+       OR (ub.blocker_id = ${b} AND ub.blocked_id = ${a}))`;
+}
 
 /** Una vivienda de un ciclo con las preferencias efectivas de su dueño; importes como `float8`. */
 interface MemberRow extends Record<string, unknown> {
@@ -53,7 +61,8 @@ export const MAX_CHAIN_CANDIDATES = 100;
 
 /**
  * Ciclos candidatos en PostgreSQL (README §11). Lee las aristas y el estado actual de las viviendas
- * dentro de la transacción del me gusta; la validación (publicación y RN-03) es del dominio.
+ * dentro de la transacción del me gusta; la validación (publicación y RN-03) es del dominio. Descarta
+ * los ciclos en los que dos dueños se han bloqueado, en cualquier sentido (RF-63).
  */
 export class DrizzleCycleCandidates implements CycleCandidates {
   constructor(private readonly db: Executor) {}
@@ -71,9 +80,11 @@ export class DrizzleCycleCandidates implements CycleCandidates {
       SELECT third_id FROM (
         SELECT NULL::uuid AS third_id, NULL::timestamptz AS waiting
         FROM likes back
-        JOIN homes hy ON hy.id = ${y}
+        JOIN homes bhx ON bhx.id = ${x}
+        JOIN homes bhy ON bhy.id = ${y}
         WHERE back.from_home_id = ${y} AND back.to_home_id = ${x}
-          AND ${ownerActive('hy')}
+          AND NOT ${blockedBetween(sql`bhx.owner_id`, sql`bhy.owner_id`)}
+          AND ${ownerActive('bhy')}
         UNION ALL
         (SELECT l1.to_home_id, GREATEST(l1.created_at, l2.created_at)
          FROM likes l1
@@ -86,6 +97,9 @@ export class DrizzleCycleCandidates implements CycleCandidates {
            AND hz.status = 'published'
            AND hz.owner_id <> hx.owner_id
            AND hz.owner_id <> hy.owner_id
+           AND NOT ${blockedBetween(sql`hx.owner_id`, sql`hy.owner_id`)}
+           AND NOT ${blockedBetween(sql`hy.owner_id`, sql`hz.owner_id`)}
+           AND NOT ${blockedBetween(sql`hz.owner_id`, sql`hx.owner_id`)}
            AND ${ownerActive('hy')}
            AND ${ownerActive('hz')}
          ORDER BY 2, 1

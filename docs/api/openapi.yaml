@@ -275,8 +275,15 @@ paths:
       operationId: updateHome
       summary: Modifica una vivienda propia
       description: |
-        Una vivienda `published` que cambia datos relevantes vuelve a `in_review`
-        (moderación previa, RF-18). No se puede modificar en `in_operation` ni `closed`.
+        Una vivienda `published` o `paused` que cambia datos relevantes vuelve a `in_review`
+        (moderación previa, RF-18), con `submittedAt` y la fecha de cambio relevante en ese
+        momento; deja de aparecer en el descubrimiento y conserva sus matches abiertos. Son
+        relevantes el rango de valor, el tipo, la dirección, las superficies, los dormitorios, los
+        baños, la planta, el ascensor, el garaje, el trastero, las características (`features`),
+        el régimen y los datos VPP; también las fotos (`completeHomePhotoUpload`,
+        `deleteHomePhoto`). `locationVisibility`, `energyRating`, `yearBuilt`,
+        `isPrimaryResidence` y `mortgageOutstandingCents` no lo son. No se puede modificar en
+        `in_operation` ni `closed` (409 `HOME_NOT_EDITABLE`).
         En una vivienda protegida (`VPPB`, `VPPL`, `VPO`), un `valueMaxCents` mayor que su
         `vppMaxLegalPriceCents` responde 422 con `code: VALUE_ABOVE_VPP_MAX_LEGAL_PRICE` y
         `errors` en `valueMaxCents` (RN-06). Fuera de `draft`, una vivienda protegida sin
@@ -332,7 +339,11 @@ paths:
     post:
       tags: [viviendas]
       operationId: pauseHome
-      summary: Pausa una vivienda publicada (`published` → `paused`)
+      summary: Pausa una vivienda publicada (`published` → `paused`, RF-17)
+      description: |
+        Mientras está pausada no aparece en el descubrimiento ni forma matches nuevos, pero
+        conserva sus matches abiertos, sus me gusta y su fecha de publicación, y su propietario
+        sigue siendo `owner`. Si no está `published`: 409 con `code: HOME_NOT_PAUSABLE`.
       x-roles: [resourceOwner]
       responses:
         '200':
@@ -349,7 +360,11 @@ paths:
     post:
       tags: [viviendas]
       operationId: resumeHome
-      summary: Reactiva una vivienda pausada (`paused` → `published`)
+      summary: Reactiva una vivienda pausada (`paused` → `published`, RF-17)
+      description: |
+        Vuelve a aparecer en el descubrimiento sin pasar por moderación: un cambio relevante
+        durante la pausa ya la habría devuelto a `in_review`. Si no está `paused`: 409 con
+        `code: HOME_NOT_RESUMABLE`.
       x-roles: [resourceOwner]
       responses:
         '200':
@@ -410,7 +425,9 @@ paths:
         solo entonces la foto pasa a `ready` y aparece en `photos` de la vivienda. Es idempotente
         sobre una foto ya `ready`. Si el fichero no es una imagen válida: 422 con
         `code: INVALID_IMAGE`, el fichero se elimina y la foto se descarta. Si la subida aún no se
-        ha hecho: 422 con `code: PHOTO_NOT_UPLOADED` y la foto sigue `pending`.
+        ha hecho: 422 con `code: PHOTO_NOT_UPLOADED` y la foto sigue `pending`. Una foto nueva en
+        una vivienda `published` o `paused` es un cambio relevante: la vivienda vuelve a
+        `in_review` (RF-18).
       x-roles: [resourceOwner]
       responses:
         '200':
@@ -434,7 +451,10 @@ paths:
       tags: [viviendas]
       operationId: deleteHomePhoto
       summary: Elimina una foto
-      description: Elimina también los ficheros. Sirve para fotos `pending` y `ready`.
+      description: |
+        Elimina también los ficheros. Sirve para fotos `pending` y `ready`. Borrar una foto
+        `ready` de una vivienda `published` o `paused` es un cambio relevante: la vivienda vuelve
+        a `in_review` (RF-18).
       x-roles: [resourceOwner]
       responses:
         '204': { description: Eliminada }
@@ -880,12 +900,127 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+  /matches/{matchId}/chat/image-uploads:
+    parameters:
+      - $ref: '#/components/parameters/MatchId'
+    post:
+      tags: [matches]
+      operationId: createChatImageUpload
+      summary: Solicita una URL firmada para subir una imagen al chat del match (RF-52)
+      description: |
+        Devuelve una URL firmada de subida (`PUT`, válida 15 minutos, con el `Content-Type`
+        indicado) y el `uploadId` con el que se envía el mensaje (`sendMatchMessage`). La
+        imagen no llega al chat hasta ese envío. Solo vale mientras el match está `open` o
+        `confirmed`; en otro estado, 409 con `code: MATCH_NOT_OPEN`. Quien no participa
+        recibe 404, igual que ante un match inexistente.
+      x-roles: [participant]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [contentType]
+              properties:
+                contentType: { type: string, enum: [image/jpeg, image/png, image/heic, image/webp] }
+      responses:
+        '201':
+          description: URL de subida
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChatImageUpload' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /matches/{matchId}/messages:
+    parameters:
+      - $ref: '#/components/parameters/MatchId'
+    post:
+      tags: [matches]
+      operationId: sendMatchMessage
+      summary: Envía un mensaje de texto o una imagen al chat del match (RF-52, RF-60)
+      description: |
+        La API comprueba que quien envía participa en el match y que el match está `open` o
+        `confirmed`, y escribe el mensaje en el chat de Firestore, que los participantes leen
+        en tiempo real (ningún cliente escribe en él directamente, RC-16). El cuerpo lleva
+        **exactamente uno** de `text` (de 1 a 2.000 caracteres, no solo espacios) o
+        `imageUploadId` (el `uploadId` de `createChatImageUpload`, con la imagen ya subida).
+        Un mensaje vacío o de más de 2.000 caracteres: 400 con el campo `text` (`required` o
+        `too_long`). La imagen se procesa como las fotos de vivienda (sin metadatos, lado
+        mayor de 2048 px, WebP) y se guarda en un espacio privado; `imageUrl` es una URL
+        firmada de corta duración (el resto de participantes la piden con `getChatImageUrl`;
+        en Firestore el mensaje lleva solo un `imageId` opaco, nunca la ruta de almacenamiento). Si el fichero no es una imagen válida: 422 con
+        `code: INVALID_IMAGE`; si aún no se ha subido: 422 con `code: IMAGE_NOT_UPLOADED`.
+        Match no `open` ni `confirmed` (por ejemplo, `closed`: el chat queda en solo lectura):
+        409 con `code: MATCH_NOT_OPEN`. Chat aún sin crear: 409 con `code: CHAT_NOT_READY`
+        (se reintenta). Quien no participa recibe 404, igual que ante un match inexistente.
+      x-roles: [participant]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              minProperties: 1
+              maxProperties: 1
+              properties:
+                text: { type: string, minLength: 1, maxLength: 2000 }
+                imageUploadId: { type: string, format: uuid }
+      responses:
+        '201':
+          description: Mensaje enviado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChatMessage' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+
+  /matches/{matchId}/chat/images/{imageId}:
+    parameters:
+      - $ref: '#/components/parameters/MatchId'
+      - name: imageId
+        in: path
+        required: true
+        description: Identificador opaco (`imageId`) del mensaje de imagen en Firestore
+        schema: { type: string, format: uuid }
+    get:
+      tags: [matches]
+      operationId: getChatImageUrl
+      summary: URL firmada de corta duración de una imagen del chat (RF-52)
+      description: |
+        Los mensajes de imagen de Firestore llevan solo un `imageId` opaco; los participantes
+        lo cambian aquí por una URL firmada de lectura válida 15 minutos (`expiresAt`). Vale
+        también con el match cerrado (el historial sigue siendo legible). Quien no participa,
+        una imagen que no existe en este match o un `imageId` que no es UUID reciben 404.
+      x-roles: [participant]
+      responses:
+        '200':
+          description: URL firmada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChatImageUrl' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
 
   /reports:
     post:
       tags: [moderacion]
       operationId: createReport
       summary: Denuncia un usuario, una vivienda o un mensaje (RF-63)
+      description: >-
+        Un usuario o una vivienda se identifican por su UUID; un mensaje, por su id de Firestore, y
+        solo se puede denunciar si se participa en su chat (si no, 404, igual que si no existe). La
+        denuncia de un mensaje guarda su texto, su remitente y su fecha como evidencia. No se puede
+        denunciar lo propio (400). Límite de 10 denuncias por usuario y hora (429).
       x-roles: [owner, seeker]
       requestBody:
         required: true
@@ -907,6 +1042,10 @@ paths:
       tags: [moderacion]
       operationId: blockUser
       summary: Bloquea a un usuario (RF-63)
+      description: >-
+        Idempotente. Desde ese momento ninguno de los dos ve las viviendas del otro en el
+        descubrimiento ni forma matches nuevos con él; los matches existentes no se cierran. Bloquearse
+        a uno mismo es un 400.
       x-roles: [owner, seeker]
       requestBody:
         required: true
@@ -997,6 +1136,9 @@ paths:
       tags: [administracion]
       operationId: adminListReports
       summary: Denuncias (RF-63, RF-90)
+      description: >-
+        Sin `status` devuelve las abiertas. Siempre de la más antigua a la más reciente, con la
+        evidencia de las denuncias de un mensaje.
       x-roles: [admin]
       parameters:
         - name: status
@@ -1030,6 +1172,10 @@ paths:
       tags: [administracion]
       operationId: adminResolveReport
       summary: Resuelve una denuncia
+      description: >-
+        Resuelve o desestima una denuncia abierta con una nota obligatoria. Queda registrado en el log
+        de auditoría (RF-93), en la misma transacción (`report.resolve` o `report.dismiss`). Una
+        denuncia que ya no está abierta responde 409.
       x-roles: [admin]
       requestBody:
         required: true
@@ -1038,10 +1184,10 @@ paths:
             schema:
               type: object
               additionalProperties: false
-              required: [status]
+              required: [status, resolution]
               properties:
                 status: { type: string, enum: [resolved, dismissed] }
-                resolution: { type: string, maxLength: 2000 }
+                resolution: { type: string, minLength: 1, maxLength: 2000 }
       responses:
         '200':
           description: Denuncia resuelta
@@ -1052,6 +1198,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
   /admin/users:
     get:
       tags: [administracion]
@@ -1632,6 +1779,35 @@ components:
         uploadUrl: { type: string, format: uri }
         expiresAt: { type: string, format: date-time }
 
+    ChatImageUpload:
+      type: object
+      required: [uploadId, uploadUrl, expiresAt]
+      properties:
+        uploadId: { type: string, format: uuid }
+        uploadUrl: { type: string, format: uri }
+        expiresAt: { type: string, format: date-time }
+    ChatImageUrl:
+      type: object
+      required: [url, expiresAt]
+      properties:
+        url: { type: string, format: uri }
+        expiresAt: { type: string, format: date-time }
+    ChatMessage:
+      description: |
+        Mensaje que acaba de enviar quien llama. Los mensajes del chat se leen de Firestore
+        (`chats/{chatId}/messages`), no de la API. Nunca lleva el id interno del remitente.
+      type: object
+      required: [id, kind, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        kind: { type: string, enum: [text, image] }
+        text: { type: [string, 'null'], description: Solo en los mensajes de texto }
+        imageUrl:
+          type: [string, 'null']
+          format: uri
+          description: URL firmada de corta duración; solo en los mensajes de imagen
+        createdAt: { type: string, format: date-time }
+
     SearchPreferences:
       type: object
       additionalProperties: false
@@ -1682,7 +1858,9 @@ components:
         id: { type: string, format: uuid }
         type: { type: integer, enum: [2, 3] }
         status: { $ref: '#/components/schemas/MatchStatus' }
-        chatId: { type: string, description: Identificador del chat de grupo en Firestore; ausente hasta que se crea el chat }
+        chatId:
+          type: string
+          description: Identificador del chat de grupo en Firestore (`chats/{chatId}`); ausente hasta que se crea, poco después del match
         createdAt: { type: string, format: date-time }
         participants:
           type: array
@@ -1752,7 +1930,19 @@ components:
         reason: { type: string }
         status: { $ref: '#/components/schemas/ReportStatus' }
         resolution: { type: [string, 'null'] }
+        evidence:
+          description: Copia del mensaje denunciado; solo en las denuncias de un mensaje.
+          oneOf:
+            - $ref: '#/components/schemas/ReportEvidence'
+            - type: 'null'
         createdAt: { type: string, format: date-time }
+    ReportEvidence:
+      type: object
+      required: [text, senderId, sentAt]
+      properties:
+        text: { type: [string, 'null'], description: Nulo si el mensaje era una imagen }
+        senderId: { type: string, format: uuid }
+        sentAt: { type: string, format: date-time }
 
     AdminUser:
       type: object

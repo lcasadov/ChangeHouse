@@ -167,8 +167,15 @@ export interface paths {
     head?: never;
     /**
      * Modifica una vivienda propia
-     * @description Una vivienda `published` que cambia datos relevantes vuelve a `in_review`
-     *     (moderación previa, RF-18). No se puede modificar en `in_operation` ni `closed`.
+     * @description Una vivienda `published` o `paused` que cambia datos relevantes vuelve a `in_review`
+     *     (moderación previa, RF-18), con `submittedAt` y la fecha de cambio relevante en ese
+     *     momento; deja de aparecer en el descubrimiento y conserva sus matches abiertos. Son
+     *     relevantes el rango de valor, el tipo, la dirección, las superficies, los dormitorios, los
+     *     baños, la planta, el ascensor, el garaje, el trastero, las características (`features`),
+     *     el régimen y los datos VPP; también las fotos (`completeHomePhotoUpload`,
+     *     `deleteHomePhoto`). `locationVisibility`, `energyRating`, `yearBuilt`,
+     *     `isPrimaryResidence` y `mortgageOutstandingCents` no lo son. No se puede modificar en
+     *     `in_operation` ni `closed` (409 `HOME_NOT_EDITABLE`).
      *     En una vivienda protegida (`VPPB`, `VPPL`, `VPO`), un `valueMaxCents` mayor que su
      *     `vppMaxLegalPriceCents` responde 422 con `code: VALUE_ABOVE_VPP_MAX_LEGAL_PRICE` y
      *     `errors` en `valueMaxCents` (RN-06). Fuera de `draft`, una vivienda protegida sin
@@ -217,7 +224,12 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Pausa una vivienda publicada (`published` → `paused`) */
+    /**
+     * Pausa una vivienda publicada (`published` → `paused`, RF-17)
+     * @description Mientras está pausada no aparece en el descubrimiento ni forma matches nuevos, pero
+     *     conserva sus matches abiertos, sus me gusta y su fecha de publicación, y su propietario
+     *     sigue siendo `owner`. Si no está `published`: 409 con `code: HOME_NOT_PAUSABLE`.
+     */
     post: operations['pauseHome'];
     delete?: never;
     options?: never;
@@ -236,7 +248,12 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Reactiva una vivienda pausada (`paused` → `published`) */
+    /**
+     * Reactiva una vivienda pausada (`paused` → `published`, RF-17)
+     * @description Vuelve a aparecer en el descubrimiento sin pasar por moderación: un cambio relevante
+     *     durante la pausa ya la habría devuelto a `in_review`. Si no está `paused`: 409 con
+     *     `code: HOME_NOT_RESUMABLE`.
+     */
     post: operations['resumeHome'];
     delete?: never;
     options?: never;
@@ -288,7 +305,9 @@ export interface paths {
      *     solo entonces la foto pasa a `ready` y aparece en `photos` de la vivienda. Es idempotente
      *     sobre una foto ya `ready`. Si el fichero no es una imagen válida: 422 con
      *     `code: INVALID_IMAGE`, el fichero se elimina y la foto se descarta. Si la subida aún no se
-     *     ha hecho: 422 con `code: PHOTO_NOT_UPLOADED` y la foto sigue `pending`.
+     *     ha hecho: 422 con `code: PHOTO_NOT_UPLOADED` y la foto sigue `pending`. Una foto nueva en
+     *     una vivienda `published` o `paused` es un cambio relevante: la vivienda vuelve a
+     *     `in_review` (RF-18).
      */
     post: operations['completeHomePhotoUpload'];
     delete?: never;
@@ -312,7 +331,9 @@ export interface paths {
     post?: never;
     /**
      * Elimina una foto
-     * @description Elimina también los ficheros. Sirve para fotos `pending` y `ready`.
+     * @description Elimina también los ficheros. Sirve para fotos `pending` y `ready`. Borrar una foto
+     *     `ready` de una vivienda `published` o `paused` es un cambio relevante: la vivienda vuelve
+     *     a `in_review` (RF-18).
      */
     delete: operations['deleteHomePhoto'];
     options?: never;
@@ -625,6 +646,94 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/matches/{matchId}/chat/image-uploads': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        matchId: components['parameters']['MatchId'];
+      };
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Solicita una URL firmada para subir una imagen al chat del match (RF-52)
+     * @description Devuelve una URL firmada de subida (`PUT`, válida 15 minutos, con el `Content-Type`
+     *     indicado) y el `uploadId` con el que se envía el mensaje (`sendMatchMessage`). La
+     *     imagen no llega al chat hasta ese envío. Solo vale mientras el match está `open` o
+     *     `confirmed`; en otro estado, 409 con `code: MATCH_NOT_OPEN`. Quien no participa
+     *     recibe 404, igual que ante un match inexistente.
+     */
+    post: operations['createChatImageUpload'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/matches/{matchId}/messages': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        matchId: components['parameters']['MatchId'];
+      };
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Envía un mensaje de texto o una imagen al chat del match (RF-52, RF-60)
+     * @description La API comprueba que quien envía participa en el match y que el match está `open` o
+     *     `confirmed`, y escribe el mensaje en el chat de Firestore, que los participantes leen
+     *     en tiempo real (ningún cliente escribe en él directamente, RC-16). El cuerpo lleva
+     *     **exactamente uno** de `text` (de 1 a 2.000 caracteres, no solo espacios) o
+     *     `imageUploadId` (el `uploadId` de `createChatImageUpload`, con la imagen ya subida).
+     *     Un mensaje vacío o de más de 2.000 caracteres: 400 con el campo `text` (`required` o
+     *     `too_long`). La imagen se procesa como las fotos de vivienda (sin metadatos, lado
+     *     mayor de 2048 px, WebP) y se guarda en un espacio privado; `imageUrl` es una URL
+     *     firmada de corta duración (el resto de participantes la piden con `getChatImageUrl`;
+     *     en Firestore el mensaje lleva solo un `imageId` opaco, nunca la ruta de almacenamiento). Si el fichero no es una imagen válida: 422 con
+     *     `code: INVALID_IMAGE`; si aún no se ha subido: 422 con `code: IMAGE_NOT_UPLOADED`.
+     *     Match no `open` ni `confirmed` (por ejemplo, `closed`: el chat queda en solo lectura):
+     *     409 con `code: MATCH_NOT_OPEN`. Chat aún sin crear: 409 con `code: CHAT_NOT_READY`
+     *     (se reintenta). Quien no participa recibe 404, igual que ante un match inexistente.
+     */
+    post: operations['sendMatchMessage'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/matches/{matchId}/chat/images/{imageId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        matchId: components['parameters']['MatchId'];
+        /** @description Identificador opaco (`imageId`) del mensaje de imagen en Firestore */
+        imageId: string;
+      };
+      cookie?: never;
+    };
+    /**
+     * URL firmada de corta duración de una imagen del chat (RF-52)
+     * @description Los mensajes de imagen de Firestore llevan solo un `imageId` opaco; los participantes
+     *     lo cambian aquí por una URL firmada de lectura válida 15 minutos (`expiresAt`). Vale
+     *     también con el match cerrado (el historial sigue siendo legible). Quien no participa,
+     *     una imagen que no existe en este match o un `imageId` que no es UUID reciben 404.
+     */
+    get: operations['getChatImageUrl'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/reports': {
     parameters: {
       query?: never;
@@ -634,7 +743,10 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Denuncia un usuario, una vivienda o un mensaje (RF-63) */
+    /**
+     * Denuncia un usuario, una vivienda o un mensaje (RF-63)
+     * @description Un usuario o una vivienda se identifican por su UUID; un mensaje, por su id de Firestore, y solo se puede denunciar si se participa en su chat (si no, 404, igual que si no existe). La denuncia de un mensaje guarda su texto, su remitente y su fecha como evidencia. No se puede denunciar lo propio (400). Límite de 10 denuncias por usuario y hora (429).
+     */
     post: operations['createReport'];
     delete?: never;
     options?: never;
@@ -651,7 +763,10 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Bloquea a un usuario (RF-63) */
+    /**
+     * Bloquea a un usuario (RF-63)
+     * @description Idempotente. Desde ese momento ninguno de los dos ve las viviendas del otro en el descubrimiento ni forma matches nuevos con él; los matches existentes no se cierran. Bloquearse a uno mismo es un 400.
+     */
     post: operations['blockUser'];
     delete?: never;
     options?: never;
@@ -708,7 +823,10 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Denuncias (RF-63, RF-90) */
+    /**
+     * Denuncias (RF-63, RF-90)
+     * @description Sin `status` devuelve las abiertas. Siempre de la más antigua a la más reciente, con la evidencia de las denuncias de un mensaje.
+     */
     get: operations['adminListReports'];
     put?: never;
     post?: never;
@@ -733,7 +851,10 @@ export interface paths {
     delete?: never;
     options?: never;
     head?: never;
-    /** Resuelve una denuncia */
+    /**
+     * Resuelve una denuncia
+     * @description Resuelve o desestima una denuncia abierta con una nota obligatoria. Queda registrado en el log de auditoría (RF-93), en la misma transacción (`report.resolve` o `report.dismiss`). Una denuncia que ya no está abierta responde 409.
+     */
     patch: operations['adminResolveReport'];
     trace?: never;
   };
@@ -1133,6 +1254,39 @@ export interface components {
       /** Format: date-time */
       expiresAt: string;
     };
+    ChatImageUpload: {
+      /** Format: uuid */
+      uploadId: string;
+      /** Format: uri */
+      uploadUrl: string;
+      /** Format: date-time */
+      expiresAt: string;
+    };
+    ChatImageUrl: {
+      /** Format: uri */
+      url: string;
+      /** Format: date-time */
+      expiresAt: string;
+    };
+    /**
+     * @description Mensaje que acaba de enviar quien llama. Los mensajes del chat se leen de Firestore
+     *     (`chats/{chatId}/messages`), no de la API. Nunca lleva el id interno del remitente.
+     */
+    ChatMessage: {
+      /** Format: uuid */
+      id: string;
+      /** @enum {string} */
+      kind: 'text' | 'image';
+      /** @description Solo en los mensajes de texto */
+      text?: string | null;
+      /**
+       * Format: uri
+       * @description URL firmada de corta duración; solo en los mensajes de imagen
+       */
+      imageUrl?: string | null;
+      /** Format: date-time */
+      createdAt: string;
+    };
     SearchPreferences: {
       center?: components['schemas']['GeoPoint'];
       radiusKm?: number;
@@ -1166,7 +1320,7 @@ export interface components {
       /** @enum {integer} */
       type: 2 | 3;
       status: components['schemas']['MatchStatus'];
-      /** @description Identificador del chat de grupo en Firestore; ausente hasta que se crea el chat */
+      /** @description Identificador del chat de grupo en Firestore (`chats/{chatId}`); ausente hasta que se crea, poco después del match */
       chatId?: string;
       /** Format: date-time */
       createdAt: string;
@@ -1225,8 +1379,18 @@ export interface components {
       reason: string;
       status: components['schemas']['ReportStatus'];
       resolution?: string | null;
+      /** @description Copia del mensaje denunciado; solo en las denuncias de un mensaje. */
+      evidence?: components['schemas']['ReportEvidence'] | null;
       /** Format: date-time */
       createdAt: string;
+    };
+    ReportEvidence: {
+      /** @description Nulo si el mensaje era una imagen */
+      text: string | null;
+      /** Format: uuid */
+      senderId: string;
+      /** Format: date-time */
+      sentAt: string;
     };
     AdminUser: {
       /** Format: uuid */
@@ -2313,6 +2477,103 @@ export interface operations {
       409: components['responses']['Conflict'];
     };
   };
+  createChatImageUpload: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        matchId: components['parameters']['MatchId'];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': {
+          /** @enum {string} */
+          contentType: 'image/jpeg' | 'image/png' | 'image/heic' | 'image/webp';
+        };
+      };
+    };
+    responses: {
+      /** @description URL de subida */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ChatImageUpload'];
+        };
+      };
+      400: components['responses']['BadRequest'];
+      401: components['responses']['Unauthorized'];
+      403: components['responses']['Forbidden'];
+      404: components['responses']['NotFound'];
+      409: components['responses']['Conflict'];
+    };
+  };
+  sendMatchMessage: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        matchId: components['parameters']['MatchId'];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': {
+          text?: string;
+          /** Format: uuid */
+          imageUploadId?: string;
+        };
+      };
+    };
+    responses: {
+      /** @description Mensaje enviado */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ChatMessage'];
+        };
+      };
+      400: components['responses']['BadRequest'];
+      401: components['responses']['Unauthorized'];
+      403: components['responses']['Forbidden'];
+      404: components['responses']['NotFound'];
+      409: components['responses']['Conflict'];
+      422: components['responses']['Unprocessable'];
+    };
+  };
+  getChatImageUrl: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        matchId: components['parameters']['MatchId'];
+        /** @description Identificador opaco (`imageId`) del mensaje de imagen en Firestore */
+        imageId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description URL firmada */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ChatImageUrl'];
+        };
+      };
+      401: components['responses']['Unauthorized'];
+      403: components['responses']['Forbidden'];
+      404: components['responses']['NotFound'];
+    };
+  };
   createReport: {
     parameters: {
       query?: never;
@@ -2479,7 +2740,7 @@ export interface operations {
         'application/json': {
           /** @enum {string} */
           status: 'resolved' | 'dismissed';
-          resolution?: string;
+          resolution: string;
         };
       };
     };
@@ -2497,6 +2758,7 @@ export interface operations {
       401: components['responses']['Unauthorized'];
       403: components['responses']['Forbidden'];
       404: components['responses']['NotFound'];
+      409: components['responses']['Conflict'];
     };
   };
   adminListUsers: {

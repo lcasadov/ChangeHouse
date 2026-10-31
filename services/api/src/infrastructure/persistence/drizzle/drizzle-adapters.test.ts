@@ -5,12 +5,15 @@ import { AddressCipher } from '../../crypto/address-cipher.js';
 import type { Database, Executor } from './database.js';
 import { DrizzleAdminGrants } from './drizzle-admin-grants.js';
 import { DrizzleAuditLog } from './drizzle-audit-log.js';
+import { DrizzleBlockRepository } from './drizzle-block-repository.js';
+import { DrizzleChatMemberships } from './drizzle-chat-memberships.js';
 import { DrizzleCycleCandidates } from './drizzle-cycle-candidates.js';
 import { DrizzleDecisionStore } from './drizzle-decision-store.js';
 import { DrizzleDecisionUnitOfWork } from './drizzle-decision-unit-of-work.js';
 import { DrizzleMatchHomes } from './drizzle-match-homes.js';
 import { DrizzleMatchRepository } from './drizzle-match-repository.js';
 import { DrizzleMatchUnitOfWork } from './drizzle-match-unit-of-work.js';
+import { DrizzleReportRepository } from './drizzle-report-repository.js';
 import { DrizzleUnitOfWork } from './drizzle-unit-of-work.js';
 
 /**
@@ -124,7 +127,7 @@ describe('DrizzleUnitOfWork', () => {
     );
 
     expect(opened).toBe(1);
-    expect(result).toEqual(['audit', 'homes']);
+    expect(result).toEqual(['audit', 'homes', 'reports']);
   });
 
   it('un fallo del trabajo se propaga para que la transacción se revierta', async () => {
@@ -367,7 +370,7 @@ describe('DrizzleMatchRepository', () => {
   });
 
   it('findMatch agrupa los participantes de cada match, o devuelve null', async () => {
-    const row = { id: 'm', type: 2, status: 'open', createdAt: at, cycleKey: 'a:b', chatId: null };
+    const row = { id: 'm', type: 2, status: 'open', createdAt: at, cycleKey: 'a:b', chatId: 'm' };
     const participant = {
       homeId: 'a',
       userId: 'u-a',
@@ -387,6 +390,7 @@ describe('DrizzleMatchRepository', () => {
       type: 2,
       status: 'open',
       createdAt: at,
+      chatId: 'm',
       participants: [participant],
     });
     expect(missing).toBeNull();
@@ -479,7 +483,7 @@ describe('DrizzleMatchRepository: decisiones y detalle', () => {
 });
 
 describe('DrizzleMatchUnitOfWork', () => {
-  it('ejecuta el trabajo en una transacción con las decisiones y la auditoría sobre ella', async () => {
+  it('ejecuta el trabajo en una transacción con las decisiones, la auditoría y la bandeja de salida sobre ella', async () => {
     const { db: tx } = fakeDb(undefined);
     const transactions: unknown[] = [];
     const database = {
@@ -493,7 +497,7 @@ describe('DrizzleMatchUnitOfWork', () => {
       Promise.resolve(Object.keys(scope).sort()),
     );
 
-    expect(result).toEqual(['audit', 'matches']);
+    expect(result).toEqual(['audit', 'matches', 'outbox']);
     expect(transactions).toHaveLength(1);
   });
 });
@@ -568,5 +572,126 @@ describe('DrizzleMatchHomes', () => {
 
     expect([...addresses]).toEqual([['h-1', 'Calle Real, 9, Leganés']]);
     expect(cipher.decrypted).toHaveLength(1);
+  });
+});
+
+describe('DrizzleBlockRepository', () => {
+  it('inserta el bloqueo y no hace nada si ya existía', async () => {
+    const { db, calls } = fakeDb(undefined);
+    const at = new Date('2026-10-30T10:00:00.000Z');
+
+    await new DrizzleBlockRepository(db).add('ana', 'beto', at);
+
+    expect(calls.map((call) => call.method)).toEqual(['insert', 'values', 'onConflictDoNothing']);
+    expect(calls[1]?.args).toEqual([{ blockerId: 'ana', blockedId: 'beto', createdAt: at }]);
+  });
+});
+
+describe('DrizzleChatMemberships', () => {
+  it('devuelve los chats de los matches del usuario y descarta los aún sin chat', async () => {
+    const { db } = fakeDb([{ chatId: 'chat-1' }, { chatId: null }, { chatId: 'chat-2' }]);
+
+    expect(await new DrizzleChatMemberships(db).chatIdsOf('ana')).toEqual(['chat-1', 'chat-2']);
+  });
+});
+
+describe('DrizzleReportRepository', () => {
+  const at = new Date('2026-10-30T10:00:00.000Z');
+  const row = {
+    id: 'r1',
+    reporterId: 'ana',
+    targetType: 'message',
+    targetId: 'm1',
+    reason: 'Insultos',
+    status: 'open',
+    evidenceText: 'Texto',
+    evidenceSenderId: 'beto',
+    evidenceSentAt: at,
+    resolution: null,
+    resolvedBy: null,
+    resolvedAt: null,
+    createdAt: at,
+  };
+
+  it('insert guarda la evidencia aplanada y una denuncia sin evidencia la deja nula', async () => {
+    const { db, calls } = fakeDb(undefined);
+    const repository = new DrizzleReportRepository(db);
+    const report = {
+      id: 'r1',
+      reporterId: 'ana',
+      targetType: 'home' as const,
+      targetId: 'h1',
+      reason: 'Falso',
+      status: 'open' as const,
+      evidence: null,
+      resolution: null,
+      resolvedBy: null,
+      resolvedAt: null,
+      createdAt: at,
+    };
+
+    await repository.insert(report);
+    await repository.insert({ ...report, evidence: { text: null, senderId: 'beto', sentAt: at } });
+
+    const values = calls.filter((call) => call.method === 'values').map((call) => call.args[0]);
+    expect(values[0]).toMatchObject({
+      evidenceText: null,
+      evidenceSenderId: null,
+      evidenceSentAt: null,
+    });
+    expect(values[1]).toMatchObject({
+      evidenceText: null,
+      evidenceSenderId: 'beto',
+      evidenceSentAt: at,
+    });
+  });
+
+  it('findByIdForUpdate bloquea la fila y reconstruye la evidencia; sin fila devuelve null', async () => {
+    const found = fakeDb([row]);
+    const missing = fakeDb([]);
+
+    const report = await new DrizzleReportRepository(found.db).findByIdForUpdate('r1');
+
+    expect(found.calls.some((call) => call.method === 'for' && call.args[0] === 'update')).toBe(
+      true,
+    );
+    expect(report?.evidence).toEqual({ text: 'Texto', senderId: 'beto', sentAt: at });
+    expect(await new DrizzleReportRepository(missing.db).findByIdForUpdate('r1')).toBeNull();
+  });
+
+  it('save solo actualiza la resolución', async () => {
+    const { db, calls } = fakeDb(undefined);
+    const resolvedAt = new Date('2026-10-31T10:00:00.000Z');
+
+    await new DrizzleReportRepository(db).save({
+      ...row,
+      targetType: 'message',
+      status: 'resolved',
+      evidence: null,
+      resolution: 'Hecho',
+      resolvedBy: 'admin',
+      resolvedAt,
+    });
+
+    expect(calls.find((call) => call.method === 'set')?.args).toEqual([
+      { status: 'resolved', resolution: 'Hecho', resolvedBy: 'admin', resolvedAt },
+    ]);
+  });
+
+  it('listByStatus ordena por antigüedad, aplica el límite y admite un cursor', async () => {
+    const { db, calls } = fakeDb([row]);
+
+    const listed = await new DrizzleReportRepository(db).listByStatus({
+      status: 'open',
+      after: { at, id: 'r0' },
+      limit: 3,
+    });
+    await new DrizzleReportRepository(db).listByStatus({ status: 'open', limit: 3 });
+
+    expect(listed.map((report) => report.id)).toEqual(['r1']);
+    expect(calls.filter((call) => call.method === 'limit').map((call) => call.args[0])).toEqual([
+      3, 3,
+    ]);
+    expect(calls.filter((call) => call.method === 'orderBy')).toHaveLength(2);
   });
 });

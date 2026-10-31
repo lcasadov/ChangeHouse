@@ -5,7 +5,7 @@ import {
   PhotoLimitReachedError,
   PhotoNotUploadedError,
 } from '../../domain/home/errors.js';
-import { assertEditable, hasBeenPublished, type Home } from '../../domain/home/home.js';
+import { assertEditable, type Home, relevantChangeOf } from '../../domain/home/home.js';
 import {
   assertCanAddPhoto,
   assertCanDeletePhoto,
@@ -54,9 +54,13 @@ async function ownPhoto(deps: PhotoDeps, ownerId: string, homeId: string, photoI
   return { home, photo };
 }
 
-/** Las fotos de una vivienda que ya estuvo en el descubrimiento son un cambio relevante (RF-44). */
+/**
+ * Las fotos de una vivienda que ya estuvo en el descubrimiento son un cambio relevante (RF-44): si
+ * está publicada o pausada, además, vuelve a revisión (RF-18).
+ */
 async function noteRelevantChange(deps: PhotoDeps, home: Home): Promise<void> {
-  if (hasBeenPublished(home)) await deps.homes.markRelevantChange(home.id, deps.clock.now());
+  const change = relevantChangeOf(home, deps.clock.now());
+  if (change) await deps.homes.markRelevantChange(home.id, change);
 }
 
 /** Descarta una foto que no llegó a publicarse: su fila y el original subido. */

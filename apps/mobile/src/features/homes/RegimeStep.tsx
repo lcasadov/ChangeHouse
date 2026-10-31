@@ -25,7 +25,7 @@ const DATE_LENGTH = 10;
  * fecha de calificación definitiva y, si se conocen, el fin de la protección y el precio máximo
  * legal; una libre no pide nada más. Si nada cambia respecto a lo guardado, solo avanza.
  */
-export function RegimeStep({ home, onSaved, onBack, onExit }: Readonly<StepProps>) {
+export function RegimeStep({ home, onSaved, onBack, onExit, confirmSave }: Readonly<StepProps>) {
   const { t } = useTranslation();
   const theme = useTheme();
   const update = useUpdateHome(home?.id ?? '');
@@ -41,7 +41,12 @@ export function RegimeStep({ home, onSaved, onBack, onExit }: Readonly<StepProps
     form,
     async (patch) => {
       if (!home) return;
-      onSaved(sameAsSaved(home, patch) ? home : await update.mutateAsync(patch));
+      if (sameAsSaved(home, patch)) {
+        onSaved(home);
+        return;
+      }
+      if (confirmSave && !(await confirmSave(patch))) return;
+      onSaved(await update.mutateAsync(patch));
     },
     (error) => {
       // El servidor tiene la última palabra sobre el tope legal, aunque el valor guardado que

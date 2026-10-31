@@ -587,6 +587,176 @@ describe('migraciones', () => {
     expect(participantsLeft).toHaveLength(0);
   });
 
+  it('GIVEN la base migrada WHEN se inspecciona THEN outbox guarda cada hecho una sola vez, nace pendiente y tiene un índice de pendientes', async () => {
+    const target = openSql(urlFor(EMPTY_DB));
+    const [event, duplicate, other] = [
+      '0199c1a2-0000-7000-8000-0000000000d1',
+      '0199c1a2-0000-7000-8000-0000000000d2',
+      '0199c1a2-0000-7000-8000-0000000000d3',
+    ];
+    const aggregate = '0199c1a2-0000-7000-8000-0000000000d9';
+    await target`INSERT INTO outbox (id, type, aggregate_id) VALUES (${event}, 'match.created', ${aggregate})`;
+    const [created] = await target<{ attempts: number; processed_at: Date | null }[]>`
+      SELECT attempts, processed_at FROM outbox WHERE id = ${event}`;
+    const sameFact = target`INSERT INTO outbox (id, type, aggregate_id) VALUES (${duplicate}, 'match.created', ${aggregate})`;
+    await expect(sameFact).rejects.toThrow(/outbox_type_aggregate_key/);
+    await target`INSERT INTO outbox (id, type, aggregate_id) VALUES (${other}, 'otro', ${aggregate})`;
+    const indexes = await target<{ indexdef: string }[]>`
+      SELECT indexdef FROM pg_indexes WHERE tablename = 'outbox' AND indexname = 'outbox_pending_idx'`;
+    await target`DELETE FROM outbox`;
+    await target.end();
+
+    expect(created).toEqual({ attempts: 0, processed_at: null });
+    expect(indexes).toHaveLength(1);
+    expect(indexes[0]?.indexdef).toMatch(/WHERE \(processed_at IS NULL\)/);
+  });
+
+  it('GIVEN la base migrada WHEN se inspecciona THEN user_devices tiene el token como clave, plataforma acotada, cascada con el usuario y outbox admite una carga opcional', async () => {
+    const target = openSql(urlFor(EMPTY_DB));
+    const key = await target<{ columns: string }[]>`
+      SELECT string_agg(kcu.column_name, ',' ORDER BY kcu.ordinal_position) AS columns
+      FROM information_schema.table_constraints tc
+      JOIN information_schema.key_column_usage kcu USING (constraint_name, table_schema)
+      WHERE tc.table_name = 'user_devices' AND tc.constraint_type = 'PRIMARY KEY'`;
+    const columns = await target<{ column_name: string; udt_name: string; is_nullable: string }[]>`
+      SELECT column_name, udt_name, is_nullable FROM information_schema.columns
+      WHERE table_name = 'user_devices' ORDER BY ordinal_position`;
+    const platforms = await target<{ enumlabel: string }[]>`
+      SELECT e.enumlabel FROM pg_enum e JOIN pg_type t ON t.oid = e.enumtypid
+      WHERE t.typname = 'device_platform' ORDER BY e.enumsortorder`;
+    const cascade = await target<{ delete_rule: string }[]>`
+      SELECT rc.delete_rule FROM information_schema.referential_constraints rc
+      JOIN information_schema.table_constraints tc USING (constraint_name)
+      WHERE tc.table_name = 'user_devices' AND tc.constraint_type = 'FOREIGN KEY'`;
+    const payload = await target<{ is_nullable: string; udt_name: string }[]>`
+      SELECT is_nullable, udt_name FROM information_schema.columns
+      WHERE table_name = 'outbox' AND column_name = 'payload'`;
+    const userId = crypto.randomUUID();
+    await target`INSERT INTO users (id, firebase_uid, email, display_name)
+                 VALUES (${userId}, ${`uid-${userId}`}, ${`${userId}@example.com`}, 'Ana')`;
+    await target`INSERT INTO user_devices (fcm_token, user_id, platform)
+                 VALUES ('token-1', ${userId}, 'android')`;
+    const duplicate = target`INSERT INTO user_devices (fcm_token, user_id, platform)
+                             VALUES ('token-1', ${userId}, 'ios')`;
+    const unknownPlatform = target`INSERT INTO user_devices (fcm_token, user_id, platform)
+                                   VALUES ('token-2', ${userId}, 'symbian')`;
+    await expect(duplicate).rejects.toThrow();
+    await expect(unknownPlatform).rejects.toThrow();
+    await target`DELETE FROM users WHERE id = ${userId}`;
+    const left = await target`SELECT 1 FROM user_devices`;
+    await target.end();
+
+    expect(key).toEqual([{ columns: 'fcm_token' }]);
+    expect(columns).toEqual([
+      { column_name: 'fcm_token', udt_name: 'text', is_nullable: 'NO' },
+      { column_name: 'user_id', udt_name: 'uuid', is_nullable: 'NO' },
+      { column_name: 'platform', udt_name: 'device_platform', is_nullable: 'NO' },
+      { column_name: 'updated_at', udt_name: 'timestamptz', is_nullable: 'NO' },
+    ]);
+    expect(platforms.map((row) => row.enumlabel)).toEqual(['android', 'ios', 'web']);
+    expect(cascade).toEqual([{ delete_rule: 'CASCADE' }]);
+    expect(payload).toEqual([{ is_nullable: 'YES', udt_name: 'jsonb' }]);
+    expect(left).toHaveLength(0);
+  });
+
+  it('GIVEN la base migrada WHEN se inspecciona THEN user_blocks tiene clave compuesta, cascada en ambos usuarios y rechaza que alguien se bloquee a sí mismo', async () => {
+    const target = openSql(urlFor(EMPTY_DB));
+    const key = await target<{ columns: string }[]>`
+      SELECT string_agg(kcu.column_name, ',' ORDER BY kcu.ordinal_position) AS columns
+      FROM information_schema.table_constraints tc
+      JOIN information_schema.key_column_usage kcu USING (constraint_name, table_schema)
+      WHERE tc.table_name = 'user_blocks' AND tc.constraint_type = 'PRIMARY KEY'`;
+    const cascades = await target<{ delete_rule: string }[]>`
+      SELECT rc.delete_rule FROM information_schema.referential_constraints rc
+      JOIN information_schema.table_constraints tc USING (constraint_name)
+      WHERE tc.table_name = 'user_blocks' AND tc.constraint_type = 'FOREIGN KEY'`;
+    const [ana, beto] = [crypto.randomUUID(), crypto.randomUUID()];
+    for (const [id, name] of [
+      [ana, 'Ana'],
+      [beto, 'Beto'],
+    ] as const) {
+      await target`INSERT INTO users (id, firebase_uid, email, display_name)
+                   VALUES (${id}, ${`uid-${id}`}, ${`${id}@example.com`}, ${name})`;
+    }
+    const toSelf = target`INSERT INTO user_blocks (blocker_id, blocked_id) VALUES (${ana}, ${ana})`;
+    await target`INSERT INTO user_blocks (blocker_id, blocked_id) VALUES (${ana}, ${beto})`;
+    const duplicate = target`INSERT INTO user_blocks (blocker_id, blocked_id) VALUES (${ana}, ${beto})`;
+    await expect(toSelf).rejects.toThrow(/user_blocks_not_self/);
+    await expect(duplicate).rejects.toThrow();
+    await target`DELETE FROM users WHERE id = ${beto}`;
+    const left = await target`SELECT 1 FROM user_blocks`;
+    await target`DELETE FROM users WHERE id = ${ana}`;
+    await target.end();
+
+    expect(key).toEqual([{ columns: 'blocker_id,blocked_id' }]);
+    expect(cascades).toEqual([{ delete_rule: 'CASCADE' }, { delete_rule: 'CASCADE' }]);
+    expect(left).toHaveLength(0);
+  });
+
+  it('GIVEN la base migrada WHEN se inspecciona THEN reports nace abierta, acota objetivo y estado, exige la evidencia de un mensaje y la nota de una resolución', async () => {
+    const target = openSql(urlFor(EMPTY_DB));
+    const columns = await target<{ column_name: string; udt_name: string; is_nullable: string }[]>`
+      SELECT column_name, udt_name, is_nullable FROM information_schema.columns
+      WHERE table_name = 'reports' ORDER BY ordinal_position`;
+    const statuses = await target<{ enumlabel: string }[]>`
+      SELECT e.enumlabel FROM pg_enum e JOIN pg_type t ON t.oid = e.enumtypid
+      WHERE t.typname = 'report_status' ORDER BY e.enumsortorder`;
+    const targets = await target<{ enumlabel: string }[]>`
+      SELECT e.enumlabel FROM pg_enum e JOIN pg_type t ON t.oid = e.enumtypid
+      WHERE t.typname = 'report_target' ORDER BY e.enumsortorder`;
+    const reporter = crypto.randomUUID();
+    await target`INSERT INTO users (id, firebase_uid, email, display_name)
+                 VALUES (${reporter}, ${`uid-${reporter}`}, ${`${reporter}@example.com`}, 'Ana')`;
+    const home = crypto.randomUUID();
+    await target`INSERT INTO reports (id, reporter_id, target_type, target_id, reason)
+                 VALUES (${home}, ${reporter}, 'home', ${crypto.randomUUID()}, 'Anuncio falso')`;
+    const [created] = await target<{ status: string; created_at: Date | null }[]>`
+      SELECT status, created_at FROM reports WHERE id = ${home}`;
+    const messageWithoutEvidence = target`
+      INSERT INTO reports (id, reporter_id, target_type, target_id, reason)
+      VALUES (${crypto.randomUUID()}, ${reporter}, 'message', 'msg-1', 'Insultos')`;
+    await target`INSERT INTO reports (id, reporter_id, target_type, target_id, reason,
+                                      evidence_text, evidence_sender_id, evidence_sent_at)
+                 VALUES (${crypto.randomUUID()}, ${reporter}, 'message', 'msg-1', 'Insultos',
+                         'Texto', ${crypto.randomUUID()}, now())`;
+    const resolvedWithoutNote = target`
+      UPDATE reports SET status = 'resolved' WHERE id = ${home}`;
+    const unknownTarget = target`
+      INSERT INTO reports (id, reporter_id, target_type, target_id, reason)
+      VALUES (${crypto.randomUUID()}, ${reporter}, 'chat', 'x', 'x')`;
+    await expect(messageWithoutEvidence).rejects.toThrow(/reports_message_evidence/);
+    await expect(resolvedWithoutNote).rejects.toThrow(/reports_resolution_complete/);
+    await expect(unknownTarget).rejects.toThrow();
+    await target`UPDATE reports SET status = 'dismissed', resolution = 'No procede',
+                                    resolved_by = ${reporter}, resolved_at = now()
+                 WHERE id = ${home}`;
+    await target.end();
+
+    expect(columns.map((column) => column.column_name)).toEqual([
+      'id',
+      'reporter_id',
+      'target_type',
+      'target_id',
+      'reason',
+      'status',
+      'evidence_text',
+      'evidence_sender_id',
+      'evidence_sent_at',
+      'resolution',
+      'resolved_by',
+      'resolved_at',
+      'created_at',
+    ]);
+    expect(columns.find((column) => column.column_name === 'target_id')).toMatchObject({
+      udt_name: 'text',
+      is_nullable: 'NO',
+    });
+    expect(statuses.map((row) => row.enumlabel)).toEqual(['open', 'resolved', 'dismissed']);
+    expect(targets.map((row) => row.enumlabel)).toEqual(['user', 'home', 'message']);
+    expect(created?.status).toBe('open');
+    expect(created?.created_at).toBeInstanceOf(Date);
+  });
+
   it('GIVEN viviendas ya publicadas antes de la migración WHEN se aplica THEN reciben su fecha de publicación y las demás no', async () => {
     // Las migraciones hasta la 0006 en una carpeta aparte: la base queda como antes de este cambio
     const before = await mkdtemp(join(tmpdir(), 'migrations-0006-'));

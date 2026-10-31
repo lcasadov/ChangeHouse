@@ -61,6 +61,11 @@ export function confirmInterest<T extends MatchState>(match: T, userId: string):
   return { ...match, status: everyone ? 'confirmed' : match.status, participants };
 }
 
+/** Un match vivo (`open` o `confirmed`) admite retiradas; el resto ya no. */
+export function isLiveMatch(match: MatchState): boolean {
+  return match.status === 'open' || match.status === 'confirmed';
+}
+
 /** El participante se retira: queda `withdrawn` y el match se cierra para todos (RN-10). */
 export function withdrawFromMatch<T extends MatchState>(match: T, userId: string): T {
   participantsOf(match, userId);
@@ -72,4 +77,15 @@ export function withdrawFromMatch<T extends MatchState>(match: T, userId: string
 export function ensureCanSharePhone(match: MatchState, userId: string): void {
   participantsOf(match, userId);
   if (match.status !== 'open' && match.status !== 'confirmed') throw new MatchNotOpenError();
+}
+
+/** Se puede escribir en el chat mientras el match está `open` o `confirmed`; después queda en solo lectura. */
+export function ensureCanChat(match: MatchState, userId: string): void {
+  participantsOf(match, userId);
+  if (match.status !== 'open' && match.status !== 'confirmed') throw new MatchNotOpenError();
+}
+
+/** Quien participa en el match, sea cual sea su estado; si no, el match no existe para él. */
+export function ensureParticipant(match: MatchState, userId: string): void {
+  participantsOf(match, userId);
 }

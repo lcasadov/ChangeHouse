@@ -6,7 +6,10 @@ export type AuditAction =
   /** Un match cerrado por la suspensión de uno de sus participantes; el actor es el admin. */
   | 'match.close'
   | 'user.suspend'
-  | 'user.reactivate';
+  | 'user.reactivate'
+  | 'user.delete'
+  | 'report.resolve'
+  | 'report.dismiss';
 
 /**
  * Una entrada del registro de auditoría: quién, qué, sobre qué y cuándo. Nunca lleva datos de la
@@ -15,7 +18,7 @@ export type AuditAction =
 export interface AuditEntry {
   actorId: string;
   action: AuditAction;
-  entity: 'home' | 'match' | 'user';
+  entity: 'home' | 'match' | 'user' | 'report';
   entityId: string;
   at: Date;
 }

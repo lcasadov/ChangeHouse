@@ -48,6 +48,9 @@ const REQUESTS: Record<string, RequestTemplate> = {
     }),
   },
   listMyConsents: { method: 'GET', url: '/v1/me/consents' },
+  // Elimina la cuenta de quien la invoca: las guardas la saltan para no dejar al actor sin cuenta
+  deleteMe: { method: 'DELETE', url: '/v1/me' },
+  exportMyData: { method: 'GET', url: '/v1/me/export' },
   acceptConsent: {
     method: 'POST',
     url: '/v1/me/consents',
@@ -55,6 +58,7 @@ const REQUESTS: Record<string, RequestTemplate> = {
   },
 };
 
+const DESTRUCTIVE_OPERATION = 'deleteMe';
 const MISSING_ID = '0199c1a2-0000-7000-8000-000000000000';
 const HOMES_REQUESTS: Record<string, RequestTemplate> = {
   listMyHomes: { method: 'GET', url: '/v1/me/homes' },
@@ -72,6 +76,8 @@ const HOMES_REQUESTS: Record<string, RequestTemplate> = {
   getHome: { method: 'GET', url: `/v1/homes/${MISSING_ID}` },
   updateHome: { method: 'PATCH', url: `/v1/homes/${MISSING_ID}`, payload: () => ({ bedrooms: 2 }) },
   submitHome: { method: 'POST', url: `/v1/homes/${MISSING_ID}/submit` },
+  pauseHome: { method: 'POST', url: `/v1/homes/${MISSING_ID}/pause` },
+  resumeHome: { method: 'POST', url: `/v1/homes/${MISSING_ID}/resume` },
   createHomePhotoUpload: {
     method: 'POST',
     url: `/v1/homes/${MISSING_ID}/photos`,
@@ -119,6 +125,25 @@ const HOMES_REQUESTS: Record<string, RequestTemplate> = {
     url: `/v1/matches/${MISSING_ID}/phone-sharing`,
     payload: () => ({ share: true }),
   },
+  getChatImageUrl: {
+    method: 'GET',
+    url: `/v1/matches/${MISSING_ID}/chat/images/${MISSING_ID}`,
+  },
+  createChatImageUpload: {
+    method: 'POST',
+    url: `/v1/matches/${MISSING_ID}/chat/image-uploads`,
+    payload: () => ({ contentType: 'image/jpeg' }),
+  },
+  sendMatchMessage: {
+    method: 'POST',
+    url: `/v1/matches/${MISSING_ID}/messages`,
+    payload: () => ({ text: 'Hola' }),
+  },
+  registerDevice: {
+    method: 'PUT',
+    url: '/v1/me/devices',
+    payload: () => ({ fcmToken: 'token-de-privacidad', platform: 'web' }),
+  },
   adminListHomes: { method: 'GET', url: '/v1/admin/homes?status=in_review' },
   adminModerateHome: {
     method: 'POST',
@@ -129,6 +154,22 @@ const HOMES_REQUESTS: Record<string, RequestTemplate> = {
     method: 'PUT',
     url: `/v1/admin/users/${MISSING_ID}/suspension`,
     payload: () => ({ suspended: true, reason: 'Fraude reiterado' }),
+  },
+  createReport: {
+    method: 'POST',
+    url: '/v1/reports',
+    payload: () => ({ targetType: 'user', targetId: MISSING_ID, reason: 'Acoso' }),
+  },
+  blockUser: {
+    method: 'POST',
+    url: '/v1/me/blocked-users',
+    payload: () => ({ userId: MISSING_ID }),
+  },
+  adminListReports: { method: 'GET', url: '/v1/admin/reports' },
+  adminResolveReport: {
+    method: 'PATCH',
+    url: `/v1/admin/reports/${MISSING_ID}`,
+    payload: () => ({ status: 'resolved', resolution: 'Revisada' }),
   },
 };
 Object.assign(REQUESTS, HOMES_REQUESTS);
@@ -192,7 +233,7 @@ describe.skipIf(!emulatorAvailable())('privacidad del teléfono (RF-03, RC-11)',
 
     for (const operationId of api.app.operations) {
       const template = REQUESTS[operationId];
-      if (!template) continue;
+      if (!template || operationId === DESTRUCTIVE_OPERATION) continue;
       const response = await api.app.inject({
         method: template.method,
         url: template.url,
@@ -272,7 +313,9 @@ describe.skipIf(!emulatorAvailable())('privacidad del teléfono (RF-03, RC-11)',
       const bodies: string[] = [];
       for (const operationId of api.app.operations) {
         const template = REQUESTS[operationId];
-        if (!template || operationId === 'getMatch') continue;
+        if (!template || operationId === 'getMatch' || operationId === DESTRUCTIVE_OPERATION) {
+          continue;
+        }
         const response = await api.app.inject({
           method: template.method,
           url: template.url,

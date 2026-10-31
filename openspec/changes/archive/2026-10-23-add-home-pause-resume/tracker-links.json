@@ -1,0 +1,66 @@
+{
+  "tracker": "github-issues",
+  "change": "add-home-pause-resume",
+  "sprint": {
+    "path": "Sprint en curso",
+    "created": false
+  },
+  "epic": {
+    "capability": "homes",
+    "id": 92,
+    "reused": true
+  },
+  "related_epics": [],
+  "feature": {
+    "id": 269,
+    "reused": false
+  },
+  "stories": [
+    {
+      "key": "Pausar y reactivar",
+      "id": 270,
+      "reused": false,
+      "prio": "P2"
+    },
+    {
+      "key": "Vuelta a revisión tras cambios relevantes",
+      "id": 271,
+      "reused": false,
+      "prio": "P2"
+    }
+  ],
+  "tasks": [
+    {
+      "key": "T1",
+      "id": 272,
+      "parent": 270,
+      "state": "done"
+    },
+    {
+      "key": "B1",
+      "id": 273,
+      "parent": 271,
+      "state": "done"
+    },
+    {
+      "key": "T2",
+      "id": 274,
+      "parent": 271,
+      "state": "done"
+    },
+    {
+      "key": "F1",
+      "id": 275,
+      "parent": 270,
+      "state": "done"
+    },
+    {
+      "key": "V1",
+      "id": 276,
+      "parent": 270,
+      "state": "done"
+    }
+  ],
+  "bugs": [],
+  "pending": []
+}

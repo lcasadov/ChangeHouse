@@ -2,7 +2,7 @@ import { deriveRole } from '../../domain/account/role.js';
 import { isSuspended } from '../../domain/account/suspension.js';
 import type { HomeOwnership } from '../account/home-ownership.js';
 import type { UserRepository } from '../account/user-repository.js';
-import type { IdentityVerifier } from './identity-verifier.js';
+import { type IdentityVerifier, InvalidTokenError } from './identity-verifier.js';
 import type { Principal } from './principal.js';
 
 export interface ResolvePrincipalDeps {
@@ -22,6 +22,9 @@ export async function resolvePrincipal(
   const identity = await deps.verifier.verify(token);
   const user = await deps.users.findByFirebaseUid(identity.uid);
   if (!user) return { identity, account: null };
+  // Una cuenta eliminada queda anonimizada pero conserva su uid: mientras Firebase tarde en darla de
+  // baja, su token sigue siendo auténtico y aun así no vale para nada
+  if (user.deletedAt !== null) throw new InvalidTokenError();
 
   // Los roles asignados prevalecen: no hace falta consultar las viviendas
   const hasPublishedHome =

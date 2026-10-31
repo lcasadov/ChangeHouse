@@ -9,6 +9,7 @@ import { haptics } from '../../ui/haptics';
 import { useAuth } from '../auth/AuthProvider';
 import type { Celebration } from '../matches/MatchCelebrationHost';
 import { MATCHES_QUERY_KEY } from '../matches/use-matches';
+import { useNotificationPermission } from '../notifications/use-notification-permission';
 import { useServices } from '../session/services';
 import { markDecided, unmarkDecided } from './decided-cards';
 import { type Decision, UNDO_WINDOW_MS } from './decision-model';
@@ -54,6 +55,7 @@ export function useCardDecisions({ homeId }: Readonly<CardDecisionsOptions>) {
   const [undoing, setUndoing] = useState(false);
   const [celebration, setCelebration] = useState<Celebration | null>(null);
   const sequence = useRef(0);
+  const notifications = useNotificationPermission();
 
   const uid = user?.uid;
   const offerId = offer?.id;
@@ -159,6 +161,7 @@ export function useCardDecisions({ homeId }: Readonly<CardDecisionsOptions>) {
       );
     }
     void haptics.success();
+    if (decision === 'like') void notifications.afterLike();
     return true;
   };
 
@@ -221,6 +224,8 @@ export function useCardDecisions({ homeId }: Readonly<CardDecisionsOptions>) {
     undo,
     /** El match que acaba de formar un «Me gusta», mientras se celebra. */
     celebration,
+    /** La explicación del permiso de avisos, que se ofrece tras el primer «Me gusta». */
+    notifications,
     closeCelebration: () => {
       setCelebration(null);
     },

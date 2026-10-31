@@ -13,6 +13,8 @@ interface HomeContext {
   ownHomeId: string;
   /** Una vivienda propia ya publicada, desde la que se decide (me gusta, descarte, deshacer). */
   ownPublishedHomeId: string;
+  /** Una vivienda propia pausada, que se puede reactivar. */
+  ownPausedHomeId: string;
   /** Una foto propia ya subida y sin confirmar (`pending`). */
   ownPhotoId: string;
   publishedHomeId: string;
@@ -20,6 +22,10 @@ interface HomeContext {
   reviewHomeId: string;
   /** Un usuario ajeno sin suspender, solo para el admin (suspenderlo cambia su estado). */
   targetUserId: string;
+  /** El propietario de la vivienda publicada ajena: a quien se bloquea. */
+  strangerId: string;
+  /** Una denuncia abierta, solo para el admin (resolverla la cierra). */
+  openReportId: string;
 }
 
 interface RequestTemplate {
@@ -74,6 +80,8 @@ const REQUESTS: Record<string, RequestTemplate> = {
     }),
   },
   listMyConsents: { method: 'GET', url: '/v1/me/consents' },
+  deleteMe: { method: 'DELETE', url: '/v1/me' },
+  exportMyData: { method: 'GET', url: '/v1/me/export' },
   listMyHomes: { method: 'GET', url: '/v1/me/homes' },
   createHome: {
     method: 'POST',
@@ -87,6 +95,14 @@ const REQUESTS: Record<string, RequestTemplate> = {
     payload: () => ({ bedrooms: 2 }),
   },
   submitHome: { method: 'POST', url: (context) => `/v1/homes/${context.ownHomeId}/submit` },
+  pauseHome: {
+    method: 'POST',
+    url: (context) => `/v1/homes/${context.ownPublishedHomeId}/pause`,
+  },
+  resumeHome: {
+    method: 'POST',
+    url: (context) => `/v1/homes/${context.ownPausedHomeId}/resume`,
+  },
   createHomePhotoUpload: {
     method: 'POST',
     url: (context) => `/v1/homes/${context.ownHomeId}/photos`,
@@ -155,6 +171,41 @@ const REQUESTS: Record<string, RequestTemplate> = {
     url: `/v1/matches/${MISSING_HOME}/phone-sharing`,
     payload: () => ({ share: true }),
   },
+  // Chat: sin match al que pertenecer, el 404 de quien tiene acceso prueba que se llegó al caso de uso
+  getChatImageUrl: {
+    method: 'GET',
+    url: `/v1/matches/${MISSING_HOME}/chat/images/${MISSING_HOME}`,
+  },
+  createChatImageUpload: {
+    method: 'POST',
+    url: `/v1/matches/${MISSING_HOME}/chat/image-uploads`,
+    payload: () => ({ contentType: 'image/jpeg' }),
+  },
+  sendMatchMessage: {
+    method: 'POST',
+    url: `/v1/matches/${MISSING_HOME}/messages`,
+    payload: () => ({ text: 'Hola' }),
+  },
+  createReport: {
+    method: 'POST',
+    url: '/v1/reports',
+    payload: (context) => ({
+      targetType: 'home',
+      targetId: context.publishedHomeId,
+      reason: 'Anuncio falso',
+    }),
+  },
+  blockUser: {
+    method: 'POST',
+    url: '/v1/me/blocked-users',
+    payload: (context) => ({ userId: context.strangerId }),
+  },
+  adminListReports: { method: 'GET', url: '/v1/admin/reports' },
+  adminResolveReport: {
+    method: 'PATCH',
+    url: (context) => `/v1/admin/reports/${context.openReportId}`,
+    payload: () => ({ status: 'resolved', resolution: 'Revisada' }),
+  },
   adminListHomes: { method: 'GET', url: '/v1/admin/homes?status=in_review' },
   adminModerateHome: {
     method: 'POST',
@@ -165,6 +216,11 @@ const REQUESTS: Record<string, RequestTemplate> = {
     method: 'PUT',
     url: (context) => `/v1/admin/users/${context.targetUserId}/suspension`,
     payload: () => ({ suspended: true, reason: 'Fraude reiterado' }),
+  },
+  registerDevice: {
+    method: 'PUT',
+    url: '/v1/me/devices',
+    payload: () => ({ fcmToken: 'token-de-la-matriz', platform: 'android' }),
   },
   acceptConsent: {
     method: 'POST',
@@ -190,6 +246,7 @@ afterAll(async () => {
 });
 
 let publishedHomeId: string | undefined;
+let strangerId = MISSING_HOME;
 
 /** Una vivienda publicada de un tercero, creada una sola vez para todas las filas. */
 async function publishedHome(): Promise<string> {
@@ -205,6 +262,7 @@ async function publishedHome(): Promise<string> {
     payload: COMPLETE_HOME,
   });
   publishedHomeId = created.json<{ id: string }>().id;
+  strangerId = landlordId;
   await sql`UPDATE homes SET status = 'published' WHERE id = ${publishedHomeId}`;
   return publishedHomeId;
 }
@@ -269,10 +327,13 @@ async function authorizationFor(
   const context: HomeContext = {
     ownHomeId: MISSING_HOME,
     ownPublishedHomeId: MISSING_HOME,
+    ownPausedHomeId: MISSING_HOME,
     ownPhotoId: MISSING_HOME,
     publishedHomeId: await publishedHome(),
     reviewHomeId: MISSING_HOME,
     targetUserId: MISSING_HOME,
+    strangerId,
+    openReportId: MISSING_HOME,
   };
   if (actor === 'anon') return { headers: {}, context };
   const { uid, email, idToken } = await signUp();
@@ -287,6 +348,11 @@ async function authorizationFor(
   const id = crypto.randomUUID();
   await sql`INSERT INTO users (id, firebase_uid, email, display_name, assigned_role)
             VALUES (${id}, ${uid}, ${email}, 'Actor de prueba', ${assigned})`;
+  if (actor === 'admin') {
+    context.openReportId = crypto.randomUUID();
+    await sql`INSERT INTO reports (id, reporter_id, target_type, target_id, reason)
+              VALUES (${context.openReportId}, ${id}, 'user', ${context.strangerId}, 'Acoso')`;
+  }
   // La cuenta suspendida es un owner con todo preparado: lo único que cambia es la suspensión
   if (actor === 'owner' || actor === 'suspended') ownership.owners.add(id);
   if (assigned === null) {
@@ -308,6 +374,15 @@ async function authorizationFor(
     context.ownPublishedHomeId = published.json<{ id: string }>().id;
     await sql`UPDATE homes SET status = 'published', published_at = now()
               WHERE id = ${context.ownPublishedHomeId}`;
+    const paused = await api.app.inject({
+      method: 'POST',
+      url: '/v1/homes',
+      headers,
+      payload: COMPLETE_HOME,
+    });
+    context.ownPausedHomeId = paused.json<{ id: string }>().id;
+    await sql`UPDATE homes SET status = 'paused', published_at = now()
+              WHERE id = ${context.ownPausedHomeId}`;
     // Con preferencias propias y de la vivienda, las lecturas y el borrado de la matriz tienen algo que devolver
     for (const url of [
       '/v1/me/search-preferences',

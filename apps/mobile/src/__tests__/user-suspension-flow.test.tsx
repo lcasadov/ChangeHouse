@@ -130,18 +130,15 @@ describe('Suspender y reactivar usuarios desde «Administración»', () => {
       'cannot-suspend-admin',
     ],
     ['un usuario inexistente', '0198f3a0-0000-7000-8000-00000000dead', [], 'not-found'],
-  ] as const)(
-    'suspender a %s muestra por qué no se puede',
-    async (_case, userId, users, error) => {
-      await openUsers({ users: [...users] });
-      await fill(userId, REASON);
+  ] as const)('suspender a %s muestra por qué no se puede', async (_case, userId, users, error) => {
+    await openUsers({ users: [...users] });
+    await fill(userId, REASON);
 
-      await fireEvent.press(button(u.suspend));
-      await fireEvent.press(button(u.confirm.confirm));
+    await fireEvent.press(button(u.suspend));
+    await fireEvent.press(button(u.confirm.confirm));
 
-      expect(await screen.findByText(u.errors[error])).toBeTruthy();
-    },
-  );
+    expect(await screen.findByText(u.errors[error])).toBeTruthy();
+  });
 
   it('sin conexión lo dice y deja reintentar', async () => {
     const backend = await openUsers();

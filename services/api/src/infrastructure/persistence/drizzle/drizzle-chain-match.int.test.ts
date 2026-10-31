@@ -532,7 +532,7 @@ function unitsPausingBeforeSave(inner: DecisionUnitOfWork, gate: Gate): Decision
           await gate.arrive();
           return matching.matches.saveMatch(match);
         };
-        return work(store, { cycles: matching.cycles, matches: writer });
+        return work(store, { ...matching, matches: writer });
       }),
   };
 }
@@ -623,5 +623,95 @@ describe('DrizzleCycleCandidates con propietarios suspendidos', () => {
     await like(a, b);
 
     expect((await cycles.findCycles(a, b)).map((cycle) => cycle.length)).toEqual([2]);
+  });
+});
+
+const block = (blocker: string, blocked: string) =>
+  sql`INSERT INTO user_blocks (blocker_id, blocked_id) VALUES (${blocker}, ${blocked})`;
+
+describe('bloqueos entre usuarios: ningún ciclo con dos participantes bloqueados', () => {
+  const PAIRS = [
+    ['Ana bloquea a Beto', ANA, BETO],
+    ['Beto bloquea a Ana', BETO, ANA],
+  ] as const;
+
+  it.each(PAIRS)(
+    'Scenario: Sin matches nuevos - %s y el ciclo directo desaparece',
+    async (_label, blocker, blocked) => {
+      const { a, b } = await chain();
+      await like(b, a);
+      await like(a, b);
+      await block(blocker, blocked);
+
+      expect(await cycles.findCycles(a, b)).toEqual([]);
+    },
+  );
+
+  it('un bloqueo ajeno al ciclo no lo afecta', async () => {
+    const { a, b } = await chain();
+    await like(b, a);
+    await like(a, b);
+    await block(DANI, ANA);
+
+    const found = await cycles.findCycles(a, b);
+
+    expect(found.map((cycle) => cycle.map((member) => member.homeId))).toEqual([[a, b]]);
+  });
+
+  it.each([
+    ['Ana-Beto', ANA, BETO],
+    ['Beto-Ana', BETO, ANA],
+    ['Beto-Carla', BETO, CARLA],
+    ['Carla-Beto', CARLA, BETO],
+    ['Carla-Ana', CARLA, ANA],
+    ['Ana-Carla', ANA, CARLA],
+  ])(
+    'la cadena se descarta si hay un bloqueo %s entre cualquiera de sus tres participantes',
+    async (_label, blocker, blocked) => {
+      const { a, b, c } = await chain();
+      await like(b, c);
+      await like(c, a);
+      await like(a, b);
+      await block(blocker, blocked);
+
+      expect(await cycles.findCycles(a, b)).toEqual([]);
+    },
+  );
+
+  it('con un bloqueo en la cadena sigue disponible el ciclo directo si no afecta a sus dos dueños', async () => {
+    const { a, b, c } = await chain();
+    await like(b, a);
+    await like(b, c);
+    await like(c, a);
+    await like(a, b);
+    await block(BETO, CARLA);
+
+    const found = await cycles.findCycles(a, b);
+
+    expect(found.map((cycle) => cycle.map((member) => member.homeId))).toEqual([[a, b]]);
+  });
+
+  it('Scenario: Sin matches nuevos - el me gusta que cerraría el ciclo se guarda pero no crea match', async () => {
+    const { a, b } = await chain();
+    await like(b, a);
+    await block(ANA, BETO);
+
+    const result = await operations().likeHome(ANA, { fromHomeId: a, targetHomeId: b });
+
+    expect(result).toEqual({ liked: true, match: null });
+    expect(await sql`SELECT 1 FROM matches`).toHaveLength(0);
+    expect(await sql`SELECT 1 FROM likes`).toHaveLength(2);
+  });
+
+  it('Scenario: Bloquear no cierra matches existentes - un match ya creado sigue abierto', async () => {
+    const { a, b } = await chain();
+    await like(b, a);
+    const created = await operations().likeHome(ANA, { fromHomeId: a, targetHomeId: b });
+    await block(BETO, ANA);
+
+    const [row] = await sql<{ status: string }[]>`SELECT status FROM matches`;
+
+    expect(created.match).not.toBeNull();
+    expect(row?.status).toBe('open');
   });
 });

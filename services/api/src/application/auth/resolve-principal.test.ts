@@ -101,3 +101,14 @@ describe('resolvePrincipal', () => {
     await expect(run('good')).rejects.toBe(boom);
   });
 });
+
+describe('resolvePrincipal con una cuenta eliminada', () => {
+  it('rechaza el token de una cuenta eliminada como no válido, sin consultar sus viviendas', async () => {
+    const { run, consulted } = setup({
+      users: [makeUser({ id: 'u1', firebaseUid: 'uid-1', deletedAt: new Date() })],
+    });
+
+    await expect(run('good')).rejects.toBeInstanceOf(InvalidTokenError);
+    expect(consulted).toEqual([]);
+  });
+});

@@ -6,6 +6,7 @@ import {
   InvalidTokenError,
   type VerifiedIdentity,
 } from '../../application/auth/identity-verifier.js';
+import { FirebaseIdentityRemover } from './firebase-identity-remover.js';
 
 /** Códigos con los que `firebase-admin` dice que el token en sí no vale (caducado, malformado, revocado…). */
 const INVALID_TOKEN_CODES = new Set([
@@ -13,6 +14,8 @@ const INVALID_TOKEN_CODES = new Set([
   'auth/argument-error',
   'auth/invalid-id-token',
   'auth/id-token-revoked',
+  // Token de una cuenta ya dada de baja (lo comprueba el emulador; en producción llega como revocado)
+  'auth/user-not-found',
 ]);
 
 function isInvalidToken(error: unknown): boolean {
@@ -48,7 +51,7 @@ export interface FirebaseIdentityOptions {
 
 let instances = 0;
 
-/** Crea el verificador con su propia aplicación de Firebase; `close` la libera. */
+/** Crea el verificador (y el que da de baja cuentas) con su propia aplicación de Firebase; `close` la libera. */
 export function createFirebaseIdentityVerifier(options: FirebaseIdentityOptions) {
   // El SDK solo lee el emulador de esta variable de entorno, y lo hace al crear `Auth`
   if (options.authEmulatorHost) {
@@ -59,8 +62,10 @@ export function createFirebaseIdentityVerifier(options: FirebaseIdentityOptions)
     { projectId: options.projectId },
     `changehouse-identity-${String(instances)}`,
   );
+  const auth = getAuth(app);
   return {
-    verifier: new FirebaseIdentityVerifier(getAuth(app)),
+    verifier: new FirebaseIdentityVerifier(auth),
+    remover: new FirebaseIdentityRemover(auth),
     close: () => deleteApp(app),
   };
 }

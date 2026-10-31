@@ -46,6 +46,8 @@ describe('FirebaseIdentityVerifier', () => {
     'auth/argument-error',
     'auth/invalid-id-token',
     'auth/id-token-revoked',
+    // El token de una cuenta ya dada de baja (el emulador lo comprueba; Firebase real, al revocar)
+    'auth/user-not-found',
   ])('el error %s de Firebase es un token inválido, sin arrastrar su detalle', async (code) => {
     const failure = await verifierThatFails(firebaseError(code))
       .verify('token')

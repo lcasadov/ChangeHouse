@@ -9,6 +9,21 @@ import { adminRoutes } from './admin-routes';
 import { ModerationCard } from './ModerationCard';
 import { homesOf, useModerationQueue } from './use-moderation';
 
+/** Entrada a «Denuncias», visible también cuando la cola de viviendas está vacía o no carga. */
+function ReportsEntry() {
+  const { t } = useTranslation();
+  const router = useRouter();
+  return (
+    <Button
+      variant="secondary"
+      label={t('admin.reports.open')}
+      onPress={() => {
+        router.push(adminRoutes.reports);
+      }}
+    />
+  );
+}
+
 /**
  * Pestaña «Administración»: la cola de viviendas en revisión, la más antigua primero. Se carga por
  * páginas («Cargar más») y se refresca tirando hacia abajo. Sin nada pendiente, lo dice. En todos los
@@ -32,6 +47,7 @@ export function AdminQueueScreen() {
     return (
       <Screen>
         <View style={{ gap: theme.space[4], paddingVertical: theme.space[5] }}>
+          <ReportsEntry />
           <Notice
             tone="danger"
             action={{
@@ -53,6 +69,9 @@ export function AdminQueueScreen() {
   if (homes.length === 0) {
     return (
       <Screen>
+        <View style={{ paddingTop: theme.space[5] }}>
+          <ReportsEntry />
+        </View>
         <EmptyState
           icon="checkmark-done-outline"
           title={t('admin.queue.empty.title')}
@@ -85,6 +104,7 @@ export function AdminQueueScreen() {
             </Text>
             <Text tone="textMuted">{t('admin.queue.intro')}</Text>
             {usersEntry}
+            <ReportsEntry />
           </View>
         }
         renderItem={({ item }) => (

@@ -167,9 +167,27 @@ describe('DrizzleHomeRepository', () => {
     const home = draft(1);
     await repository.insert(home);
 
-    await repository.markRelevantChange(home.id, NOW);
+    await repository.markRelevantChange(home.id, { relevantChangedAt: NOW });
 
     expect(await repository.findById(home.id)).toEqual({ ...home, relevantChangedAt: NOW });
+  });
+
+  it('markRelevantChange con vuelta a revisión cambia también el estado y la fecha de envío', async () => {
+    const home = { ...draft(1), status: 'published' as const, publishedAt: NOW };
+    await repository.insert(home);
+
+    await repository.markRelevantChange(home.id, {
+      relevantChangedAt: NOW,
+      status: 'in_review',
+      submittedAt: NOW,
+    });
+
+    expect(await repository.findById(home.id)).toEqual({
+      ...home,
+      status: 'in_review',
+      submittedAt: NOW,
+      relevantChangedAt: NOW,
+    });
   });
 
   it('save de una vivienda inexistente es un error, no un alta silenciosa', async () => {

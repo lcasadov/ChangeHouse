@@ -2,6 +2,12 @@ import type { MeInput } from '@changehouse/shared';
 
 import type { components } from '../../api/schema';
 
+/** El dispositivo que recibe los avisos (cuerpo de `registerDevice`). */
+export interface DeviceRegistration {
+  fcmToken: string;
+  platform: 'android' | 'ios' | 'web';
+}
+
 /** Perfil del usuario (`Me` del contrato). */
 export type Me = components['schemas']['Me'];
 
@@ -28,4 +34,10 @@ export interface AccountApi {
   /** El perfil, o `null` si la persona se ha autenticado pero aún no se ha dado de alta (404). */
   getMe: () => Promise<Me | null>;
   upsertMe: (input: MeInput) => Promise<Me>;
+  /** Registra o refresca el token FCM de este dispositivo (`registerDevice`). */
+  registerDevice: (input: DeviceRegistration) => Promise<void>;
+  /** Elimina la cuenta (`deleteMe`, 204): anonimización y baja en el proveedor de identidad. */
+  deleteMe: () => Promise<void>;
+  /** Los datos personales del usuario en JSON (`exportMyData`). */
+  exportMyData: () => Promise<Record<string, unknown>>;
 }
