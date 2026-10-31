@@ -86,7 +86,7 @@ export interface ApiAdapters {
   homeOwnership?: HomeOwnership;
   /** Por defecto, Google Places si hay clave de servidor y los lugares de prueba si no. */
   placeResolver?: PlaceResolver;
-  /** Por defecto, Cloud Storage (o fake-gcs-server si hay `STORAGE_EMULATOR_HOST`). */
+  /** Por defecto, Cloud Storage (o fake-gcs-server si hay `FAKE_GCS_HOST`). */
   photoStorage?: PhotoStorage;
   /** Por defecto, `sharp`. */
   imageProcessor?: ImageProcessor;

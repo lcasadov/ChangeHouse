@@ -20,7 +20,7 @@ const API_ENV = {
   FIREBASE_PROJECT_ID: PROJECT_ID,
   FIREBASE_AUTH_EMULATOR_HOST: 'localhost:9099',
   FIRESTORE_EMULATOR_HOST: 'localhost:8085',
-  STORAGE_EMULATOR_HOST: 'localhost:4443',
+  FAKE_GCS_HOST: 'localhost:4443',
   STORAGE_PRIVATE_BUCKET: 'changehouse-photos-private',
   STORAGE_PUBLIC_BUCKET: 'changehouse-photos-public',
   APP_ORIGIN: `http://localhost:${String(APP_PORT)}`,
