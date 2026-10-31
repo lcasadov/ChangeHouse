@@ -67,8 +67,13 @@ function Chat({ detail, view, onRefresh }: Readonly<ChatProps>) {
   const { user } = useAuth();
   const me = useMe();
   const channel = useChatMessages(detail.chatId, me.data?.id);
+  const remoteIds = useMemo(
+    () => channel.messages.map((message) => message.id),
+    [channel.messages],
+  );
   const outbox = useChatOutbox({
     matchId: detail.id,
+    remoteIds,
     // El match cambió por otro lado: se vuelve a pedir para enseñarlo como está ahora
     onClosed: () => {
       queryClient

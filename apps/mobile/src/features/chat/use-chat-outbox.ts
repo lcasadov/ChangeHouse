@@ -1,5 +1,5 @@
 import type { PhotoContentType } from '@changehouse/shared';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { supportedContentType } from '../homes/home-photos';
 import { useServices } from '../session/services';
@@ -23,6 +23,8 @@ export interface ChatOutbox {
 
 interface OutboxOptions {
   matchId: string;
+  /** Ids de los mensajes que el canal en tiempo real tiene ahora: lo que ya estaba al enviar no es el eco del envío. */
+  remoteIds: readonly string[];
   /** La API respondió que el match ya no admite mensajes. */
   onClosed: () => void;
 }
@@ -33,10 +35,18 @@ interface OutboxOptions {
  * Una imagen se sube a su URL firmada y solo entonces se envía; si falla el envío, reintentar no
  * la vuelve a subir.
  */
-export function useChatOutbox({ matchId, onClosed }: Readonly<OutboxOptions>): ChatOutbox {
+export function useChatOutbox({
+  matchId,
+  remoteIds,
+  onClosed,
+}: Readonly<OutboxOptions>): ChatOutbox {
   const { chatApi, photoPicker, photoUploader } = useServices();
   const itemsRef = useRef<OutgoingMessage[]>([]);
   const nextKey = useRef(0);
+  const remoteIdsRef = useRef(remoteIds);
+  useEffect(() => {
+    remoteIdsRef.current = remoteIds;
+  }, [remoteIds]);
   const [messages, setMessages] = useState<readonly OutgoingMessage[]>([]);
   const [picking, setPicking] = useState(false);
   const [attachFailure, setAttachFailure] = useState<AttachFailure | null>(null);
@@ -85,10 +95,16 @@ export function useChatOutbox({ matchId, onClosed }: Readonly<OutboxOptions>): C
     }
   };
 
-  const enqueue = (item: Omit<OutgoingMessage, 'key' | 'stage' | 'createdAt'>) => {
+  const enqueue = (
+    item: Omit<OutgoingMessage, 'key' | 'stage' | 'seenRemoteIds' | 'createdAt'>,
+  ) => {
     nextKey.current += 1;
     const key = `outgoing-${String(nextKey.current)}`;
-    commit([...itemsRef.current, { ...item, key, stage: 'sending', createdAt: new Date() }]);
+    const seenRemoteIds = new Set(remoteIdsRef.current);
+    commit([
+      ...itemsRef.current,
+      { ...item, key, stage: 'sending', seenRemoteIds, createdAt: new Date() },
+    ]);
     run(key).catch(() => undefined);
   };
 

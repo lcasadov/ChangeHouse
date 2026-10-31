@@ -317,6 +317,17 @@ describe('Enviar mensajes', () => {
     expect(screen.getAllByText('¿Te viene bien el sábado?')).toHaveLength(1);
   });
 
+  it('si el canal entrega el mensaje antes de que responda la API, se ve una sola vez', async () => {
+    const { chatApi, channel } = await openChat();
+    chatApi.hold();
+
+    await send('Nos vemos el sábado');
+    await receive(channel, textFrom('Ana', 'Nos vemos el sábado', 30, ME.id));
+
+    expect(screen.getAllByText('Nos vemos el sábado')).toHaveLength(1);
+    expect(screen.queryByText(c.status.sending)).toBeNull();
+  });
+
   it('no envía un mensaje en blanco: el botón está deshabilitado', async () => {
     const { chatApi } = await openChat();
     await screen.findByLabelText(c.composer.label);
