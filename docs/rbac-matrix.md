@@ -263,5 +263,9 @@ y en `services/api/test/authorization/rbac-matrix.json`:
 - **Una operación implementada sin regla se deniega** (403 con token; 401 sin él).
 - La autorización corre en `onRequest`, antes de leer el cuerpo: sin token siempre es 401, aunque el
   cuerpo sea inválido.
-- ⚠️ PENDIENTE: usuario suspendido o borrado (403 `ACCOUNT_SUSPENDED`) — sin implementar; llega con la
+- ⚠️ PENDIENTE: usuario suspendido (403 `ACCOUNT_SUSPENDED`) — sin implementar; llega con la
   administración de usuarios.
+- **Cuenta eliminada** (`add-account-deletion-and-export`): su token se trata como no válido (401) desde
+  que se confirma la eliminación, aunque Firebase Auth tarde en darla de baja. `deleteMe` y
+  `exportMyData` niegan con 403 a quien no tiene el rol (incluido `unregistered`); `deleteMe` no admite
+  `agency` ni `admin` y `exportMyData` no admite `admin`. `exportMyData` limita a 5 por hora y usuario (429).

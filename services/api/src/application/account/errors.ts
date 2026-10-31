@@ -29,6 +29,17 @@ export class UserNotFoundError extends DomainError {
   }
 }
 
+/** La cuenta no existe o ya está eliminada: para quien pregunta es lo mismo. */
+export class AccountNotFoundError extends DomainError {
+  readonly code = 'ACCOUNT_NOT_FOUND';
+  override readonly kind: DomainErrorKind = 'not_found';
+
+  constructor() {
+    super('Cuenta no encontrada');
+    this.name = 'AccountNotFoundError';
+  }
+}
+
 export class UserHasActiveHomesError extends DomainError {
   readonly code = 'USER_HAS_ACTIVE_HOMES';
   override readonly kind: DomainErrorKind = 'conflict';

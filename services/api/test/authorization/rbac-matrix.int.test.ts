@@ -74,6 +74,8 @@ const REQUESTS: Record<string, RequestTemplate> = {
     }),
   },
   listMyConsents: { method: 'GET', url: '/v1/me/consents' },
+  deleteMe: { method: 'DELETE', url: '/v1/me' },
+  exportMyData: { method: 'GET', url: '/v1/me/export' },
   listMyHomes: { method: 'GET', url: '/v1/me/homes' },
   createHome: {
     method: 'POST',

@@ -48,6 +48,9 @@ const REQUESTS: Record<string, RequestTemplate> = {
     }),
   },
   listMyConsents: { method: 'GET', url: '/v1/me/consents' },
+  // Elimina la cuenta de quien la invoca: las guardas la saltan para no dejar al actor sin cuenta
+  deleteMe: { method: 'DELETE', url: '/v1/me' },
+  exportMyData: { method: 'GET', url: '/v1/me/export' },
   acceptConsent: {
     method: 'POST',
     url: '/v1/me/consents',
@@ -55,6 +58,7 @@ const REQUESTS: Record<string, RequestTemplate> = {
   },
 };
 
+const DESTRUCTIVE_OPERATION = 'deleteMe';
 const MISSING_ID = '0199c1a2-0000-7000-8000-000000000000';
 const HOMES_REQUESTS: Record<string, RequestTemplate> = {
   listMyHomes: { method: 'GET', url: '/v1/me/homes' },
@@ -208,7 +212,7 @@ describe.skipIf(!emulatorAvailable())('privacidad del teléfono (RF-03, RC-11)',
 
     for (const operationId of api.app.operations) {
       const template = REQUESTS[operationId];
-      if (!template) continue;
+      if (!template || operationId === DESTRUCTIVE_OPERATION) continue;
       const response = await api.app.inject({
         method: template.method,
         url: template.url,
@@ -288,7 +292,9 @@ describe.skipIf(!emulatorAvailable())('privacidad del teléfono (RF-03, RC-11)',
       const bodies: string[] = [];
       for (const operationId of api.app.operations) {
         const template = REQUESTS[operationId];
-        if (!template || operationId === 'getMatch') continue;
+        if (!template || operationId === 'getMatch' || operationId === DESTRUCTIVE_OPERATION) {
+          continue;
+        }
         const response = await api.app.inject({
           method: template.method,
           url: template.url,

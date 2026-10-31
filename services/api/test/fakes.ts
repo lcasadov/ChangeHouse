@@ -1,13 +1,30 @@
 import { FIXTURE_PLACES, type HomeStatus } from '@changehouse/shared';
 
+import type {
+  AccountDeletionScope,
+  AccountDeletionStore,
+  AccountDeletionUnitOfWork,
+} from '../src/application/account/account-deletion.js';
+import type {
+  AccountExportReader,
+  ExportedDismissal,
+  ExportedLike,
+  ExportedMatch,
+} from '../src/application/account/account-export.js';
 import type { AdminGrantRepository } from '../src/application/account/admin-grant.js';
 import type { ConsentRepository } from '../src/application/account/consent-repository.js';
+import type {
+  ErasablePhoto,
+  ErasureFollowUp,
+} from '../src/application/account/finish-account-deletion.js';
 import type { HomeOwnership } from '../src/application/account/home-ownership.js';
+import type { IdentityRemover } from '../src/application/account/identity-remover.js';
 import type { ProfileChanges, UserRepository } from '../src/application/account/user-repository.js';
 import type {
   ChatChannel,
   ChatMessageRecord,
   NewChat,
+  ParticipantAnonymization,
 } from '../src/application/chat/chat-channel.js';
 import type { ChatImageStorage } from '../src/application/chat/chat-image-storage.js';
 import type { ChatRoster, ChatSetup } from '../src/application/chat/chat-setup.js';
@@ -97,6 +114,7 @@ export function makeUser(overrides: Partial<User> = {}): User {
     isOver65: false,
     assignedRole: null,
     createdAt: DEFAULT_CREATED_AT,
+    deletedAt: null,
     ...overrides,
   };
 }
@@ -887,6 +905,26 @@ export class InMemoryChatChannel implements ChatChannel {
     stored.messages.push(message);
     return Promise.resolve();
   }
+
+  readonly anonymized: { chatId: string; anonymization: ParticipantAnonymization }[] = [];
+
+  anonymizeParticipant(chatId: string, anonymization: ParticipantAnonymization): Promise<void> {
+    const outage = this.outage();
+    if (outage) return Promise.reject(outage);
+    this.anonymized.push({ chatId, anonymization });
+    const stored = this.chats.get(chatId);
+    if (stored) {
+      stored.messages = stored.messages.map((message) => {
+        if (message.kind === 'system') {
+          return { ...message, participantNames: [...anonymization.participantNames] };
+        }
+        return message.senderId === anonymization.senderId
+          ? { ...message, senderName: anonymization.displayName }
+          : message;
+      });
+    }
+    return Promise.resolve();
+  }
 }
 
 /** Participantes y enlace del chat en memoria. */
@@ -1011,5 +1049,132 @@ export class InMemoryUserContactDirectory implements UserContactDirectory {
       return Promise.reject(new Error('Firebase Auth no disponible'));
     }
     return Promise.resolve(this.contacts.get(firebaseUid) ?? null);
+  }
+}
+
+/**
+ * Eliminación de cuenta en memoria: el almacén y la unidad de trabajo sobre los mismos repositorios
+ * en memoria que usan el resto de pruebas. Si el trabajo falla, vuelve al estado anterior (`ROLLBACK`).
+ */
+export class InMemoryAccountDeletion implements AccountDeletionStore, AccountDeletionUnitOfWork {
+  /** Usuarios cuyos datos derivados se han borrado. */
+  erased: string[] = [];
+
+  constructor(
+    readonly users: InMemoryUserRepository,
+    readonly homes: InMemoryHomeRepository,
+    readonly matches: InMemoryMatchUnitOfWork,
+    readonly reader: InMemoryMatchReader,
+    readonly audit: InMemoryAuditLog,
+    readonly outbox: InMemoryOutbox,
+  ) {}
+
+  async run<T>(work: (scope: AccountDeletionScope) => Promise<T>): Promise<T> {
+    const users = new Map(this.users.users);
+    const homes = new Map(this.homes.homes);
+    const records = [...this.reader.records];
+    const entries = [...this.audit.entries];
+    const events = this.outbox.events.map((event) => ({ ...event }));
+    const erased = [...this.erased];
+    try {
+      return await work({
+        accounts: this,
+        homes: this.homes,
+        matches: this.matches,
+        audit: this.audit,
+        outbox: this.outbox,
+      });
+    } catch (error) {
+      this.users.users.clear();
+      for (const [id, user] of users) this.users.users.set(id, user);
+      this.homes.homes.clear();
+      for (const [id, home] of homes) this.homes.homes.set(id, home);
+      this.reader.records.splice(0, this.reader.records.length, ...records);
+      this.audit.entries = entries;
+      this.outbox.events.splice(0, this.outbox.events.length, ...events);
+      this.erased = erased;
+      throw error;
+    }
+  }
+
+  lockUser(userId: string): Promise<User | null> {
+    return this.users.findById(userId);
+  }
+
+  saveAnonymized(user: User): Promise<void> {
+    this.users.users.set(user.id, user);
+    return Promise.resolve();
+  }
+
+  liveMatchIds(userId: string): Promise<string[]> {
+    return Promise.resolve(
+      this.reader.records
+        .filter((record) => record.status === 'open' || record.status === 'confirmed')
+        .filter((record) => record.participants.some((p) => p.userId === userId))
+        .map((record) => record.id)
+        .sort(),
+    );
+  }
+
+  eraseDerivedData(userId: string): Promise<void> {
+    this.erased.push(userId);
+    return Promise.resolve();
+  }
+}
+
+/** Lo que queda por limpiar tras confirmar la eliminación: fotos y matches del usuario, en memoria. */
+export class InMemoryErasureFollowUp implements ErasureFollowUp {
+  photos: ErasablePhoto[] = [];
+  matchIds: string[] = [];
+  deletedPhotoRecordsOf: string[] = [];
+
+  photosOf(): Promise<ErasablePhoto[]> {
+    return Promise.resolve(this.photos);
+  }
+
+  deletePhotoRecords(userId: string): Promise<void> {
+    this.deletedPhotoRecordsOf.push(userId);
+    this.photos = [];
+    return Promise.resolve();
+  }
+
+  matchIdsOf(): Promise<string[]> {
+    return Promise.resolve(this.matchIds);
+  }
+}
+
+/** Proveedor de identidad en memoria; `failures` hace fallar las siguientes bajas (Firebase caído). */
+export class InMemoryIdentityRemover implements IdentityRemover {
+  readonly removed: string[] = [];
+  failures = 0;
+
+  remove(uid: string): Promise<void> {
+    if (this.failures > 0) {
+      this.failures -= 1;
+      return Promise.reject(new Error('Firebase Auth no disponible'));
+    }
+    this.removed.push(uid);
+    return Promise.resolve();
+  }
+}
+
+/** Lecturas de la exportación en memoria. */
+export class InMemoryAccountExportReader implements AccountExportReader {
+  likes: ExportedLike[] = [];
+  dismissals: ExportedDismissal[] = [];
+  matches: ExportedMatch[] = [];
+  readonly requestedFor: string[] = [];
+
+  likesOf(userId: string): Promise<ExportedLike[]> {
+    this.requestedFor.push(userId);
+    return Promise.resolve(this.likes);
+  }
+
+  dismissalsOf(): Promise<ExportedDismissal[]> {
+    return Promise.resolve(this.dismissals);
+  }
+
+  matchesOf(): Promise<ExportedMatch[]> {
+    return Promise.resolve(this.matches);
   }
 }

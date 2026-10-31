@@ -208,5 +208,17 @@
   { "operationId": "getChatImageUrl", "actor": "seeker", "expected": 404 },
   { "operationId": "getChatImageUrl", "actor": "owner", "expected": 404 },
   { "operationId": "getChatImageUrl", "actor": "agency", "expected": 403 },
-  { "operationId": "getChatImageUrl", "actor": "admin", "expected": 403 }
+  { "operationId": "getChatImageUrl", "actor": "admin", "expected": 403 },
+  { "operationId": "deleteMe", "actor": "anon", "expected": 401 },
+  { "operationId": "deleteMe", "actor": "unregistered", "expected": 403 },
+  { "operationId": "deleteMe", "actor": "seeker", "expected": 204 },
+  { "operationId": "deleteMe", "actor": "owner", "expected": 204 },
+  { "operationId": "deleteMe", "actor": "agency", "expected": 403 },
+  { "operationId": "deleteMe", "actor": "admin", "expected": 403 },
+  { "operationId": "exportMyData", "actor": "anon", "expected": 401 },
+  { "operationId": "exportMyData", "actor": "unregistered", "expected": 403 },
+  { "operationId": "exportMyData", "actor": "seeker", "expected": 200 },
+  { "operationId": "exportMyData", "actor": "owner", "expected": 200 },
+  { "operationId": "exportMyData", "actor": "agency", "expected": 200 },
+  { "operationId": "exportMyData", "actor": "admin", "expected": 403 }
 ]

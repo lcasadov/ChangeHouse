@@ -3,6 +3,7 @@ import Fastify, { type FastifyInstance, type FastifyServerOptions, LogController
 
 import { registerSecurity, type SecurityOptions } from './authorization/security.js';
 import { generateCorrelationId, registerProblemHandling } from './problem.js';
+import { type AccountDataRouteOptions, accountDataRoutes } from './routes/account-data.js';
 import { type AccountRouteOptions, accountRoutes } from './routes/accounts.js';
 import { type AdminHomeRouteOptions, adminHomeRoutes } from './routes/admin-homes.js';
 import { type DecisionRouteOptions, decisionRoutes } from './routes/decisions.js';
@@ -29,6 +30,7 @@ export interface AppOptions {
   security?: SecurityOptions;
   waitlist?: WaitlistRouteOptions;
   accounts?: AccountRouteOptions;
+  accountData?: AccountDataRouteOptions;
   devices?: DeviceRouteOptions;
   homes?: HomeRouteOptions;
   photos?: PhotoRouteOptions;
@@ -70,7 +72,7 @@ function registerCors(
     callback(null, {
       ...profile,
       origin: fromApp || (origin !== undefined && origin === landingOrigin),
-      exposedHeaders: ['Retry-After', 'X-Correlation-Id'],
+      exposedHeaders: ['Retry-After', 'X-Correlation-Id', 'Content-Disposition'],
     });
   };
   void app.register(cors, () => delegate);
@@ -103,6 +105,7 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
     async (versioned) => {
       if (options.waitlist) await versioned.register(waitlistRoutes(options.waitlist));
       if (options.accounts) await versioned.register(accountRoutes(options.accounts));
+      if (options.accountData) await versioned.register(accountDataRoutes(options.accountData));
       if (options.devices) await versioned.register(deviceRoutes(options.devices));
       if (options.homes) await versioned.register(homeRoutes(options.homes));
       if (options.photos) await versioned.register(photoRoutes(options.photos));

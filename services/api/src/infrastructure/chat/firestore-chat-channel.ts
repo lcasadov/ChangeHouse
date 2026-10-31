@@ -1,11 +1,15 @@
 import { deleteApp, initializeApp } from 'firebase-admin/app';
-import { type Firestore, getFirestore } from 'firebase-admin/firestore';
+import { type DocumentReference, type Firestore, getFirestore } from 'firebase-admin/firestore';
 
 import type {
   ChatChannel,
   ChatMessageRecord,
   NewChat,
+  ParticipantAnonymization,
 } from '../../application/chat/chat-channel.js';
+
+/** Escrituras que admite un lote de Firestore, con margen sobre el máximo de 500. */
+const BATCH_LIMIT = 400;
 
 /** Código gRPC `ALREADY_EXISTS`: el documento que se intenta crear ya existe. */
 const ALREADY_EXISTS = 6;
@@ -75,6 +79,32 @@ export class FirestoreChatChannel implements ChatChannel {
       if (!chat.exists) throw new Error(`El chat ${chatId} no existe en Firestore`);
       transaction.create(chatRef.collection('messages').doc(message.id), documentOf(message));
     });
+  }
+
+  async anonymizeParticipant(
+    chatId: string,
+    anonymization: ParticipantAnonymization,
+  ): Promise<void> {
+    const messages = this.firestore.collection('chats').doc(chatId).collection('messages');
+    const [sent, system] = await Promise.all([
+      messages.where('senderId', '==', anonymization.senderId).get(),
+      messages.where('kind', '==', 'system').get(),
+    ]);
+    const updates: { ref: DocumentReference; data: Record<string, unknown> }[] = [
+      ...sent.docs.map((document) => ({
+        ref: document.ref,
+        data: { senderName: anonymization.displayName },
+      })),
+      ...system.docs.map((document) => ({
+        ref: document.ref,
+        data: { participantNames: [...anonymization.participantNames] },
+      })),
+    ];
+    for (let from = 0; from < updates.length; from += BATCH_LIMIT) {
+      const batch = this.firestore.batch();
+      for (const { ref, data } of updates.slice(from, from + BATCH_LIMIT)) batch.update(ref, data);
+      await batch.commit();
+    }
   }
 }
 

@@ -38,9 +38,23 @@ export interface NewChat {
   readonly createdAt: Date;
 }
 
+/** Cómo se presenta en un chat una cuenta eliminada: el remitente renombrado y los nombres de la bienvenida. */
+export interface ParticipantAnonymization {
+  /** Id interno del usuario eliminado, tal como figura en `senderId` de sus mensajes. */
+  readonly senderId: string;
+  readonly displayName: string;
+  /** Nombres actuales de todos los participantes, en el orden del mensaje de bienvenida. */
+  readonly participantNames: readonly string[];
+}
+
 /** Puerto de salida: el almacén del chat en tiempo real (Firestore). Solo la API escribe en él. */
 export interface ChatChannel {
   /** Crea el chat con su mensaje de bienvenida; si ya existe no hace nada (idempotente). */
   createChat(chat: NewChat): Promise<void>;
   appendMessage(chatId: string, message: ChatMessageRecord): Promise<void>;
+  /**
+   * Conserva los mensajes pero sustituye el nombre de quien eliminó su cuenta. Es idempotente y un
+   * chat que no existe no es un error.
+   */
+  anonymizeParticipant(chatId: string, anonymization: ParticipantAnonymization): Promise<void>;
 }

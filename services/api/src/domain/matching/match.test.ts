@@ -6,6 +6,7 @@ import {
   ensureCanChat,
   ensureCanSharePhone,
   ensureParticipant,
+  isLiveMatch,
   type MatchState,
   type ParticipantStatus,
   withdrawFromMatch,
@@ -171,5 +172,17 @@ describe('ensureParticipant', () => {
     expect(() => {
       ensureParticipant(match('open', 'pending', 'pending'), 'user-c');
     }).toThrow(MatchNotFoundError);
+  });
+});
+
+describe('isLiveMatch', () => {
+  it.each([
+    ['open', true],
+    ['confirmed', true],
+    ['in_operation', false],
+    ['closed', false],
+    ['expired', false],
+  ] as const)('un match %s: vivo = %s', (status, live) => {
+    expect(isLiveMatch({ status, participants: [] })).toBe(live);
   });
 });

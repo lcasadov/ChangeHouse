@@ -11,6 +11,7 @@ import {
 
 import {
   HomeIncompleteError,
+  HomeInOperationError,
   HomeNotEditableError,
   HomeNotInReviewError,
   HomeNotPausableError,
@@ -307,6 +308,16 @@ export function editHome(home: Home, changes: HomeChanges, now: Date): Home {
 export function pauseHome(home: Home): Home {
   if (home.status !== 'published') throw new HomeNotPausableError();
   return { ...home, status: 'paused' };
+}
+
+/**
+ * Cierra una vivienda por la eliminación de la cuenta de su propietario, sea cual sea su estado.
+ * Una ya cerrada se queda igual; una en operación no se cierra.
+ */
+export function closeHome(home: Home): Home {
+  if (home.status === 'closed') return home;
+  if (home.status === 'in_operation') throw new HomeInOperationError();
+  return { ...home, status: 'closed' };
 }
 
 /** Reactiva una vivienda pausada sin pasar por moderación: los cambios relevantes ya la habrían sacado de `paused`. */

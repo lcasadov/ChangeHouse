@@ -66,6 +66,10 @@ class FlakyChannel implements ChatChannel {
   appendMessage(...args: Parameters<ChatChannel['appendMessage']>) {
     return this.real.appendMessage(...args);
   }
+
+  anonymizeParticipant(...args: Parameters<ChatChannel['anonymizeParticipant']>) {
+    return this.real.anonymizeParticipant(...args);
+  }
 }
 
 const sql = openSql();

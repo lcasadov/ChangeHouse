@@ -46,6 +46,17 @@ export class HomeNotEditableError extends DomainError {
   }
 }
 
+/** Una vivienda en operación no se cierra: hay una operación en curso sobre ella (409). */
+export class HomeInOperationError extends DomainError {
+  readonly code = 'HOME_IN_OPERATION';
+  override readonly kind: DomainErrorKind = 'conflict';
+
+  constructor() {
+    super('Una vivienda en operación no se puede cerrar mientras la operación siga en curso');
+    this.name = 'HomeInOperationError';
+  }
+}
+
 export class HomeNotSubmittableError extends DomainError {
   readonly code = 'HOME_NOT_SUBMITTABLE';
   override readonly kind: DomainErrorKind = 'conflict';

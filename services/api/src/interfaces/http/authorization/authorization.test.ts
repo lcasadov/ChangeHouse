@@ -86,6 +86,9 @@ describe('política de autorización', () => {
       listMyConsents: { kind: 'roles', roles: everyone, denyStatus: 404 },
       acceptConsent: { kind: 'roles', roles: everyone, denyStatus: 404 },
       registerDevice: { kind: 'roles', roles: everyone, denyStatus: 404 },
+      // Eliminar la cuenta y exportar los datos (RF-05): la propia; agency solo puede exportar
+      deleteMe: { kind: 'roles', roles: ['seeker', 'owner'] },
+      exportMyData: { kind: 'roles', roles: ['seeker', 'owner', 'agency'] },
       // RC-19: agency y admin no publican ni gestionan viviendas; getHome añade al admin (forma pública)
       listMyHomes: { kind: 'roles', roles: ['seeker', 'owner'] },
       createHome: { kind: 'roles', roles: ['seeker', 'owner'] },

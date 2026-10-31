@@ -1,7 +1,11 @@
 import { PRIVACY_VERSION, TERMS_VERSION } from '@changehouse/shared';
 
+import { accountDeletionOperations } from './application/account/account-deletion.js';
+import { accountExportOperations } from './application/account/account-export.js';
 import { accountOperations } from './application/account/account-operations.js';
+import { finishAccountDeletion } from './application/account/finish-account-deletion.js';
 import type { HomeOwnership } from './application/account/home-ownership.js';
+import type { IdentityRemover } from './application/account/identity-remover.js';
 import { resolvePrincipal } from './application/auth/resolve-principal.js';
 import type { ChatChannel } from './application/chat/chat-channel.js';
 import type { ChatImageStorage } from './application/chat/chat-image-storage.js';
@@ -23,7 +27,7 @@ import {
 } from './application/notifications/notification-operations.js';
 import type { Notifier } from './application/notifications/notifier.js';
 import type { UserContactDirectory } from './application/notifications/user-contact-directory.js';
-import { MATCH_CREATED } from './application/outbox/outbox.js';
+import { MATCH_CREATED, USER_DELETED } from './application/outbox/outbox.js';
 import { OutboxDispatcher } from './application/outbox/outbox-dispatcher.js';
 import { searchPreferencesOperations } from './application/search-preferences/search-preferences-operations.js';
 import { joinWaitlist } from './application/waitlist/join-waitlist.js';
@@ -34,10 +38,13 @@ import { AddressCipher } from './infrastructure/crypto/address-cipher.js';
 import { SharpImageProcessor } from './infrastructure/images/sharp-image-processor.js';
 import { createFirebaseNotifier } from './infrastructure/notifications/firebase-notifier.js';
 import { createDatabase } from './infrastructure/persistence/drizzle/database.js';
+import { DrizzleAccountDeletionUnitOfWork } from './infrastructure/persistence/drizzle/drizzle-account-deletion-unit-of-work.js';
+import { DrizzleAccountExportReader } from './infrastructure/persistence/drizzle/drizzle-account-export.js';
 import { DrizzleChatSetup } from './infrastructure/persistence/drizzle/drizzle-chat-setup.js';
 import { DrizzleDecisionUnitOfWork } from './infrastructure/persistence/drizzle/drizzle-decision-unit-of-work.js';
 import { DrizzleDeviceRepository } from './infrastructure/persistence/drizzle/drizzle-device-repository.js';
 import { DrizzleDiscoveryRepository } from './infrastructure/persistence/drizzle/drizzle-discovery-repository.js';
+import { DrizzleErasureFollowUp } from './infrastructure/persistence/drizzle/drizzle-erasure-follow-up.js';
 import { DrizzleHomeOwnership } from './infrastructure/persistence/drizzle/drizzle-home-ownership.js';
 import { DrizzleHomeRepository } from './infrastructure/persistence/drizzle/drizzle-home-repository.js';
 import { DrizzleMatchHomes } from './infrastructure/persistence/drizzle/drizzle-match-homes.js';
@@ -81,6 +88,8 @@ export interface ApiAdapters {
   notifier?: Notifier;
   /** Por defecto, Firebase Auth (o su emulador): email y verificación de cada participante. */
   userContacts?: UserContactDirectory;
+  /** Por defecto, Firebase Auth (o su emulador): baja de las cuentas eliminadas. */
+  identityRemover?: IdentityRemover;
 }
 
 const MS_PER_SECOND = 1000;
@@ -99,7 +108,11 @@ function placeResolverFor(config: ApiConfig): PlaceResolver {
 /** Raíz de composición: une adaptadores, casos de uso y transporte. */
 export function createApi(config: ApiConfig, adapters: ApiAdapters = {}) {
   const database = createDatabase(config.databaseUrl);
-  const { verifier, close: closeIdentity } = createFirebaseIdentityVerifier(config.firebase);
+  const {
+    verifier,
+    remover,
+    close: closeIdentity,
+  } = createFirebaseIdentityVerifier(config.firebase);
 
   const users = new DrizzleUserRepository(database.db);
   const ownership = adapters.homeOwnership ?? new DrizzleHomeOwnership(database.db);
@@ -178,6 +191,23 @@ export function createApi(config: ApiConfig, adapters: ApiAdapters = {}) {
     clock: adapters.clock ?? systemClock,
     ids: uuidV7Generator,
   });
+  const accountData = {
+    ...accountDeletionOperations({
+      units: new DrizzleAccountDeletionUnitOfWork(database.db, cipher),
+      clock: adapters.clock ?? systemClock,
+      ids: uuidV7Generator,
+    }),
+    ...accountExportOperations({
+      users,
+      consents: users,
+      homes: homeRepository,
+      photos: photoRepository,
+      storage: photoStorage,
+      preferences: preferencesRepository,
+      reader: new DrizzleAccountExportReader(database.db),
+      clock: adapters.clock ?? systemClock,
+    }),
+  };
   const chatChannel = chatChannelFor(config, adapters.chatChannel);
   const chat = chatOperations({
     matches: matchRepository,
@@ -209,6 +239,19 @@ export function createApi(config: ApiConfig, adapters: ApiAdapters = {}) {
     handlers: {
       ...notificationOutbox,
       // Primero el chat (idempotente) y luego el aviso: si el aviso falla, el reintento no duplica el chat
+      // Tras confirmar la baja lógica: fotos, chats y baja en Firebase Auth, todo reintentable
+      [USER_DELETED]: (userId) =>
+        finishAccountDeletion(
+          {
+            users,
+            followUp: new DrizzleErasureFollowUp(database.db),
+            storage: photoStorage,
+            roster: new DrizzleChatSetup(database.db),
+            chat: chatChannel.channel,
+            identity: adapters.identityRemover ?? remover,
+          },
+          userId,
+        ),
       [MATCH_CREATED]: async (matchId) => {
         await chat.createChatForMatch(matchId);
         await notificationOutbox[MATCH_CREATED](matchId);
@@ -241,6 +284,7 @@ export function createApi(config: ApiConfig, adapters: ApiAdapters = {}) {
       rateLimit: config.waitlistRateLimit,
     },
     accounts,
+    accountData: { ...accountData, deleteMe: kickAfter(accountData.deleteMe) },
     devices: { registerDevice: notifications.registerDevice },
     homes,
     photos,

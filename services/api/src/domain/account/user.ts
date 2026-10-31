@@ -13,4 +13,6 @@ export interface User {
   readonly isOver65: boolean;
   readonly assignedRole: AssignedRole | null;
   readonly createdAt: Date;
+  /** Borrado lógico: desde cuándo la cuenta está eliminada y anonimizada; `null` si sigue activa. */
+  readonly deletedAt: Date | null;
 }
