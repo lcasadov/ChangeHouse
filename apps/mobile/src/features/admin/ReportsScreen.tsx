@@ -4,10 +4,11 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FlatList, RefreshControl, View } from 'react-native';
 
-import { Button, EmptyState, Notice, Screen, Text } from '../../ui';
+import { Button, EmptyState, Notice, Text } from '../../ui';
 import { LoadingView } from '../session/LoadingView';
 import { AdminApiError, type Report } from './admin-api';
 import { adminRoutes } from './admin-routes';
+import { AdminScreen } from './AdminScreen';
 import { ReportCard } from './ReportCard';
 import { ResolveReportSheet } from './ResolveReportSheet';
 import { reportsOf, useReportsQueue, useResolveReport } from './use-reports';
@@ -95,7 +96,7 @@ export function ReportsScreen() {
 
   if (!queue.data) {
     return (
-      <Screen>
+      <AdminScreen>
         <View style={{ gap: theme.space[4], paddingVertical: theme.space[5] }}>
           {header}
           <Notice
@@ -110,12 +111,12 @@ export function ReportsScreen() {
             {t('admin.reports.loadFailed')}
           </Notice>
         </View>
-      </Screen>
+      </AdminScreen>
     );
   }
 
   return (
-    <Screen>
+    <AdminScreen>
       <FlatList
         testID="reports-queue"
         data={reportsOf(queue.data)}
@@ -182,6 +183,6 @@ export function ReportsScreen() {
           setPending(null);
         }}
       />
-    </Screen>
+    </AdminScreen>
   );
 }

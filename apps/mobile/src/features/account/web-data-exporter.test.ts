@@ -54,6 +54,18 @@ describe('createWebDataExporter', () => {
     expect(revokeObjectURL).toHaveBeenCalledWith('blob:datos');
   });
 
+  it('descarga con el tipo indicado cuando el fichero no es JSON (CSV)', async () => {
+    const { createObjectURL } = setup();
+
+    await createWebDataExporter().deliver({
+      filename: 'lista.csv',
+      content: 'a,b',
+      mimeType: 'text/csv',
+    });
+
+    expect(createObjectURL.mock.calls[0]?.[0].type).toBe('text/csv');
+  });
+
   it('si el navegador bloquea la descarga, limpia y rechaza con el fallo', async () => {
     const { link, revokeObjectURL } = setup(true);
 

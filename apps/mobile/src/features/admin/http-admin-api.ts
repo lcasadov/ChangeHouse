@@ -5,12 +5,17 @@ import {
   type AdminApi,
   AdminApiError,
   type AdminUser,
+  type AuditPage,
+  type Metrics,
+  type MetricsPeriod,
   type ModerationDecision,
   type ModerationPage,
   type Report,
   type ReportResolution,
   type ReportsPage,
   type SuspensionDecision,
+  type UsersPage,
+  type WaitlistPage,
 } from './admin-api';
 
 type Problem = components['schemas']['Problem'];
@@ -113,6 +118,64 @@ export function createHttpAdminApi(client: ApiClient): AdminApi {
         }),
       );
       if (!data) throw failureOf(response.status);
+      return data;
+    },
+
+    async getMetrics(period: MetricsPeriod): Promise<Metrics> {
+      const { data, response } = await request(() =>
+        client.GET('/admin/metrics', { params: { query: period } }),
+      );
+      if (!data) throw failureOf(response.status);
+      return data;
+    },
+
+    async listUsers({ q, cursor }): Promise<UsersPage> {
+      const { data, response } = await request(() =>
+        client.GET('/admin/users', {
+          params: {
+            query: { limit: QUEUE_PAGE_SIZE, ...(q ? { q } : {}), ...(cursor ? { cursor } : {}) },
+          },
+        }),
+      );
+      if (!data) throw failureOf(response.status);
+      return { items: data.items, nextCursor: data.nextCursor ?? null };
+    },
+
+    async listAuditLog(cursor?: string): Promise<AuditPage> {
+      const { data, response } = await request(() =>
+        client.GET('/admin/audit-log', {
+          params: { query: { limit: QUEUE_PAGE_SIZE, ...(cursor ? { cursor } : {}) } },
+        }),
+      );
+      if (!data) throw failureOf(response.status);
+      return { items: data.items, nextCursor: data.nextCursor ?? null };
+    },
+
+    async listWaitlist({ municipality, cursor }): Promise<WaitlistPage> {
+      const { data, response } = await request(() =>
+        client.GET('/admin/waitlist', {
+          params: {
+            query: {
+              limit: QUEUE_PAGE_SIZE,
+              ...(municipality ? { municipality } : {}),
+              ...(cursor ? { cursor } : {}),
+            },
+          },
+        }),
+      );
+      if (!data || typeof data === 'string') throw failureOf(response.status);
+      return { items: data.items, nextCursor: data.nextCursor ?? null };
+    },
+
+    async exportWaitlist(municipality?: string): Promise<string> {
+      const { data, response } = await request(() =>
+        client.GET('/admin/waitlist', {
+          params: { query: municipality ? { municipality } : {} },
+          headers: { Accept: 'text/csv' },
+          parseAs: 'text',
+        }),
+      );
+      if (data === undefined || !response.ok) throw failureOf(response.status);
       return data;
     },
   };

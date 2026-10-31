@@ -449,14 +449,14 @@ async function openAdmin(reports: ReturnType<typeof storedReport>[], theme?: 'li
     ...(theme ? { theme } : {}),
   });
   await fireEvent.press(await screen.findByRole('button', { name: es.tabs.admin }));
-  await screen.findByRole('button', { name: a.open });
+  await screen.findByRole('tab', { name: es.admin.tabs.reports });
   return { backend };
 }
 
 /** Un admin que abre «Administración» → «Denuncias». */
 async function openReports(reports: ReturnType<typeof storedReport>[], theme?: 'light' | 'dark') {
   const opened = await openAdmin(reports, theme);
-  await fireEvent.press(button(a.open));
+  await fireEvent.press(screen.getByRole('tab', { name: es.admin.tabs.reports }));
   await screen.findByRole('header', { name: a.title });
   return opened;
 }
@@ -542,7 +542,7 @@ describe('Cola de denuncias del admin', () => {
   it('si la cola no carga lo explica y «Reintentar» la vuelve a pedir', async () => {
     const { backend } = await openAdmin([OLDER]);
     backend.failNext = 'server';
-    await fireEvent.press(button(a.open));
+    await fireEvent.press(screen.getByRole('tab', { name: es.admin.tabs.reports }));
 
     expect(await screen.findByText(a.loadFailed)).toBeTruthy();
 

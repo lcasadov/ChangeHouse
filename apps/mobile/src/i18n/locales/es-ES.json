@@ -783,7 +783,6 @@
       "unknown": "No hemos podido guardar tu decisión. Inténtalo de nuevo en unos minutos."
     },
     "users": {
-      "entry": "Suspender o reactivar un usuario",
       "title": "Suspender o reactivar un usuario",
       "intro": "Al suspender una cuenta, la persona deja de poder usar la app, sus casas desaparecen de Explorar y sus matches abiertos se cierran para todos. Reactivarla le devuelve el acceso, pero no reabre esos matches.",
       "userIdLabel": "Identificador del usuario",
@@ -814,7 +813,6 @@
       }
     },
     "reports": {
-      "open": "Denuncias",
       "back": "Viviendas en revisión",
       "title": "Denuncias",
       "intro": "Las abiertas, de la más antigua a la más reciente.",
@@ -871,6 +869,119 @@
         "gone": "Esta denuncia ya no existe o la ha resuelto otra persona. La cola se ha actualizado.",
         "conflict": "Esta denuncia ya se resolvió. La cola se ha actualizado."
       }
+    },
+    "tabs": {
+      "label": "Secciones de administración",
+      "moderation": "Moderación",
+      "reports": "Denuncias",
+      "users": "Usuarios",
+      "metrics": "Métricas",
+      "audit": "Auditoría",
+      "waitlist": "Lista de espera"
+    },
+    "panel": {
+      "loading": "Cargando"
+    },
+    "metrics": {
+      "title": "Métricas",
+      "intro": "La actividad del producto en un periodo, por días naturales.",
+      "from": "Desde",
+      "to": "Hasta",
+      "hint": "Formato AAAA-MM-DD, por ejemplo 2026-10-01.",
+      "submit": "Consultar",
+      "retry": "Reintentar",
+      "totalLabel": "{{label}}: {{value}}",
+      "totals": {
+        "signups": "Altas",
+        "likes": "Me gusta",
+        "direct": "Matches directos",
+        "chain": "Matches en cadena",
+        "operations": "Operaciones"
+      },
+      "zones": {
+        "title": "Viviendas publicadas por zona",
+        "zone": "Zona",
+        "count": "Viviendas",
+        "empty": "No hay viviendas publicadas en este periodo."
+      },
+      "invalid": {
+        "title": "Periodo no válido",
+        "description": "Corrige las fechas marcadas y vuelve a consultar."
+      },
+      "errors": {
+        "format": "Escribe la fecha como AAAA-MM-DD.",
+        "range": "La fecha final no puede ser anterior a la inicial.",
+        "loadFailed": "No hemos podido cargar las métricas. Comprueba tu conexión y vuelve a intentarlo."
+      }
+    },
+    "userList": {
+      "title": "Usuarios",
+      "intro": "Busca por email o nombre visible y suspende o reactiva cuentas.",
+      "columns": {
+        "name": "Nombre",
+        "email": "Email",
+        "status": "Estado",
+        "created": "Alta"
+      },
+      "empty": {
+        "title": "Ningún usuario coincide",
+        "description": "Prueba con otro email o nombre."
+      },
+      "loadFailed": "No hemos podido cargar los usuarios. Comprueba tu conexión y vuelve a intentarlo.",
+      "retry": "Reintentar",
+      "loadMore": "Cargar más",
+      "loadMoreFailed": "No hemos podido cargar más usuarios. Inténtalo de nuevo.",
+      "searchLabel": "Buscar por email o nombre",
+      "search": "Buscar",
+      "status": {
+        "active": "Activo",
+        "suspended": "Suspendido"
+      },
+      "manage": "Suspender o reactivar",
+      "manageLabel": "Suspender o reactivar a {{name}} ({{email}})"
+    },
+    "audit": {
+      "title": "Auditoría",
+      "intro": "Las acciones del equipo, de la más reciente a la más antigua. Solo lectura.",
+      "columns": {
+        "actor": "Autor",
+        "action": "Acción",
+        "entity": "Entidad",
+        "at": "Fecha"
+      },
+      "empty": {
+        "title": "Aún no hay acciones registradas",
+        "description": "Las moderaciones y suspensiones aparecerán aquí."
+      },
+      "loadFailed": "No hemos podido cargar la auditoría. Comprueba tu conexión y vuelve a intentarlo.",
+      "retry": "Reintentar",
+      "loadMore": "Cargar más",
+      "loadMoreFailed": "No hemos podido cargar más auditoría. Inténtalo de nuevo."
+    },
+    "waitlist": {
+      "title": "Lista de espera",
+      "intro": "Las personas inscritas en la lista de espera. El filtro también se aplica a la exportación.",
+      "columns": {
+        "email": "Email",
+        "municipality": "Municipio",
+        "homeType": "Tipo de vivienda",
+        "lookingFor": "Qué busca",
+        "consentAt": "Consentimiento"
+      },
+      "empty": {
+        "title": "No hay inscripciones",
+        "description": "Cuando alguien se inscriba, aparecerá aquí."
+      },
+      "loadFailed": "No hemos podido cargar la lista de espera. Comprueba tu conexión y vuelve a intentarlo.",
+      "retry": "Reintentar",
+      "loadMore": "Cargar más",
+      "loadMoreFailed": "No hemos podido cargar más lista de espera. Inténtalo de nuevo.",
+      "municipalityLabel": "Municipio",
+      "filter": "Filtrar",
+      "export": "Exportar CSV",
+      "filename": "lista-de-espera.csv",
+      "exportDone": "Fichero «{{filename}}» listo.",
+      "exportFailed": "No hemos podido exportar la lista. Inténtalo de nuevo."
     }
   },
   "search": {

@@ -3,8 +3,9 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, View } from 'react-native';
 
-import { Button, Dialog, Notice, Screen, Text, TextField } from '../../ui';
+import { Button, Dialog, Notice, Text, TextField } from '../../ui';
 import { AdminApiError, type AdminUser } from './admin-api';
+import { AdminScreen } from './AdminScreen';
 import { REASON_MAX_LENGTH, validateReason } from './reject-reason';
 import { useSetUserSuspension } from './use-user-suspension';
 
@@ -34,15 +35,15 @@ interface Outcome {
 }
 
 /**
- * Suspender o reactivar a un usuario por su identificador (RF-90), con motivo obligatorio. Es la
- * entrada mínima hasta que llegue el listado de usuarios con `add-admin-panel`. Suspender se confirma
+ * Suspender o reactivar a un usuario por su identificador (RF-90), con motivo obligatorio. Se llega
+ * desde el listado de «Usuarios», que ya trae el identificador. Suspender se confirma
  * antes: cierra sus matches abiertos y oculta sus viviendas; reactivar no los reabre.
  */
-export function UserSuspensionScreen() {
+export function UserSuspensionScreen({ initialUserId = '' }: Readonly<{ initialUserId?: string }>) {
   const { t } = useTranslation();
   const theme = useTheme();
   const mutation = useSetUserSuspension();
-  const [userId, setUserId] = useState('');
+  const [userId, setUserId] = useState(initialUserId);
   const [reason, setReason] = useState('');
   const [errors, setErrors] = useState<FormErrors>({});
   const [confirming, setConfirming] = useState<string | null>(null);
@@ -88,7 +89,7 @@ export function UserSuspensionScreen() {
   };
 
   return (
-    <Screen>
+    <AdminScreen>
       <ScrollView
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ gap: theme.space[4], paddingVertical: theme.space[5] }}
@@ -162,6 +163,6 @@ export function UserSuspensionScreen() {
           setConfirming(null);
         }}
       />
-    </Screen>
+    </AdminScreen>
   );
 }

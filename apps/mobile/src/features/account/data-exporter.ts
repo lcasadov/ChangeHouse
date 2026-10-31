@@ -1,8 +1,10 @@
 /** El fichero de «Descargar mis datos», ya serializado. */
 export interface DataExportFile {
   filename: string;
-  /** JSON legible de la exportación. */
+  /** Contenido ya serializado: JSON legible en la exportación de datos, CSV en la lista de espera. */
   content: string;
+  /** Tipo del fichero; por defecto `application/json`. */
+  mimeType?: string;
 }
 
 /**

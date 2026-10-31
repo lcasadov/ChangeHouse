@@ -177,6 +177,10 @@ describe('política de autorización', () => {
       blockUser: { kind: 'roles', roles: ['seeker', 'owner'] },
       adminListReports: { kind: 'roles', roles: ['admin'] },
       adminResolveReport: { kind: 'roles', roles: ['admin'] },
+      adminListUsers: { kind: 'roles', roles: ['admin'] },
+      adminGetMetrics: { kind: 'roles', roles: ['admin'] },
+      adminListAuditLog: { kind: 'roles', roles: ['admin'] },
+      adminListWaitlist: { kind: 'roles', roles: ['admin'] },
     });
   });
 });

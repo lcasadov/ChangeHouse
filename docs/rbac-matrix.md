@@ -226,10 +226,10 @@ matriz como datos, que no crea matches, los actores `seeker` y `owner` obtienen
 | `adminModerateHome` | 401 | 403 | 403 | ✅ | auditoría en la misma transacción; fuera de revisión → 409; rechazar sin motivo → 400 |
 | `adminListReports` | 401 | 403 | 403 | ✅ | abiertas por defecto, de la más antigua a la más reciente, con evidencia |
 | `adminResolveReport` | 401 | 403 | 403 | ✅ | nota obligatoria (400); auditoría `report.resolve`/`report.dismiss` en la misma transacción; ya cerrada → 409 |
-| `adminListUsers` | 401 | 403 | 403 | ✅ | — |
+| `adminListUsers` | 401 | 403 | 403 | ✅ | búsqueda por prefijo de email o nombre; cursor; sin cuentas borradas |
 | `adminSetUserSuspension` | 401 | 403 | 403 | ✅ | motivo obligatorio (sin él, 400); auditoría en la misma transacción; a sí mismo u otro admin → 409 |
-| `adminGetMetrics` | 401 | 403 | 403 | ✅ | — |
-| `adminListAuditLog` | 401 | 403 | 403 | ✅ | — |
+| `adminGetMetrics` | 401 | 403 | 403 | ✅ | `to` anterior a `from` o más de 366 días → 400 |
+| `adminListAuditLog` | 401 | 403 | 403 | ✅ | solo lectura, del más reciente al más antiguo |
 | `adminListWaitlist` | 401 | 403 | 403 | ✅ | exportación CSV |
 | `joinWaitlist` | ✅ 202 | ✅ 202 | ✅ 202 | ✅ 202 | límite de peticiones, anti-bots |
 

@@ -206,6 +206,10 @@ const REQUESTS: Record<string, RequestTemplate> = {
     url: (context) => `/v1/admin/reports/${context.openReportId}`,
     payload: () => ({ status: 'resolved', resolution: 'Revisada' }),
   },
+  adminListUsers: { method: 'GET', url: '/v1/admin/users?q=ana' },
+  adminGetMetrics: { method: 'GET', url: '/v1/admin/metrics?from=2026-10-01&to=2026-10-31' },
+  adminListAuditLog: { method: 'GET', url: '/v1/admin/audit-log' },
+  adminListWaitlist: { method: 'GET', url: '/v1/admin/waitlist?municipality=Madrid' },
   adminListHomes: { method: 'GET', url: '/v1/admin/homes?status=in_review' },
   adminModerateHome: {
     method: 'POST',

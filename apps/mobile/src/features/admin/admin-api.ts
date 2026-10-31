@@ -4,6 +4,15 @@ import type { Home } from '../homes/homes-api';
 /** Un usuario tal como lo ve el admin (`AdminUser` del contrato). */
 export type AdminUser = components['schemas']['AdminUser'];
 
+/** Las métricas de un periodo (`Metrics`). */
+export type Metrics = components['schemas']['Metrics'];
+
+/** Una acción del registro de auditoría (`AuditEntry`). */
+export type AuditEntry = components['schemas']['AuditEntry'];
+
+/** Una inscripción en la lista de espera (`WaitlistEntry`). */
+export type WaitlistEntry = components['schemas']['WaitlistEntry'];
+
 /** Una denuncia (`Report`): lo que se denuncia, el motivo y su estado de revisión. */
 export type Report = components['schemas']['Report'];
 
@@ -61,6 +70,30 @@ export interface ReportResolution {
   resolution: string;
 }
 
+/** Periodo de las métricas en días naturales (`AAAA-MM-DD`). */
+export interface MetricsPeriod {
+  from: string;
+  to: string;
+}
+
+/** Una página de usuarios (`adminListUsers`). */
+export interface UsersPage {
+  items: AdminUser[];
+  nextCursor: string | null;
+}
+
+/** Una página de la auditoría (`adminListAuditLog`). */
+export interface AuditPage {
+  items: AuditEntry[];
+  nextCursor: string | null;
+}
+
+/** Una página de la lista de espera (`adminListWaitlist`). */
+export interface WaitlistPage {
+  items: WaitlistEntry[];
+  nextCursor: string | null;
+}
+
 /** Puerto de salida de la administración; el adaptador HTTP vive en `http-admin-api.ts`. */
 export interface AdminApi {
   /** La cola: viviendas en revisión de la enviada antes a la enviada después. */
@@ -73,4 +106,14 @@ export interface AdminApi {
   listReports: (cursor?: string) => Promise<ReportsPage>;
   /** Resuelve o desestima una denuncia con su nota y devuelve la denuncia ya cerrada. */
   resolveReport: (reportId: string, resolution: ReportResolution) => Promise<Report>;
+  /** Las métricas del periodo; un periodo invertido rechaza con `invalid`. */
+  getMetrics: (period: MetricsPeriod) => Promise<Metrics>;
+  /** Los usuarios, con búsqueda opcional por email o nombre visible. */
+  listUsers: (query: { q?: string; cursor?: string }) => Promise<UsersPage>;
+  /** La auditoría, de la acción más reciente a la más antigua. */
+  listAuditLog: (cursor?: string) => Promise<AuditPage>;
+  /** La lista de espera, con filtro opcional por municipio. */
+  listWaitlist: (query: { municipality?: string; cursor?: string }) => Promise<WaitlistPage>;
+  /** La lista de espera en CSV (`Accept: text/csv`), con el mismo filtro. */
+  exportWaitlist: (municipality?: string) => Promise<string>;
 }

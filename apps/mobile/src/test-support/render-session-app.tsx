@@ -8,9 +8,13 @@ import WelcomeRoute from '../../app/(auth)/welcome';
 import TabsLayout from '../../app/(tabs)/_layout';
 import AdminLayout from '../../app/(tabs)/admin/_layout';
 import ModerationDetailRoute from '../../app/(tabs)/admin/[homeId]';
+import AdminAuditRoute from '../../app/(tabs)/admin/audit';
 import AdminQueueRoute from '../../app/(tabs)/admin/index';
+import AdminMetricsRoute from '../../app/(tabs)/admin/metrics';
 import AdminReportsRoute from '../../app/(tabs)/admin/reports';
+import AdminSuspensionRoute from '../../app/(tabs)/admin/user-suspension';
 import AdminUsersRoute from '../../app/(tabs)/admin/users';
+import AdminWaitlistRoute from '../../app/(tabs)/admin/waitlist';
 import HomesLayout from '../../app/(tabs)/homes/_layout';
 import EditHomeRoute from '../../app/(tabs)/homes/[homeId]/edit';
 import HomeDetailRoute from '../../app/(tabs)/homes/[homeId]/index';
@@ -79,6 +83,11 @@ export function fakeServices(overrides: Partial<AppServices> = {}): AppServices 
       setUserSuspension: () => Promise.reject(new Error('Sin usuarios en este doble')),
       listReports: () => Promise.resolve({ items: [], nextCursor: null }),
       resolveReport: () => Promise.reject(new Error('Sin denuncias en este doble')),
+      getMetrics: () => Promise.reject(new Error('Sin métricas en este doble')),
+      listUsers: () => Promise.resolve({ items: [], nextCursor: null }),
+      listAuditLog: () => Promise.resolve({ items: [], nextCursor: null }),
+      listWaitlist: () => Promise.resolve({ items: [], nextCursor: null }),
+      exportWaitlist: () => Promise.resolve(''),
     },
     moderationApi: {
       report: () => Promise.resolve(),
@@ -238,6 +247,10 @@ export function renderSessionApp({
       '(tabs)/admin/reports': AdminReportsRoute,
       '(tabs)/admin/[homeId]': ModerationDetailRoute,
       '(tabs)/admin/users': AdminUsersRoute,
+      '(tabs)/admin/user-suspension': AdminSuspensionRoute,
+      '(tabs)/admin/metrics': AdminMetricsRoute,
+      '(tabs)/admin/audit': AdminAuditRoute,
+      '(tabs)/admin/waitlist': AdminWaitlistRoute,
       '(tabs)/profile': ProfileRoute,
     },
     { initialUrl: url },

@@ -15,6 +15,10 @@ const ADMIN = me({ roles: ['admin'] });
 const BETO = adminUser();
 const REASON = 'Fraude reiterado';
 
+const manageLabel = (user: AdminUser) =>
+  es.admin.userList.manageLabel
+    .replace('{{name}}', user.displayName)
+    .replace('{{email}}', user.email);
 const button = (name: string) => screen.getByRole('button', { name });
 const outcome = (key: 'suspended' | 'reactivated', user: AdminUser) =>
   u.outcome[key].replace('{{name}}', user.displayName).replace('{{email}}', user.email);
@@ -23,14 +27,20 @@ async function openUsers(
   options: { users?: AdminUser[]; profile?: ReturnType<typeof me>; theme?: 'light' | 'dark' } = {},
 ) {
   const auth = new FakeAuthService({ initialUser: authUser() });
+  // El listado debe ofrecer a Beto para llegar a la pantalla de suspensión
+  const given = options.users ?? [];
+  const seeded = given.some((user) => user.id === BETO.id) ? given : [BETO, ...given];
   const backend = new FakeBackend({
     registered: true,
     profile: options.profile ?? ADMIN,
-    users: options.users ?? [BETO],
+    users: seeded,
   });
   await renderSessionApp({ auth, backend, ...(options.theme ? { theme: options.theme } : {}) });
   await fireEvent.press(await screen.findByRole('button', { name: es.tabs.admin }));
-  await fireEvent.press(await screen.findByRole('button', { name: u.entry }));
+  await fireEvent.press(await screen.findByRole('tab', { name: es.admin.tabs.users }));
+  // Varias cuentas de prueba comparten nombre y email: basta con abrir la primera
+  const [first] = await screen.findAllByRole('button', { name: manageLabel(BETO) });
+  await fireEvent.press(first as NonNullable<typeof first>);
   await screen.findByRole('header', { name: u.title });
   return backend;
 }

@@ -36,14 +36,13 @@ personas; la zona generada la reescribe `plan-sync` en cada operación.
 
 | change | estado | % | completadas/total | fase |
 |---|---|---|---|---|
-| add-admin-panel | ❌ SIN EMPEZAR | 0 % | 0/5 | ❌ SIN EMPEZAR |
 
-**Progreso global de los changes activos**: 0/5 (0 %)
+
+**Progreso global de los changes activos**: 0/0 (0 %)
 
 | estado | changes |
 |---|---|
-| ❌ SIN EMPEZAR | 1 |
-| ✅ ARCHIVADO | 21 |
+| ✅ ARCHIVADO | 22 |
 
 ### Changes archivados
 
@@ -67,6 +66,7 @@ personas; la zona generada la reescribe `plan-sync` en cada operación.
 | 2026-10-23-add-landing-blog | 5/5 | 2026-10-23 |
 | 2026-10-30-add-match-chat | 8/8 | 2026-10-30 |
 | 2026-10-31-add-account-deletion-and-export | 6/6 | 2026-10-31 |
+| 2026-10-31-add-admin-panel | 5/5 | 2026-10-31 |
 | 2026-10-31-add-notifications | 7/7 | 2026-10-31 |
 | 2026-10-31-add-reports-and-blocking | 6/6 | 2026-10-31 |
 | 2026-10-31-add-user-suspension | 5/5 | 2026-10-31 |
