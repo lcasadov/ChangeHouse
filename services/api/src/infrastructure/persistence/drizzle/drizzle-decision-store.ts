@@ -5,14 +5,15 @@ import type {
   DecisionStore,
   LastAction,
 } from '../../../application/decision/decision-repository.js';
+import { homeIdsOfKey } from '../../../domain/matching/cycle.js';
 import type { Executor } from './database.js';
 import { accountDismissals, dismissals, homes, likes } from './schema.js';
 
 /**
- * Espacio de los bloqueos asesores de pares de viviendas: la forma de dos enteros no se solapa con
- * la de un `bigint` que usa `lockUser`, así que un par nunca choca con un usuario.
+ * Espacio de los bloqueos asesores de viviendas: la forma de dos enteros no se solapa con la de un
+ * `bigint` que usa `lockUser`, así que una vivienda nunca choca con un usuario.
  */
-const PAIR_LOCK_SPACE = 2;
+const HOME_LOCK_SPACE = 2;
 
 interface LastActionRow extends Record<string, unknown> {
   kind: 'like' | 'dismissal';
@@ -29,10 +30,22 @@ export class DrizzleDecisionStore implements DecisionStore {
     await this.db.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${userId}, 0))`);
   }
 
+  /**
+   * Bloquea cada vivienda del par, en el orden de su clave de bloqueo para que dos transacciones
+   * nunca se esperen en círculo. Dos aristas de un mismo ciclo de 2 o 3 siempre comparten una
+   * vivienda, así que los me gusta y los deshacer que pueden cerrar o romper el mismo ciclo se
+   * serializan y el último ve las aristas de los demás.
+   */
   async lockPair(pairKey: string): Promise<void> {
-    await this.db.execute(
-      sql`SELECT pg_advisory_xact_lock(${PAIR_LOCK_SPACE}::int, hashtext(${pairKey}))`,
+    const ids = sql.join(
+      homeIdsOfKey(pairKey).map((id) => sql`${id}`),
+      sql`, `,
     );
+    await this.db.execute(sql`
+      SELECT pg_advisory_xact_lock(${HOME_LOCK_SPACE}::int, lock_key)
+      FROM (SELECT DISTINCT hashtext(home_id) AS lock_key
+            FROM unnest(ARRAY[${ids}]::text[]) AS home_id) home_locks
+      ORDER BY lock_key`);
   }
 
   async countLikes(userId: string, start: Date, end: Date): Promise<number> {

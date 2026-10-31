@@ -18,6 +18,8 @@ export default defineConfig({
   webServer: {
     command: `astro build && astro preview --port ${PORT}`,
     url: `http://localhost:${PORT}`,
+    // Guías de prueba publicadas: las reales están en borrador y no se construyen en producción
+    env: { GUIAS_CONTENT_DIR: './e2e/guias-content' },
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },

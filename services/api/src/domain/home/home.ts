@@ -4,6 +4,7 @@ import {
   type HomeRegime,
   type HomeStatus,
   type HomeType,
+  isProtectedRegime,
   type LocationVisibility,
   MAX_MODERATION_REASON,
 } from '@changehouse/shared';
@@ -16,6 +17,8 @@ import {
   HomeNotResumableError,
   HomeNotSubmittableError,
   InvalidModerationReasonError,
+  ValueAboveVppMaxLegalPriceError,
+  VppQualificationDateRequiredError,
 } from './errors.js';
 import { assertValueRange } from './money.js';
 import { MIN_PHOTOS } from './photo.js';
@@ -168,6 +171,24 @@ function fromDetails(details: HomeDetails): Partial<Home> {
   });
 }
 
+/** Una vivienda protegida no vale más que su precio máximo legal, si se conoce (RN-06). */
+function assertWithinLegalPrice(home: Home): void {
+  const { regime, valueMaxCents, vppMaxLegalPriceCents } = home;
+  if (!isProtectedRegime(regime) || valueMaxCents === null || vppMaxLegalPriceCents === null)
+    return;
+  if (valueMaxCents > vppMaxLegalPriceCents) throw new ValueAboveVppMaxLegalPriceError();
+}
+
+/**
+ * Una vivienda protegida necesita su fecha de calificación definitiva para salir del borrador
+ * (RF-14); el borrador la admite vacía mientras el asistente guarda el avance.
+ */
+function assertQualified(home: Home): void {
+  if (isProtectedRegime(home.regime) && home.vppQualificationDate === null) {
+    throw new VppQualificationDateRequiredError();
+  }
+}
+
 /** Una vivienda nueva siempre nace en `draft`, con lo que el propietario ya ha rellenado. */
 export function newDraft(params: NewDraft): Home {
   const home: Home = {
@@ -205,6 +226,7 @@ export function newDraft(params: NewDraft): Home {
     ...fromDetails(params.details ?? {}),
   };
   assertValueRange(home.valueMinCents, home.valueMaxCents);
+  assertWithinLegalPrice(home);
   return home;
 }
 
@@ -257,7 +279,8 @@ export function relevantChangeOf(home: Home, now: Date): RelevantChange | null {
 /**
  * Aplica los cambios del propietario. No se edita en `in_operation` ni `closed`. Una vivienda
  * publicada o pausada que cambia un dato relevante vuelve a `in_review` (RF-18); los demás cambios
- * relevantes se anotan según `relevantChangeOf`.
+ * relevantes se anotan según `relevantChangeOf`. El valor no supera el precio máximo legal de una
+ * protegida, y fuera de borrador una protegida lleva su fecha de calificación.
  */
 export function editHome(home: Home, changes: HomeChanges, now: Date): Home {
   assertEditable(home);
@@ -270,6 +293,8 @@ export function editHome(home: Home, changes: HomeChanges, now: Date): Home {
     ...(place === undefined ? {} : { address: place.address, location: place.location }),
   };
   assertValueRange(edited.valueMinCents, edited.valueMaxCents);
+  assertWithinLegalPrice(edited);
+  if (home.status !== 'draft') assertQualified(edited);
 
   if (!relevantChanged(home, edited)) return edited;
   return { ...edited, ...relevantChangeOf(home, now) };
@@ -302,10 +327,12 @@ export function assertEditable(home: Home): void {
 
 /**
  * Envía a revisión una vivienda en borrador con la ficha completa y al menos 3 fotos procesadas
- * (`readyPhotos`). Si falta algo, el error lista los campos y `photos` si faltan fotos.
+ * (`readyPhotos`). Si falta algo, el error lista los campos y `photos` si faltan fotos. Una
+ * vivienda protegida sin fecha de calificación se rechaza antes (400, RF-14).
  */
 export function submitHome(home: Home, readyPhotos: number, now: Date): Home {
   if (home.status !== 'draft') throw new HomeNotSubmittableError();
+  assertQualified(home);
   const missing = [...missingFields(home), ...(readyPhotos < MIN_PHOTOS ? ['photos'] : [])];
   if (missing.length > 0) throw new HomeIncompleteError(missing);
   return { ...home, status: 'in_review', submittedAt: now };

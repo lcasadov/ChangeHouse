@@ -42,6 +42,7 @@ interface CandidateRow extends Record<string, unknown> {
   year_built: number | null;
   value_min_cents: number | null;
   value_max_cents: number | null;
+  vpp_max_legal_price_cents: number | null;
   location_visibility: LocationVisibility;
   area_name: string;
   exact_lat: number;
@@ -58,7 +59,8 @@ const HOME_COLUMNS = sql`
   h.id, h.type, h.regime, h.useful_m2::float8 AS useful_m2, h.built_m2::float8 AS built_m2,
   h.bedrooms, h.bathrooms, h.floor, h.has_lift, h.garage, h.storage_room, h.features,
   h.energy_rating, h.year_built, h.value_min_cents::float8 AS value_min_cents,
-  h.value_max_cents::float8 AS value_max_cents, h.location_visibility, h.area_name,
+  h.value_max_cents::float8 AS value_max_cents,
+  h.vpp_max_legal_price_cents::float8 AS vpp_max_legal_price_cents, h.location_visibility, h.area_name,
   ST_Y(h.exact_location::geometry) AS exact_lat, ST_X(h.exact_location::geometry) AS exact_lng,
   ST_Y(h.approx_location::geometry) AS approx_lat, ST_X(h.approx_location::geometry) AS approx_lng,
   (extract(epoch FROM h.published_at) * 1000)::float8 AS published_ms`;
@@ -253,6 +255,7 @@ function toCandidate(row: CandidateRow): DiscoveryCandidate {
       yearBuilt: row.year_built,
       valueMinCents: row.value_min_cents,
       valueMaxCents: row.value_max_cents,
+      vppMaxLegalPriceCents: row.vpp_max_legal_price_cents,
       locationVisibility: row.location_visibility,
       location: {
         exact: { lat: row.exact_lat, lng: row.exact_lng },

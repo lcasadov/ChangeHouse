@@ -25,6 +25,12 @@ export type HomeStatus = (typeof HOME_STATUSES)[number];
 export const HOME_REGIMES = ['libre', 'VPPB', 'VPPL', 'VPO'] as const;
 export type HomeRegime = (typeof HOME_REGIMES)[number];
 
+/**
+ * Vivienda protegida (VPPB, VPPL o VPO): exige fecha de calificación definitiva al enviarse y su
+ * valor máximo no supera el precio máximo legal si se conoce (RF-14, RN-06).
+ */
+export const isProtectedRegime = (regime: HomeRegime): boolean => regime !== 'libre';
+
 /** `exact`: ubicación exacta pública; `area`: solo barrio o zona (`LocationVisibility`). */
 export const LOCATION_VISIBILITIES = ['exact', 'area'] as const;
 export type LocationVisibility = (typeof LOCATION_VISIBILITIES)[number];

@@ -22,31 +22,41 @@ const BUSINESS_KINDS: Record<
   string,
   | 'address-not-resolved'
   | 'invalid-value-range'
+  | 'above-legal-price'
   | 'incomplete'
   | 'invalid-image'
   | 'photo-not-uploaded'
 > = {
   ADDRESS_NOT_RESOLVED: 'address-not-resolved',
   INVALID_VALUE_RANGE: 'invalid-value-range',
+  VALUE_ABOVE_VPP_MAX_LEGAL_PRICE: 'above-legal-price',
   HOME_INCOMPLETE: 'incomplete',
   INVALID_IMAGE: 'invalid-image',
   PHOTO_NOT_UPLOADED: 'photo-not-uploaded',
 };
+
+/** Una vivienda protegida sin fecha de calificación: 400, pero es un dato que falta por rellenar. */
+const VPP_QUALIFICATION_DATE_REQUIRED = 'VPP_QUALIFICATION_DATE_REQUIRED';
 
 const CONFLICT_KINDS: Record<string, 'photo-limit' | 'min-photos'> = {
   PHOTO_LIMIT_REACHED: 'photo-limit',
   HOME_MIN_PHOTOS: 'min-photos',
 };
 
+const fieldsOf = (problem: Problem | undefined) =>
+  (problem?.errors ?? []).map((error) => error.field);
+
 function failureOf(status: number, problem: Problem | undefined): HomesApiError {
   if (status === UNAUTHORIZED) return new HomesApiError('unauthorized');
+  if (status === BAD_REQUEST && problem?.code === VPP_QUALIFICATION_DATE_REQUIRED) {
+    return new HomesApiError('incomplete', fieldsOf(problem));
+  }
   if (status === NOT_FOUND) return new HomesApiError('not-found');
   if (status === CONFLICT)
     return new HomesApiError(CONFLICT_KINDS[problem?.code ?? ''] ?? 'conflict');
   if (status === UNPROCESSABLE) {
     const kind = BUSINESS_KINDS[problem?.code ?? ''];
-    const fields = (problem?.errors ?? []).map((error) => error.field);
-    return new HomesApiError(kind ?? 'invalid', fields);
+    return new HomesApiError(kind ?? 'invalid', fieldsOf(problem));
   }
   return new HomesApiError(status === BAD_REQUEST ? 'invalid' : 'server');
 }

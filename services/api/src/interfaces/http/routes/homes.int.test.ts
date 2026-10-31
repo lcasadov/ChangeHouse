@@ -459,6 +459,121 @@ describe.skipIf(!emulatorAvailable())('viviendas con tokens reales', () => {
     });
   });
 
+  describe('régimen de protección (RF-14, RN-06)', () => {
+    it('Scenario: VPP sin fecha de calificación - el borrador VPPL sin fecha se guarda, pero enviarlo da 400 señalando vppQualificationDate y sigue en draft', async () => {
+      const user = await registered();
+      const { id } = await createHome(user, { ...COMPLETE, regime: 'VPPL' });
+      await addReadyPhotos(id);
+
+      const response = await call(user, 'POST', `/v1/homes/${String(id)}/submit`);
+
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toMatchObject({
+        code: 'VPP_QUALIFICATION_DATE_REQUIRED',
+        errors: [{ field: 'vppQualificationDate' }],
+      });
+      const [row] = await sql<{ status: string }[]>`SELECT status FROM homes`;
+      expect(row?.status).toBe('draft');
+    });
+
+    it('Scenario: VPP sin fecha de calificación - con la fecha de calificación la VPPL se envía a revisión', async () => {
+      const user = await registered();
+      const { id } = await createHome(user, { ...COMPLETE, regime: 'VPPL' });
+      await addReadyPhotos(id);
+      const patched = await call(user, 'PATCH', `/v1/homes/${String(id)}`, {
+        vppQualificationDate: '2015-03-10',
+      });
+
+      const response = await call(user, 'POST', `/v1/homes/${String(id)}/submit`);
+
+      expect(patched.statusCode).toBe(200);
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toMatchObject({
+        status: 'in_review',
+        regime: 'VPPL',
+        vppQualificationDate: '2015-03-10',
+      });
+    });
+
+    it('Scenario: Vivienda libre - se guarda y se envía sin datos de protección', async () => {
+      const user = await registered();
+      const { id } = await createHome(user, { ...COMPLETE, regime: 'libre' });
+      await addReadyPhotos(id);
+
+      const response = await call(user, 'POST', `/v1/homes/${String(id)}/submit`);
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toMatchObject({
+        status: 'in_review',
+        regime: 'libre',
+        vppQualificationDate: null,
+        vppProtectionEnd: null,
+        vppMaxLegalPriceCents: null,
+      });
+    });
+
+    it('Scenario: Valor por encima del máximo legal - una VPO con máximo legal de 180.000 € y valor máximo de 200.000 € da 422 señalando valueMaxCents y no se guarda', async () => {
+      const user = await registered();
+
+      const response = await call(user, 'POST', '/v1/homes', {
+        type: 'piso',
+        address: ADDRESS,
+        regime: 'VPO',
+        vppQualificationDate: '2010-01-01',
+        vppMaxLegalPriceCents: 180_000_00,
+        valueMinCents: 150_000_00,
+        valueMaxCents: 200_000_00,
+      });
+
+      expect(response.statusCode).toBe(422);
+      expect(response.json()).toMatchObject({
+        code: 'VALUE_ABOVE_VPP_MAX_LEGAL_PRICE',
+        errors: [{ field: 'valueMaxCents' }],
+      });
+      expect(await sql`SELECT 1 FROM homes`).toHaveLength(0);
+    });
+
+    it('Scenario: Valor por encima del máximo legal - subir el valor máximo por encima del máximo legal guardado da 422 y no cambia nada', async () => {
+      const user = await registered();
+      const { id } = await createHome(user, {
+        regime: 'VPO',
+        vppMaxLegalPriceCents: 180_000_00,
+        valueMinCents: 150_000_00,
+        valueMaxCents: 170_000_00,
+      });
+
+      const response = await call(user, 'PATCH', `/v1/homes/${String(id)}`, {
+        valueMaxCents: 200_000_00,
+      });
+
+      expect(response.statusCode).toBe(422);
+      expect(response.json()).toMatchObject({ code: 'VALUE_ABOVE_VPP_MAX_LEGAL_PRICE' });
+      const [row] = await sql<{ value_max_cents: string }[]>`SELECT value_max_cents FROM homes`;
+      expect(Number(row?.value_max_cents)).toBe(170_000_00);
+    });
+
+    it('Scenario: Detalle de una VPPL - otro usuario ve en la forma pública el régimen y el precio máximo legal, pero no las fechas de protección', async () => {
+      const owner = await registered();
+      const viewer = await registered();
+      const { id } = await createHome(owner, {
+        ...COMPLETE,
+        regime: 'VPPL',
+        vppQualificationDate: '2015-03-10',
+        vppProtectionEnd: '2045-03-10',
+        vppMaxLegalPriceCents: 300_000_00,
+      });
+      await setStatus(id, 'published');
+
+      const response = await call(viewer, 'GET', `/v1/homes/${String(id)}`);
+
+      expect(response.statusCode).toBe(200);
+      const home = response.json<Json>();
+      expect(home).toMatchObject({ regime: 'VPPL', vppMaxLegalPriceCents: 300_000_00 });
+      expect(home).not.toHaveProperty('vppQualificationDate');
+      expect(home).not.toHaveProperty('vppProtectionEnd');
+    });
+  });
+
   describe('rol derivado de las viviendas (GET /me)', () => {
     async function me(user: EmulatorUser) {
       const response = await call(user, 'GET', '/v1/me');

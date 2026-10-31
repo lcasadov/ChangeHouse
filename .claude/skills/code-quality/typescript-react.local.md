@@ -81,3 +81,6 @@ fc.assert(
   `jest.setTimeout(30_000)`.
 - **`Dialog` no expone `alertdialog` a `getByRole`**: se consulta por su título con `getByLabelText(título)`.
 - **Un importe con `formatEuros` lleva espacio duro (U+00A0)**: en las pruebas se compara con `formatEuros(cents)`, no con un literal.
+- **`AccessibilityInfo.isReduceMotionEnabled` también es un `jest.fn` de React Native**: tras un test que lo fija a `true`,
+  `restoreAllMocks` no lo deshace y el valor se filtra a los siguientes del fichero. Los tests de animación fijan el valor
+  que necesitan (`mockResolvedValue(false)`) en un `beforeEach`.

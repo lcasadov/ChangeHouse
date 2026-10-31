@@ -19,7 +19,7 @@ const field = (label: string) => screen.getByLabelText(label);
 const radio = (name: string) => screen.getByRole('radio', { name });
 const stepBar = (current: number) =>
   screen.findByRole('progressbar', {
-    name: h.wizard.step.replace('{{current}}', String(current)).replace('{{total}}', '6'),
+    name: h.wizard.step.replace('{{current}}', String(current)).replace('{{total}}', '7'),
   });
 const viewAction = h.card.action
   .replace('{{action}}', h.actions.view)
@@ -37,7 +37,10 @@ async function openDetail(home: Home) {
   return backend;
 }
 
-/** Desde el detalle, «Editar datos» abre el asistente en el tipo y la dirección. */
+/**
+ * Desde el detalle, «Editar datos» abre el asistente en el tipo y la dirección; el régimen sin
+ * cambios solo avanza, sin guardar.
+ */
 async function editUntilValue(backend: FakeBackend) {
   await fireEvent.press(button(h.detail.edit));
   await stepBar(2);
@@ -45,6 +48,8 @@ async function editUntilValue(backend: FakeBackend) {
   await stepBar(3);
   await fireEvent.press(button(h.wizard.next));
   await stepBar(4);
+  await fireEvent.press(button(h.wizard.next));
+  await stepBar(5);
   expect(patches(backend)).toHaveLength(2);
 }
 
@@ -132,7 +137,7 @@ describe('Editar una vivienda publicada', () => {
 
     await fireEvent.press(button(h.reReview.confirm));
 
-    await stepBar(5);
+    await stepBar(6);
     expect(backend.homes.all()[0]).toMatchObject({
       status: 'in_review',
       valueMaxCents: 32_000_000,
@@ -155,7 +160,7 @@ describe('Editar una vivienda publicada', () => {
     await waitFor(() => {
       expect(screen.queryByLabelText(h.reReview.title)).toBeNull();
     });
-    expect(await stepBar(4)).toBeTruthy();
+    expect(await stepBar(5)).toBeTruthy();
     expect(field(h.form.valueMax).props.value).toBe('320.000');
     expect(patches(backend)).toHaveLength(2);
     expect(backend.homes.all()[0]?.status).toBe('published');
@@ -165,7 +170,7 @@ describe('Editar una vivienda publicada', () => {
     const backend = await openDetail(completeHome({ status: 'published' }));
     await editUntilValue(backend);
     await fireEvent.press(button(h.wizard.next));
-    await stepBar(5);
+    await stepBar(6);
 
     await fireEvent.press(radio(h.location.exact));
     await fireEvent.press(button(h.wizard.next));
@@ -184,13 +189,37 @@ describe('Editar una vivienda publicada', () => {
     await stepBar(2);
     await fireEvent.press(button(h.wizard.next));
     await stepBar(3);
+    await fireEvent.press(button(h.wizard.next));
+    await stepBar(4);
 
     await fireEvent.changeText(field(h.form.bedrooms), '4');
     await fireEvent.press(button(h.wizard.next));
     await fireEvent.press(await screen.findByRole('button', { name: h.reReview.confirm }));
 
-    await stepBar(4);
+    await stepBar(5);
     expect(backend.homes.all()[0]).toMatchObject({ status: 'in_review', bedrooms: 4 });
+  });
+
+  it('cambiar el régimen de protección de una vivienda publicada avisa y, al confirmar, pasa a «En revisión»', async () => {
+    const backend = await openDetail(completeHome({ status: 'published' }));
+    await fireEvent.press(button(h.detail.edit));
+    await stepBar(2);
+    await fireEvent.press(button(h.wizard.next));
+    await stepBar(3);
+
+    await fireEvent.press(radio(h.regime.VPPL));
+    await fireEvent.changeText(field(h.form.vppQualificationDate), '10/03/2015');
+    await fireEvent.press(button(h.wizard.next));
+    expect(await screen.findByLabelText(h.reReview.title)).toBeTruthy();
+    expect(patches(backend)).toHaveLength(1);
+    await fireEvent.press(button(h.reReview.confirm));
+
+    await stepBar(4);
+    expect(backend.homes.all()[0]).toMatchObject({
+      status: 'in_review',
+      regime: 'VPPL',
+      vppQualificationDate: '2015-03-10',
+    });
   });
 
   it('en el primer paso de la edición no hay «Atrás» hacia las fotos y salir vuelve al detalle', async () => {

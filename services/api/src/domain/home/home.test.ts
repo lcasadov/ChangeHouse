@@ -9,6 +9,8 @@ import {
   HomeNotSubmittableError,
   InvalidModerationReasonError,
   InvalidValueRangeError,
+  ValueAboveVppMaxLegalPriceError,
+  VppQualificationDateRequiredError,
 } from './errors.js';
 import {
   approveHome,
@@ -521,9 +523,10 @@ describe('vuelta a revisión tras cambios relevantes', () => {
     ['el garaje', { garage: true }],
     ['el trastero', { storageRoom: true }],
     ['las características', { features: { terrace: true } }],
-    ['el régimen', { regime: 'VPPB' }],
+    ['el régimen', { regime: 'VPPB', vppQualificationDate: '2010-01-01' }],
     ['la fecha de calificación VPP', { vppQualificationDate: '2010-01-01' }],
     ['el fin de la protección VPP', { vppProtectionEnd: '2040-01-01' }],
+    ['el precio máximo legal VPP', { vppMaxLegalPriceCents: 900_000_00 }],
   ];
 
   it.each(RELEVANT_CHANGES)(
@@ -575,5 +578,121 @@ describe('relevantChangeOf (fotos)', () => {
 
   it('en una vivienda que nunca se publicó no hay cambio relevante', () => {
     expect(relevantChangeOf(draft(COMPLETE), LATER)).toBeNull();
+  });
+});
+
+describe('régimen de protección (RF-14, RN-06)', () => {
+  const VPO_LIMIT = 180_000_00;
+  const PROTECTED = { regime: 'VPPL', vppQualificationDate: '2015-03-10' } as const;
+
+  it('Scenario: VPP sin fecha de calificación - un borrador VPPL sin fecha se guarda (el asistente guarda el avance)', () => {
+    const home = draft({ ...COMPLETE, regime: 'VPPL' });
+
+    expect(home).toMatchObject({ regime: 'VPPL', vppQualificationDate: null, status: 'draft' });
+  });
+
+  it('Scenario: VPP sin fecha de calificación - enviar a revisión una VPPL sin fecha lanza un error de petición (400) señalando el campo y sigue en draft', () => {
+    const home = draft({ ...COMPLETE, regime: 'VPPL' });
+
+    const attempt = () => submitHome(home, ENOUGH_PHOTOS, LATER);
+
+    expect(attempt).toThrow(VppQualificationDateRequiredError);
+    try {
+      attempt();
+    } catch (error) {
+      expect(error).toMatchObject({
+        code: 'VPP_QUALIFICATION_DATE_REQUIRED',
+        kind: 'invalid_request',
+        fields: ['vppQualificationDate'],
+      });
+    }
+    expect(home.status).toBe('draft');
+  });
+
+  it.each(['VPPB', 'VPPL', 'VPO'] as const)(
+    'Scenario: VPP sin fecha de calificación - una %s con fecha de calificación se envía a revisión',
+    (regime) => {
+      const home = draft({ ...COMPLETE, regime, vppQualificationDate: '2015-03-10' });
+
+      expect(submitHome(home, ENOUGH_PHOTOS, LATER).status).toBe('in_review');
+    },
+  );
+
+  it.each(['in_review', 'published', 'paused'] as const)(
+    'Scenario: VPP sin fecha de calificación - marcar como VPP sin fecha una vivienda en %s es un error de petición',
+    (status) => {
+      const home = withStatus(draft(COMPLETE), status);
+
+      expect(() => editHome(home, { regime: 'VPO' }, LATER)).toThrow(
+        VppQualificationDateRequiredError,
+      );
+    },
+  );
+
+  it('Scenario: Vivienda libre - una vivienda libre sin datos de protección se guarda y se envía a revisión', () => {
+    const home = draft({ ...COMPLETE, regime: 'libre' });
+
+    expect(home).toMatchObject({
+      vppQualificationDate: null,
+      vppProtectionEnd: null,
+      vppMaxLegalPriceCents: null,
+    });
+    expect(submitHome(home, ENOUGH_PHOTOS, LATER).status).toBe('in_review');
+  });
+
+  it('Scenario: Valor por encima del máximo legal - una VPO con máximo legal de 180.000 € y valor máximo de 200.000 € se rechaza (422) señalando valueMaxCents', () => {
+    const attempt = () =>
+      draft({
+        regime: 'VPO',
+        vppQualificationDate: '2010-01-01',
+        vppMaxLegalPriceCents: VPO_LIMIT,
+        valueMinCents: 150_000_00,
+        valueMaxCents: 200_000_00,
+      });
+
+    expect(attempt).toThrow(ValueAboveVppMaxLegalPriceError);
+    try {
+      attempt();
+    } catch (error) {
+      expect(error).toMatchObject({
+        code: 'VALUE_ABOVE_VPP_MAX_LEGAL_PRICE',
+        kind: 'rule',
+        fields: ['valueMaxCents'],
+      });
+    }
+  });
+
+  it('Scenario: Valor por encima del máximo legal - un valor máximo igual al máximo legal se acepta', () => {
+    const home = draft({
+      ...PROTECTED,
+      vppMaxLegalPriceCents: VPO_LIMIT,
+      valueMaxCents: VPO_LIMIT,
+    });
+
+    expect(home.valueMaxCents).toBe(VPO_LIMIT);
+  });
+
+  it('Scenario: Valor por encima del máximo legal - al editar, subir el valor por encima del máximo legal guardado o bajar el máximo legal por debajo del valor se rechaza', () => {
+    const home = draft({
+      ...PROTECTED,
+      vppMaxLegalPriceCents: VPO_LIMIT,
+      valueMinCents: 150_000_00,
+      valueMaxCents: 170_000_00,
+    });
+
+    expect(() => editHome(home, { valueMaxCents: 200_000_00 }, LATER)).toThrow(
+      ValueAboveVppMaxLegalPriceError,
+    );
+    expect(() => editHome(home, { vppMaxLegalPriceCents: 160_000_00 }, LATER)).toThrow(
+      ValueAboveVppMaxLegalPriceError,
+    );
+  });
+
+  it('Scenario: Valor por encima del máximo legal - sin máximo legal conocido, o en una vivienda libre, no hay tope', () => {
+    expect(draft({ ...PROTECTED, valueMaxCents: 900_000_00 }).valueMaxCents).toBe(900_000_00);
+    expect(
+      draft({ regime: 'libre', vppMaxLegalPriceCents: VPO_LIMIT, valueMaxCents: 900_000_00 })
+        .valueMaxCents,
+    ).toBe(900_000_00);
   });
 });

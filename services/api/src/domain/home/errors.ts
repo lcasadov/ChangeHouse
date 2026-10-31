@@ -10,6 +10,32 @@ export class InvalidValueRangeError extends DomainError {
   }
 }
 
+/** Una vivienda protegida no puede valer más que su precio máximo legal, si se conoce (RN-06). */
+export class ValueAboveVppMaxLegalPriceError extends DomainError {
+  readonly code = 'VALUE_ABOVE_VPP_MAX_LEGAL_PRICE';
+
+  constructor() {
+    super('El valor máximo de una vivienda protegida no puede superar su precio máximo legal');
+    this.name = 'ValueAboveVppMaxLegalPriceError';
+    this.fields = ['valueMaxCents'];
+  }
+}
+
+/**
+ * Una vivienda protegida fuera de borrador necesita la fecha de calificación definitiva (RF-14).
+ * Es un dato de la ficha que falta, no una regla de negocio: 400, como fija el spec.
+ */
+export class VppQualificationDateRequiredError extends DomainError {
+  readonly code = 'VPP_QUALIFICATION_DATE_REQUIRED';
+  override readonly kind: DomainErrorKind = 'invalid_request';
+
+  constructor() {
+    super('Una vivienda protegida necesita la fecha de calificación definitiva');
+    this.name = 'VppQualificationDateRequiredError';
+    this.fields = ['vppQualificationDate'];
+  }
+}
+
 export class HomeNotEditableError extends DomainError {
   readonly code = 'HOME_NOT_EDITABLE';
   override readonly kind: DomainErrorKind = 'conflict';

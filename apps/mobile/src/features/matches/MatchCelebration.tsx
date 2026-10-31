@@ -1,6 +1,5 @@
-import { borderWidth, contentMaxWidth, motion, useTheme } from '@changehouse/ui';
+import { contentMaxWidth, motion, useTheme } from '@changehouse/ui';
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -16,16 +15,17 @@ import Animated, {
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Button, Text } from '../../ui';
+import { Badge, Button, Text } from '../../ui';
 import { useReduceMotion } from '../../ui/useReduceMotion';
 import { CompensationPill } from '../discovery/CompensationPill';
 import type { Compensation } from '../discovery/discovery-api';
+import { type CelebrationHome, Tile } from './CelebrationTile';
+import { ChainTiles } from './ChainStage';
 
-/** Cuánto del ancho del escenario ocupa cada casa (`TILE_WIDTH` en porcentaje); el resto es el recorrido. */
+export type { CelebrationHome } from './CelebrationTile';
+
+/** Cuánto del ancho del escenario ocupa cada casa del cruce de dos; el resto es el recorrido. */
 const TILE_WIDTH_RATIO = 0.42;
-const TILE_WIDTH = '42%';
-/** La proporción de la foto de cada casa (ancho / alto), la de las tarjetas de descubrimiento. */
-const TILE_ASPECT = 4 / 5;
 /** Cuánto se inclina y se agranda cada casa a mitad del cruce, para que no se solapen sin gracia. */
 const SWAP_TILT_DEGREES = 6;
 const SWAP_SCALE_GAIN = 0.08;
@@ -55,11 +55,14 @@ function swapTransform(direction: 1 | -1, { progress, stageWidth, lift }: SwapGe
   };
 }
 
-export interface CelebrationHome {
-  /** «Piso en Lavapiés»: el tipo y la zona, nunca la dirección. */
-  title: string;
-  /** La portada; sin ella se pinta un marcador. */
-  coverUrl: string | undefined;
+/** Lo que añade una cadena de tres al intercambio de dos. */
+export interface CelebrationChain {
+  /** La casa que recibe la de quien mira. */
+  third: CelebrationHome;
+  /** Quien entrega la casa que recibe quien mira. */
+  fromName: string;
+  /** Quien recibe la casa de quien mira. */
+  toName: string;
 }
 
 export interface MatchCelebrationProps {
@@ -68,71 +71,14 @@ export interface MatchCelebrationProps {
   mine: CelebrationHome;
   /** La casa que recibiría. */
   theirs: CelebrationHome;
+  /** Solo en un match en cadena de tres: la tercera casa y quién entrega a quién. */
+  chain?: CelebrationChain;
   /** Lo que paga o recibe quien mira (siempre una estimación orientativa); `null` si no se sabe cuál es su casa. */
   compensation: Compensation | null;
   /** «Ver match». */
   onView: () => void;
   /** «Seguir explorando»; también el gesto o botón de volver. */
   onContinue: () => void;
-}
-
-interface TileProps {
-  side: 'mine' | 'theirs';
-  home: CelebrationHome;
-  animatedStyle: ReturnType<typeof useAnimatedStyle>;
-  reduceMotion: boolean;
-}
-
-/** Una casa del intercambio: su portada (decorativa, el título del match ya nombra las casas) o un marcador. */
-function Tile({ side, home, animatedStyle, reduceMotion }: Readonly<TileProps>) {
-  const theme = useTheme();
-  const elevation = theme.elevation[3];
-
-  return (
-    <Animated.View
-      testID={`swap-tile-${side}`}
-      entering={reduceMotion ? FadeIn.duration(motion.fast) : undefined}
-      style={[
-        styles.tile,
-        {
-          backgroundColor: theme.color.surfaceMuted,
-          borderColor: theme.color.surface,
-          borderRadius: theme.radius.lg,
-          borderWidth: borderWidth.thick,
-          elevation: elevation.androidElevation,
-          shadowColor: elevation.shadowColor,
-          shadowOffset: elevation.shadowOffset,
-          shadowOpacity: elevation.shadowOpacity,
-          shadowRadius: elevation.shadowRadius,
-        },
-        animatedStyle,
-      ]}
-    >
-      {home.coverUrl ? (
-        <Image
-          testID={`match-cover-${side}`}
-          source={{ uri: home.coverUrl }}
-          contentFit="cover"
-          cachePolicy="memory-disk"
-          accessible={false}
-          style={StyleSheet.absoluteFill}
-        />
-      ) : (
-        <View
-          testID={`match-cover-${side}-placeholder`}
-          accessible={false}
-          style={[StyleSheet.absoluteFill, styles.placeholder]}
-        >
-          <Ionicons
-            accessible={false}
-            name="home-outline"
-            size={theme.space[7]}
-            color={theme.color.primary}
-          />
-        </View>
-      )}
-    </Animated.View>
-  );
 }
 
 /**
@@ -146,6 +92,7 @@ export function MatchCelebration({
   visible,
   mine,
   theirs,
+  chain,
   compensation,
   onView,
   onContinue,
@@ -210,15 +157,37 @@ export function MatchCelebration({
               onLayout={(event) => {
                 stageWidth.set(event.nativeEvent.layout.width);
               }}
-              style={[styles.stage, { maxWidth: contentMaxWidth.card }]}
+              style={[
+                styles.stage,
+                chain ? styles.triangleStage : styles.crossStage,
+                { maxWidth: contentMaxWidth.card },
+              ]}
             >
-              <Tile side="mine" home={mine} animatedStyle={mineStyle} reduceMotion={reduceMotion} />
-              <Tile
-                side="theirs"
-                home={theirs}
-                animatedStyle={theirsStyle}
-                reduceMotion={reduceMotion}
-              />
+              {chain ? (
+                <ChainTiles
+                  mine={mine}
+                  theirs={theirs}
+                  third={chain.third}
+                  progress={progress}
+                  stageWidth={stageWidth}
+                  reduceMotion={reduceMotion}
+                />
+              ) : (
+                <>
+                  <Tile
+                    side="mine"
+                    home={mine}
+                    animatedStyle={mineStyle}
+                    reduceMotion={reduceMotion}
+                  />
+                  <Tile
+                    side="theirs"
+                    home={theirs}
+                    animatedStyle={theirsStyle}
+                    reduceMotion={reduceMotion}
+                  />
+                </>
+              )}
               <Animated.View
                 testID="swap-heart"
                 pointerEvents="none"
@@ -266,14 +235,21 @@ export function MatchCelebration({
                 },
               ]}
             >
+              {chain ? (
+                <View style={styles.compensation}>
+                  <Badge tone="info" icon="triangle-outline" label={t('matches.chain.label')} />
+                </View>
+              ) : null}
               <Text variant="title" accessibilityRole="header" style={styles.centered}>
                 {t('matches.celebration.title')}
               </Text>
               <Text tone="textMuted" style={styles.centered}>
-                {t('matches.celebration.subtitle')}
+                {t(chain ? 'matches.celebration.chain.subtitle' : 'matches.celebration.subtitle')}
               </Text>
               <Text variant="bodyStrong" style={styles.centered}>
-                {t('matches.celebration.swap', { mine: mine.title, theirs: theirs.title })}
+                {chain
+                  ? t('matches.celebration.chain.swap', { from: chain.fromName, to: chain.toName })
+                  : t('matches.celebration.swap', { mine: mine.title, theirs: theirs.title })}
               </Text>
               {compensation ? (
                 <View style={[styles.compensation, { gap: theme.space[1] }]}>
@@ -304,15 +280,10 @@ const styles = StyleSheet.create({
   compensation: { alignItems: 'center' },
   heart: { alignItems: 'center', justifyContent: 'center' },
   panel: { width: '100%' },
-  placeholder: { alignItems: 'center', justifyContent: 'center' },
   root: { flex: 1 },
   content: { alignItems: 'center', flexGrow: 1, justifyContent: 'center' },
   safe: { flex: 1 },
-  stage: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-  },
-  tile: { aspectRatio: TILE_ASPECT, overflow: 'hidden', width: TILE_WIDTH },
+  stage: { width: '100%' },
+  crossStage: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
+  triangleStage: { aspectRatio: 1 },
 });
