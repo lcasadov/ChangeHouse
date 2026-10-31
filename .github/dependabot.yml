@@ -4,8 +4,23 @@ updates:
     directory: /
     schedule: { interval: weekly }
     target-branch: develop
+    groups:
+      # Una sola PR para todas las acciones
+      actions:
+        patterns: ['*']
   - package-ecosystem: npm
     directory: /
     schedule: { interval: weekly }
     target-branch: develop
     open-pull-requests-limit: 5
+    groups:
+      # react y react-dom deben tener exactamente la misma versión
+      react:
+        patterns: ['react', 'react-dom', '@types/react', '@types/react-dom']
+      # Los paquetes de Expo se alinean con el SDK (`expo install --fix`)
+      expo:
+        patterns: ['expo', 'expo-*', 'jest-expo', 'react-native', 'react-native-*', '@expo/*']
+    ignore:
+      # Los tipos de Node siguen la versión mayor del runtime (24)
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
