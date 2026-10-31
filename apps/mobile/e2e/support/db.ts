@@ -25,10 +25,8 @@ export async function grantAdminRole(email: string): Promise<void> {
 /**
  * Siembra `count` fotos ya procesadas (`ready`) de una vivienda por SQL.
  *
- * Declarado: la subida real a fake-gcs no es viable en local porque la API falla al confirmar la foto
- * con `STORAGE_EMULATOR_HOST=localhost:4443` tal como lo documenta `services/api/.env.example`
- * (`@google-cloud/storage` exige el esquema `http://` en esa variable de entorno; hallazgo del informe).
- * La API solo guarda la ruta; las pruebas no descargan las imágenes.
+ * Las fotos se siembran por SQL para no depender de la subida real a fake-gcs, que falló en local
+ * hasta corregir #379 (`FAKE_GCS_HOST`). La API solo guarda la ruta; las pruebas no descargan las imágenes.
  */
 export async function seedReadyPhotos(homeId: string, count = 3): Promise<void> {
   const sql = openSql();
