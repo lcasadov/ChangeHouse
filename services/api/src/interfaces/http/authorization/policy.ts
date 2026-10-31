@@ -34,6 +34,7 @@ export const policy: Policy = {
   getMe: { kind: 'roles', roles: ALL_ACCOUNT_ROLES, denyStatus: 404 },
   listMyConsents: { kind: 'roles', roles: ALL_ACCOUNT_ROLES, denyStatus: 404 },
   acceptConsent: { kind: 'roles', roles: ALL_ACCOUNT_ROLES, denyStatus: 404 },
+  registerDevice: { kind: 'roles', roles: ALL_ACCOUNT_ROLES, denyStatus: 404 },
   // Viviendas: `agency` y `admin` no publican ni gestionan viviendas propias (RC-19); la propiedad
   // de cada vivienda (`resourceOwner`) y su visibilidad las resuelve el caso de uso con un 404
   listMyHomes: { kind: 'roles', roles: HOME_OWNER_ROLES },

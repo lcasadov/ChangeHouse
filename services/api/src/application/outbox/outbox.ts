@@ -1,11 +1,18 @@
 /** Hechos de negocio que se propagan por la bandeja de salida. */
 export const MATCH_CREATED = 'match.created';
+export const MATCH_CONFIRMED = 'match.confirmed';
+export const MATCH_CLOSED = 'match.closed';
+export const MESSAGE_SENT = 'message.sent';
+
+/** Identificadores que el manejador necesita además del agregado; nunca datos personales. */
+export type OutboxPayload = Readonly<Record<string, string>>;
 
 /** Un hecho recién ocurrido, a guardar en la misma transacción que el cambio de negocio. */
 export interface NewOutboxEvent {
   readonly id: string;
   readonly type: string;
   readonly aggregateId: string;
+  readonly payload?: OutboxPayload;
   readonly at: Date;
 }
 
@@ -14,6 +21,7 @@ export interface PendingOutboxEvent {
   readonly id: string;
   readonly type: string;
   readonly aggregateId: string;
+  readonly payload: OutboxPayload | null;
   readonly attempts: number;
 }
 

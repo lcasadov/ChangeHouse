@@ -6,6 +6,7 @@ import { generateCorrelationId, registerProblemHandling } from './problem.js';
 import { type AccountRouteOptions, accountRoutes } from './routes/accounts.js';
 import { type AdminHomeRouteOptions, adminHomeRoutes } from './routes/admin-homes.js';
 import { type DecisionRouteOptions, decisionRoutes } from './routes/decisions.js';
+import { type DeviceRouteOptions, deviceRoutes } from './routes/devices.js';
 import { type DiscoveryRouteOptions, discoveryRoutes } from './routes/discovery.js';
 import { type HomeRouteOptions, homeRoutes } from './routes/homes.js';
 import { type MatchRouteOptions, matchRoutes } from './routes/matches.js';
@@ -28,6 +29,7 @@ export interface AppOptions {
   security?: SecurityOptions;
   waitlist?: WaitlistRouteOptions;
   accounts?: AccountRouteOptions;
+  devices?: DeviceRouteOptions;
   homes?: HomeRouteOptions;
   photos?: PhotoRouteOptions;
   adminHomes?: AdminHomeRouteOptions;
@@ -101,6 +103,7 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
     async (versioned) => {
       if (options.waitlist) await versioned.register(waitlistRoutes(options.waitlist));
       if (options.accounts) await versioned.register(accountRoutes(options.accounts));
+      if (options.devices) await versioned.register(deviceRoutes(options.devices));
       if (options.homes) await versioned.register(homeRoutes(options.homes));
       if (options.photos) await versioned.register(photoRoutes(options.photos));
       if (options.adminHomes) await versioned.register(adminHomeRoutes(options.adminHomes));

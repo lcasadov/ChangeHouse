@@ -232,6 +232,8 @@ beforeAll(() => {
 
 beforeEach(async () => {
   flaky.failures = 0;
+  // Un despacho lanzado por la petición anterior no puede seguir en curso al vaciar las tablas
+  await api.outbox.idle();
   await sql`TRUNCATE matches, outbox, users CASCADE`;
 });
 

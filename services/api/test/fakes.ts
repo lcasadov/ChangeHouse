@@ -47,7 +47,23 @@ import type {
 import type { AuditEntry, AuditLog } from '../src/application/moderation/audit-log.js';
 import type { ModerationScope, UnitOfWork } from '../src/application/moderation/unit-of-work.js';
 import type {
+  Device,
+  DeviceRepository,
+} from '../src/application/notifications/device-repository.js';
+import type {
+  EmailNotification,
+  EmailNotifier,
+  PushNotification,
+  PushNotifier,
+  PushResult,
+} from '../src/application/notifications/notifier.js';
+import type {
+  UserContact,
+  UserContactDirectory,
+} from '../src/application/notifications/user-contact-directory.js';
+import type {
   NewOutboxEvent,
+  OutboxPayload,
   OutboxProcessor,
   OutboxWriter,
   PendingOutboxEvent,
@@ -731,15 +747,18 @@ export class InMemoryMatchUnitOfWork implements MatchUnitOfWork, MatchDecisionSt
   constructor(
     private readonly reader: InMemoryMatchReader,
     readonly audit: InMemoryAuditLog,
+    readonly outbox: InMemoryOutbox = new InMemoryOutbox(),
   ) {}
 
   async run<T>(work: (scope: MatchScope) => Promise<T>): Promise<T> {
     const records = [...this.reader.records];
     const sharing = new Set(this.reader.sharing);
     const entries = [...this.audit.entries];
+    const events = this.outbox.events.map((event) => ({ ...event }));
     try {
-      return await work({ matches: this, audit: this.audit });
+      return await work({ matches: this, audit: this.audit, outbox: this.outbox });
     } catch (error) {
+      this.outbox.events.splice(0, this.outbox.events.length, ...events);
       this.reader.records.splice(0, this.reader.records.length, ...records);
       this.reader.sharing.clear();
       for (const key of sharing) this.reader.sharing.add(key);
@@ -794,6 +813,7 @@ export class InMemoryOutbox implements OutboxWriter, OutboxProcessor {
     id: string;
     type: string;
     aggregateId: string;
+    payload?: OutboxPayload;
     attempts: number;
     processedAt: Date | null;
   }[] = [];
@@ -807,6 +827,7 @@ export class InMemoryOutbox implements OutboxWriter, OutboxProcessor {
         id: event.id,
         type: event.type,
         aggregateId: event.aggregateId,
+        ...(event.payload ? { payload: event.payload } : {}),
         attempts: 0,
         processedAt: null,
       });
@@ -822,7 +843,7 @@ export class InMemoryOutbox implements OutboxWriter, OutboxProcessor {
     const summary = { processed: 0, failed: 0 };
     for (const event of this.events.filter((known) => known.processedAt === null).slice(0, limit)) {
       try {
-        await handle(event);
+        await handle({ ...event, payload: event.payload ?? null });
         event.processedAt = at;
         summary.processed += 1;
       } catch {
@@ -921,5 +942,74 @@ export class InMemoryChatImageStorage implements ChatImageStorage {
   signedReadUrl(path: string, expiresAt: Date): Promise<string> {
     this.signed.push({ path, expiresAt });
     return Promise.resolve(`https://storage.test/read/${path}?expires=${expiresAt.toISOString()}`);
+  }
+}
+
+/** Dispositivos registrados en memoria, con la unicidad por token de la tabla `user_devices`. */
+export class InMemoryDeviceRepository implements DeviceRepository {
+  readonly rows = new Map<string, Device>();
+
+  upsert(device: Device): Promise<void> {
+    this.rows.set(device.fcmToken, device);
+    return Promise.resolve();
+  }
+
+  tokensOf(userIds: readonly string[]): Promise<string[]> {
+    const tokens = [...this.rows.values()]
+      .filter((device) => userIds.includes(device.userId))
+      .map((device) => device.fcmToken);
+    return Promise.resolve(tokens);
+  }
+
+  deleteTokens(tokens: readonly string[]): Promise<void> {
+    for (const token of tokens) this.rows.delete(token);
+    return Promise.resolve();
+  }
+}
+
+/** Servicio push de pruebas: anota cada envío; `invalidTokens` los rechaza y `failures` simula una caída. */
+export class FakePushNotifier implements PushNotifier {
+  readonly sent: { tokens: readonly string[]; notification: PushNotification }[] = [];
+  invalidTokens: readonly string[] = [];
+  failures = 0;
+
+  send(tokens: readonly string[], notification: PushNotification): Promise<PushResult> {
+    if (this.failures > 0) {
+      this.failures -= 1;
+      return Promise.reject(new Error('FCM no disponible'));
+    }
+    this.sent.push({ tokens, notification });
+    return Promise.resolve({
+      invalidTokens: tokens.filter((token) => this.invalidTokens.includes(token)),
+    });
+  }
+}
+
+/** Correo de pruebas: anota cada envío; `failures` simula una caída del servicio. */
+export class FakeEmailNotifier implements EmailNotifier {
+  readonly sent: EmailNotification[] = [];
+  failures = 0;
+
+  send(email: EmailNotification): Promise<void> {
+    if (this.failures > 0) {
+      this.failures -= 1;
+      return Promise.reject(new Error('Correo no disponible'));
+    }
+    this.sent.push(email);
+    return Promise.resolve();
+  }
+}
+
+/** Datos de contacto por uid de Firebase; un uid ausente es una cuenta que ya no existe. */
+export class InMemoryUserContactDirectory implements UserContactDirectory {
+  readonly contacts = new Map<string, UserContact>();
+  failures = 0;
+
+  findContact(firebaseUid: string): Promise<UserContact | null> {
+    if (this.failures > 0) {
+      this.failures -= 1;
+      return Promise.reject(new Error('Firebase Auth no disponible'));
+    }
+    return Promise.resolve(this.contacts.get(firebaseUid) ?? null);
   }
 }

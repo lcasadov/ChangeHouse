@@ -59,6 +59,26 @@ fc.assert(
 - **Las pruebas de `application/` no importan de `infrastructure/`** (`no-restricted-imports`, también en los
   `.test.ts`): los dobles de prueba viven en `test/fakes.ts`.
 
+## Pruebas de integración con el despachador del outbox
+
+- **Antes de vaciar tablas en `beforeEach`, se espera a que acabe el despacho en curso**: `await api.outbox.idle();`
+  y solo después `TRUNCATE`. Las operaciones que registran un hecho (`likeHome`, `confirmMatch`,
+  `withdrawFromMatch`, `sendMatchMessage`) lanzan el despachador sin esperarlo; si la prueba termina antes, su
+  transacción retiene las filas de `outbox` mientras su manejador lee `matches`, y el `TRUNCATE` (que pide
+  bloqueo exclusivo) deja a ese manejador esperando para siempre: la suite se cuelga sin ningún error.
+
+```ts
+// Incorrecto: el despacho lanzado por la prueba anterior puede seguir vivo
+beforeEach(async () => {
+  await sql`TRUNCATE matches, outbox, users CASCADE`;
+});
+// Correcto
+beforeEach(async () => {
+  await api.outbox.idle();
+  await sql`TRUNCATE matches, outbox, users CASCADE`;
+});
+```
+
 ## React: efectos y llamadas opcionales
 
 - **`react-hooks/set-state-in-effect`: no se llama a `setState` en el cuerpo del efecto para «resetear».** Se deriva

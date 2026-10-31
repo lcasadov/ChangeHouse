@@ -13,6 +13,7 @@ import type { ImageProcessor } from '../home/image-processor.js';
 import { MAX_ORIGINAL_BYTES } from '../home/photo-operations.js';
 import type { IdGenerator } from '../id-generator.js';
 import type { MatchReader, MatchRecord } from '../matching/matching-repository.js';
+import { MESSAGE_SENT, type OutboxWriter } from '../outbox/outbox.js';
 import type { ChatChannel, ChatMessageRecord } from './chat-channel.js';
 import type { ChatImageStorage } from './chat-image-storage.js';
 import { chatImagePath, chatUploadPath } from './chat-paths.js';
@@ -26,6 +27,10 @@ export interface ChatDeps {
   matches: Pick<MatchReader, 'findById'>;
   setup: ChatSetup;
   channel: ChatChannel;
+  /** Registra el aviso de cada mensaje publicado; lo entrega el despachador, no esta petición. */
+  outbox: OutboxWriter;
+  /** Se avisa si falla el registro del aviso de un mensaje ya publicado; la respuesta no cambia. */
+  onEnqueueError: (error: unknown) => void;
   storage: ChatImageStorage;
   images: ImageProcessor;
   clock: Clock;
@@ -122,8 +127,30 @@ async function createChatImageUpload(
   return { uploadId, uploadUrl, expiresAt: expiresAt.toISOString() };
 }
 
+/** El aviso lleva solo los identificadores: ni el texto ni la imagen salen de Firestore. */
+async function enqueueMessageSent(
+  deps: ChatDeps,
+  matchId: string,
+  senderId: string,
+  messageId: string,
+): Promise<void> {
+  try {
+    await deps.outbox.enqueue({
+      id: deps.ids.next(),
+      type: MESSAGE_SENT,
+      aggregateId: messageId,
+      payload: { matchId, senderId },
+      at: deps.clock.now(),
+    });
+  } catch (error) {
+    // El mensaje ya está publicado: fallar aquí haría reintentar al cliente y duplicarlo
+    deps.onEnqueueError(error);
+  }
+}
+
 async function sendText(
   deps: ChatDeps,
+  matchId: string,
   chatId: string,
   sender: { senderId: string; senderName: string },
   text: string,
@@ -136,6 +163,7 @@ async function sendText(
     createdAt: deps.clock.now(),
   };
   await deps.channel.appendMessage(chatId, message);
+  await enqueueMessageSent(deps, matchId, sender.senderId, message.id);
   return {
     id: message.id,
     kind: 'text',
@@ -187,6 +215,7 @@ async function sendImage(
     throw error;
   }
   await deps.storage.delete(uploadPath);
+  await enqueueMessageSent(deps, match.id, sender.senderId, messageId);
   const expiresAt = new Date(createdAt.getTime() + IMAGE_URL_MINUTES * MS_PER_MINUTE);
   return {
     id: messageId,
@@ -210,7 +239,7 @@ async function sendMatchMessage(
   const match = await writableMatch(deps, userId, matchId);
   const chatId = chatIdFor(match);
   const sender = senderOf(match, userId);
-  if (input.kind === 'text') return sendText(deps, chatId, sender, input.text);
+  if (input.kind === 'text') return sendText(deps, matchId, chatId, sender, input.text);
   return sendImage(deps, match, chatId, sender, input.imageUploadId);
 }
 

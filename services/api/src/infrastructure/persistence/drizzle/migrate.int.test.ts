@@ -611,6 +611,54 @@ describe('migraciones', () => {
     expect(indexes[0]?.indexdef).toMatch(/WHERE \(processed_at IS NULL\)/);
   });
 
+  it('GIVEN la base migrada WHEN se inspecciona THEN user_devices tiene el token como clave, plataforma acotada, cascada con el usuario y outbox admite una carga opcional', async () => {
+    const target = openSql(urlFor(EMPTY_DB));
+    const key = await target<{ columns: string }[]>`
+      SELECT string_agg(kcu.column_name, ',' ORDER BY kcu.ordinal_position) AS columns
+      FROM information_schema.table_constraints tc
+      JOIN information_schema.key_column_usage kcu USING (constraint_name, table_schema)
+      WHERE tc.table_name = 'user_devices' AND tc.constraint_type = 'PRIMARY KEY'`;
+    const columns = await target<{ column_name: string; udt_name: string; is_nullable: string }[]>`
+      SELECT column_name, udt_name, is_nullable FROM information_schema.columns
+      WHERE table_name = 'user_devices' ORDER BY ordinal_position`;
+    const platforms = await target<{ enumlabel: string }[]>`
+      SELECT e.enumlabel FROM pg_enum e JOIN pg_type t ON t.oid = e.enumtypid
+      WHERE t.typname = 'device_platform' ORDER BY e.enumsortorder`;
+    const cascade = await target<{ delete_rule: string }[]>`
+      SELECT rc.delete_rule FROM information_schema.referential_constraints rc
+      JOIN information_schema.table_constraints tc USING (constraint_name)
+      WHERE tc.table_name = 'user_devices' AND tc.constraint_type = 'FOREIGN KEY'`;
+    const payload = await target<{ is_nullable: string; udt_name: string }[]>`
+      SELECT is_nullable, udt_name FROM information_schema.columns
+      WHERE table_name = 'outbox' AND column_name = 'payload'`;
+    const userId = crypto.randomUUID();
+    await target`INSERT INTO users (id, firebase_uid, email, display_name)
+                 VALUES (${userId}, ${`uid-${userId}`}, ${`${userId}@example.com`}, 'Ana')`;
+    await target`INSERT INTO user_devices (fcm_token, user_id, platform)
+                 VALUES ('token-1', ${userId}, 'android')`;
+    const duplicate = target`INSERT INTO user_devices (fcm_token, user_id, platform)
+                             VALUES ('token-1', ${userId}, 'ios')`;
+    const unknownPlatform = target`INSERT INTO user_devices (fcm_token, user_id, platform)
+                                   VALUES ('token-2', ${userId}, 'symbian')`;
+    await expect(duplicate).rejects.toThrow();
+    await expect(unknownPlatform).rejects.toThrow();
+    await target`DELETE FROM users WHERE id = ${userId}`;
+    const left = await target`SELECT 1 FROM user_devices`;
+    await target.end();
+
+    expect(key).toEqual([{ columns: 'fcm_token' }]);
+    expect(columns).toEqual([
+      { column_name: 'fcm_token', udt_name: 'text', is_nullable: 'NO' },
+      { column_name: 'user_id', udt_name: 'uuid', is_nullable: 'NO' },
+      { column_name: 'platform', udt_name: 'device_platform', is_nullable: 'NO' },
+      { column_name: 'updated_at', udt_name: 'timestamptz', is_nullable: 'NO' },
+    ]);
+    expect(platforms.map((row) => row.enumlabel)).toEqual(['android', 'ios', 'web']);
+    expect(cascade).toEqual([{ delete_rule: 'CASCADE' }]);
+    expect(payload).toEqual([{ is_nullable: 'YES', udt_name: 'jsonb' }]);
+    expect(left).toHaveLength(0);
+  });
+
   it('GIVEN viviendas ya publicadas antes de la migración WHEN se aplica THEN reciben su fecha de publicación y las demás no', async () => {
     // Las migraciones hasta la 0006 en una carpeta aparte: la base queda como antes de este cambio
     const before = await mkdtemp(join(tmpdir(), 'migrations-0006-'));

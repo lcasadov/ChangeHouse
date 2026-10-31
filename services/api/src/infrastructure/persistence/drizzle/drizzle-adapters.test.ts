@@ -480,7 +480,7 @@ describe('DrizzleMatchRepository: decisiones y detalle', () => {
 });
 
 describe('DrizzleMatchUnitOfWork', () => {
-  it('ejecuta el trabajo en una transacción con las decisiones y la auditoría sobre ella', async () => {
+  it('ejecuta el trabajo en una transacción con las decisiones, la auditoría y la bandeja de salida sobre ella', async () => {
     const { db: tx } = fakeDb(undefined);
     const transactions: unknown[] = [];
     const database = {
@@ -494,7 +494,7 @@ describe('DrizzleMatchUnitOfWork', () => {
       Promise.resolve(Object.keys(scope).sort()),
     );
 
-    expect(result).toEqual(['audit', 'matches']);
+    expect(result).toEqual(['audit', 'matches', 'outbox']);
     expect(transactions).toHaveLength(1);
   });
 });
