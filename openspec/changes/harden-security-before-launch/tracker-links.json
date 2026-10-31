@@ -1,0 +1,235 @@
+{
+  "tracker": "github-issues",
+  "change": "harden-security-before-launch",
+  "sprint": {
+    "path": "Sprint 01",
+    "created": false
+  },
+  "epic": {
+    "capability": "matches",
+    "id": 197,
+    "reused": true
+  },
+  "related_epics": [
+    {
+      "capability": "platform-security",
+      "id": 347
+    },
+    {
+      "capability": "accounts",
+      "id": 59
+    },
+    {
+      "capability": "moderation",
+      "id": 125
+    },
+    {
+      "capability": "homes",
+      "id": 92
+    },
+    {
+      "capability": "chat",
+      "id": 232
+    },
+    {
+      "capability": "waitlist",
+      "id": 38
+    }
+  ],
+  "feature": {
+    "id": 346,
+    "reused": true
+  },
+  "stories": [
+    {
+      "key": "Borrar el teléfono",
+      "id": 348,
+      "reused": false,
+      "prio": "P2"
+    },
+    {
+      "key": "Eliminar la cuenta",
+      "id": 349,
+      "reused": false,
+      "prio": "P1"
+    },
+    {
+      "key": "Límite de imágenes del chat",
+      "id": 350,
+      "reused": false,
+      "prio": "P2"
+    },
+    {
+      "key": "Retención del chat",
+      "id": 351,
+      "reused": false,
+      "prio": "P2"
+    },
+    {
+      "key": "Límites de las subidas de fotos",
+      "id": 352,
+      "reused": false,
+      "prio": "P2"
+    },
+    {
+      "key": "Detalle del match para sus participantes",
+      "id": 353,
+      "reused": false,
+      "prio": "P1"
+    },
+    {
+      "key": "Teléfono solo con autorización",
+      "id": 354,
+      "reused": false,
+      "prio": "P1"
+    },
+    {
+      "key": "Bloquear a un usuario",
+      "id": 355,
+      "reused": false,
+      "prio": "P2"
+    },
+    {
+      "key": "Efecto de la suspensión",
+      "id": 356,
+      "reused": false,
+      "prio": "P2"
+    },
+    {
+      "key": "Cabeceras de seguridad de la web",
+      "id": 357,
+      "reused": false,
+      "prio": "P2"
+    },
+    {
+      "key": "Reglas y almacenamiento desplegados en todos los entornos",
+      "id": 358,
+      "reused": false,
+      "prio": "P1"
+    },
+    {
+      "key": "Configuración y registros seguros",
+      "id": 359,
+      "reused": false,
+      "prio": "P2"
+    },
+    {
+      "key": "Despliegue sin inyección",
+      "id": 360,
+      "reused": false,
+      "prio": "P2"
+    },
+    {
+      "key": "Retención de la lista de espera",
+      "id": 361,
+      "reused": false,
+      "prio": "P3"
+    }
+  ],
+  "tasks": [
+    {
+      "key": "T1",
+      "id": 362,
+      "parent": 353,
+      "state": "open"
+    },
+    {
+      "key": "B1",
+      "id": 363,
+      "parent": 354,
+      "state": "open"
+    },
+    {
+      "key": "T2",
+      "id": 364,
+      "parent": 355,
+      "state": "open"
+    },
+    {
+      "key": "B2",
+      "id": 365,
+      "parent": 356,
+      "state": "open"
+    },
+    {
+      "key": "T3",
+      "id": 366,
+      "parent": 352,
+      "state": "open"
+    },
+    {
+      "key": "B3",
+      "id": 367,
+      "parent": 350,
+      "state": "open"
+    },
+    {
+      "key": "T4",
+      "id": 368,
+      "parent": 351,
+      "state": "open"
+    },
+    {
+      "key": "B4",
+      "id": 369,
+      "parent": 361,
+      "state": "open"
+    },
+    {
+      "key": "T5",
+      "id": 370,
+      "parent": 359,
+      "state": "open"
+    },
+    {
+      "key": "B5",
+      "id": 371,
+      "parent": 359,
+      "state": "open"
+    },
+    {
+      "key": "T6",
+      "id": 372,
+      "parent": 348,
+      "state": "open"
+    },
+    {
+      "key": "F1",
+      "id": 373,
+      "parent": 349,
+      "state": "open"
+    },
+    {
+      "key": "D1",
+      "id": 374,
+      "parent": 357,
+      "state": "open"
+    },
+    {
+      "key": "D2",
+      "id": 375,
+      "parent": 358,
+      "state": "open"
+    },
+    {
+      "key": "D3",
+      "id": 376,
+      "parent": 360,
+      "state": "open"
+    },
+    {
+      "key": "D4",
+      "id": 377,
+      "parent": 359,
+      "state": "open"
+    },
+    {
+      "key": "V1",
+      "id": 378,
+      "parent": 353,
+      "state": "open"
+    }
+  ],
+  "bugs": [],
+  "pending": []
+}

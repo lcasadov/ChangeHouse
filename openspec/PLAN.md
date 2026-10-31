@@ -29,6 +29,7 @@ personas; la zona generada la reescribe `plan-sync` en cada operación.
 | add-user-suspension | D · MVP | add-reports-and-blocking | |
 | add-admin-panel | D · MVP | add-home-moderation, add-waitlist | Incluye exportación de la lista de espera |
 | add-landing-blog | D · MVP | add-landing | Prioridad baja |
+| harden-security-before-launch | E · Lanzamiento | MVP completo | Hallazgos de la auditoría de seguridad; bloquea el primer despliegue |
 
 <!-- catalogo:generado:inicio -->
 
@@ -36,12 +37,13 @@ personas; la zona generada la reescribe `plan-sync` en cada operación.
 
 | change | estado | % | completadas/total | fase |
 |---|---|---|---|---|
+| harden-security-before-launch | ❌ SIN EMPEZAR | 0 % | 0/17 | E · Lanzamiento |
 
-
-**Progreso global de los changes activos**: 0/0 (0 %)
+**Progreso global de los changes activos**: 0/17 (0 %)
 
 | estado | changes |
 |---|---|
+| ❌ SIN EMPEZAR | 1 |
 | ✅ ARCHIVADO | 22 |
 
 ### Changes archivados
