@@ -46,31 +46,31 @@
       "key": "T1",
       "id": 310,
       "parent": 306,
-      "state": "doing"
+      "state": "done"
     },
     {
       "key": "B1",
       "id": 311,
       "parent": 309,
-      "state": "doing"
+      "state": "done"
     },
     {
       "key": "T2",
       "id": 312,
       "parent": 307,
-      "state": "doing"
+      "state": "done"
     },
     {
       "key": "F1",
       "id": 313,
       "parent": 308,
-      "state": "doing"
+      "state": "done"
     },
     {
       "key": "V1",
       "id": 314,
       "parent": 306,
-      "state": "doing"
+      "state": "done"
     }
   ],
   "bugs": [],
