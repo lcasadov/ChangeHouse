@@ -9,6 +9,7 @@ import { FakeDiscovery } from './fake-discovery';
 import { FakeHomes } from './fake-homes';
 import { FakeMatches, type Match } from './fake-matches';
 import { FakeModeration } from './fake-moderation';
+import { FakeReports } from './fake-reports';
 import { FakeSearchPreferences } from './fake-search-preferences';
 import { json, problem } from './http-responses';
 
@@ -84,6 +85,8 @@ export class FakeBackend {
   readonly decisions: FakeDecisions;
   /** Los matches del usuario y los «Me gusta» que cierran uno. */
   readonly matches: FakeMatches;
+  /** Las denuncias y los bloqueos, y la cola de denuncias del admin. */
+  readonly reports = new FakeReports();
   /** La cola de moderación sobre esas mismas viviendas. */
   private readonly moderation: FakeModeration;
 
@@ -187,9 +190,11 @@ export class FakeBackend {
       return this.fail(failure);
     }
     if (path.startsWith('/admin/')) {
-      return this.profile.roles.includes('admin')
-        ? this.moderation.respond(path, method, search, body)
-        : problem(403);
+      if (!this.profile.roles.includes('admin')) return problem(403);
+      return (
+        this.reports.respondAdmin(path, method, search, body) ??
+        this.moderation.respond(path, method, search, body)
+      );
     }
     if (path.endsWith('/search-preferences')) {
       return this.searchPreferences.respond(method, path, body);
@@ -204,6 +209,8 @@ export class FakeBackend {
     search: URLSearchParams,
     body: unknown,
   ): Response {
+    const report = this.reports.respond(method, path, body);
+    if (report) return report;
     const decision = this.decisions.respond(method, path, search, body);
     if (decision) return decision;
     if (path === '/discover') return this.discovery.respond(search);

@@ -24,6 +24,7 @@ import { createHttpHomesApi } from '../homes/http-homes-api';
 import { createExpoPhotoPicker } from '../homes/photo-picker';
 import { createXhrPhotoUploader } from '../homes/xhr-photo-uploader';
 import { createHttpMatchesApi } from '../matches/http-matches-api';
+import { createHttpModerationApi } from '../moderation/http-moderation-api';
 import { createExpoPushNotifications } from '../notifications/expo-push-notifications';
 import { createNoPushNotifications } from '../notifications/no-push-notifications';
 import { createFixtureZoneSuggestions } from '../search/fixture-zone-suggestions';
@@ -64,6 +65,7 @@ export function createAppServices(
     dataExporter: Platform.OS === 'web' ? createWebDataExporter() : createShareDataExporter(),
     homesApi: createHttpHomesApi(client),
     adminApi: createHttpAdminApi(client),
+    moderationApi: createHttpModerationApi(client),
     addressSuggestions: createAddressSuggestions(env),
     photoPicker: createExpoPhotoPicker(),
     photoUploader: createXhrPhotoUploader(),

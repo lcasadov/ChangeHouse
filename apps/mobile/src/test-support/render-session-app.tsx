@@ -9,6 +9,7 @@ import TabsLayout from '../../app/(tabs)/_layout';
 import AdminLayout from '../../app/(tabs)/admin/_layout';
 import ModerationDetailRoute from '../../app/(tabs)/admin/[homeId]';
 import AdminQueueRoute from '../../app/(tabs)/admin/index';
+import AdminReportsRoute from '../../app/(tabs)/admin/reports';
 import HomesLayout from '../../app/(tabs)/homes/_layout';
 import EditHomeRoute from '../../app/(tabs)/homes/[homeId]/edit';
 import HomeDetailRoute from '../../app/(tabs)/homes/[homeId]/index';
@@ -37,6 +38,7 @@ import { createHttpHomesApi } from '../features/homes/http-homes-api';
 import type { PhotoPicker } from '../features/homes/photo-picker';
 import type { PhotoUploader } from '../features/homes/photo-uploader';
 import { createHttpMatchesApi } from '../features/matches/http-matches-api';
+import { createHttpModerationApi } from '../features/moderation/http-moderation-api';
 import type { PushNotifications } from '../features/notifications/push-notifications';
 import { createFixtureZoneSuggestions } from '../features/search/fixture-zone-suggestions';
 import { createHttpSearchPreferencesApi } from '../features/search/http-search-preferences-api';
@@ -71,6 +73,12 @@ export function fakeServices(overrides: Partial<AppServices> = {}): AppServices 
     adminApi: {
       listPending: () => Promise.resolve({ items: [], nextCursor: null }),
       moderate: () => Promise.reject(new Error('Sin moderación en este doble')),
+      listReports: () => Promise.resolve({ items: [], nextCursor: null }),
+      resolveReport: () => Promise.reject(new Error('Sin denuncias en este doble')),
+    },
+    moderationApi: {
+      report: () => Promise.resolve(),
+      block: () => Promise.resolve(),
     },
     homesApi: {
       listMine: () => Promise.resolve([]),
@@ -170,6 +178,7 @@ export function renderSessionApp({
     dataExporter,
     homesApi: createHttpHomesApi(client),
     adminApi: createHttpAdminApi(client),
+    moderationApi: createHttpModerationApi(client),
     addressSuggestions,
     photoPicker,
     photoUploader,
@@ -215,6 +224,7 @@ export function renderSessionApp({
       '(tabs)/homes/[homeId]/edit': EditHomeRoute,
       '(tabs)/admin/_layout': AdminLayout,
       '(tabs)/admin/index': AdminQueueRoute,
+      '(tabs)/admin/reports': AdminReportsRoute,
       '(tabs)/admin/[homeId]': ModerationDetailRoute,
       '(tabs)/profile': ProfileRoute,
     },

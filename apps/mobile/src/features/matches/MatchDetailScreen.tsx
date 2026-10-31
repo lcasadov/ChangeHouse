@@ -22,6 +22,7 @@ import { DetailGallery } from '../discovery/DetailGallery';
 import { formatEuros } from '../homes/home-form';
 import { homeTitleOf } from '../homes/home-title';
 import { useMyHomes } from '../homes/use-homes';
+import { MoreOptions } from '../moderation/MoreOptions';
 import { LoadingView } from '../session/LoadingView';
 import { detailViewOf, type MatchDetailView } from './match-detail-model';
 import { compensationOf, kindOf, linksOf } from './match-model';
@@ -156,6 +157,12 @@ function ParticipantSection({ participant, mine, view }: Readonly<ParticipantPro
             label={t(`matches.detail.participantStatus.${owner}.${participant.status}`)}
           />
         </View>
+        {mine ? null : (
+          <MoreOptions
+            subject={participant.displayName}
+            report={{ type: 'home', id: participant.givesHomeId }}
+          />
+        )}
       </View>
       {home ? <DetailGallery home={home} title={homeTitle} /> : null}
       <View style={[padding, { gap: theme.space[2] }]}>

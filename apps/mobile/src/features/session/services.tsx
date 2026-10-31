@@ -12,6 +12,7 @@ import type { HomesApi } from '../homes/homes-api';
 import type { PhotoPicker } from '../homes/photo-picker';
 import type { PhotoUploader } from '../homes/photo-uploader';
 import type { MatchesApi } from '../matches/matches-api';
+import type { ModerationApi } from '../moderation/moderation-api';
 import type { PushNotifications } from '../notifications/push-notifications';
 import type { SearchPreferencesApi } from '../search/search-preferences-api';
 import type { ZoneSuggestions } from '../search/zone-suggestions';
@@ -25,6 +26,8 @@ export interface AppServices {
   homesApi: HomesApi;
   /** La cola de moderación y las decisiones del equipo de administración. */
   adminApi: AdminApi;
+  /** Denunciar usuarios, viviendas y mensajes, y bloquear usuarios. */
+  moderationApi: ModerationApi;
   /** Autocompletado de direcciones del alta de viviendas (Google Places o sugerencias de prueba). */
   addressSuggestions: AddressSuggestions;
   /** La galería del dispositivo, de donde se eligen las fotos de la vivienda. */

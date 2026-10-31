@@ -775,6 +775,65 @@
     "failure": {
       "network": "No hemos podido guardar tu decisión. Comprueba tu conexión y vuelve a intentarlo.",
       "unknown": "No hemos podido guardar tu decisión. Inténtalo de nuevo en unos minutos."
+    },
+    "reports": {
+      "open": "Denuncias",
+      "back": "Viviendas en revisión",
+      "title": "Denuncias",
+      "intro": "Las abiertas, de la más antigua a la más reciente.",
+      "empty": {
+        "title": "No hay denuncias abiertas",
+        "description": "Cuando alguien denuncie un usuario, una vivienda o un mensaje, aparecerá aquí."
+      },
+      "loadFailed": "No hemos podido cargar las denuncias. Comprueba tu conexión y vuelve a intentarlo.",
+      "retry": "Reintentar",
+      "loadMore": "Cargar más",
+      "loadMoreFailed": "No hemos podido cargar más denuncias. Inténtalo de nuevo.",
+      "item": {
+        "targetType": {
+          "user": "Usuario",
+          "home": "Vivienda",
+          "message": "Mensaje"
+        },
+        "target": "{{type}} denunciado (referencia {{id}})",
+        "reason": "Motivo: {{reason}}",
+        "created": "Denunciada el {{date}}",
+        "resolveLabel": "Resolver la denuncia «{{reason}}»",
+        "dismissLabel": "Desestimar la denuncia «{{reason}}»",
+        "evidence": {
+          "title": "Copia del mensaje",
+          "text": "«{{text}}»",
+          "image": "Imagen",
+          "sent": "Enviado el {{date}}"
+        }
+      },
+      "resolve": {
+        "action": "Resolver",
+        "title": "Resolver la denuncia",
+        "confirm": "Resolver denuncia"
+      },
+      "dismiss": {
+        "action": "Desestimar",
+        "title": "Desestimar la denuncia",
+        "confirm": "Desestimar denuncia"
+      },
+      "note": {
+        "description": "Escribe una nota con lo que has comprobado. Quedará en el registro de auditoría.",
+        "label": "Nota de la resolución",
+        "hint": "Obligatoria, hasta 2000 caracteres.",
+        "cancel": "Cancelar",
+        "errors": {
+          "required": "Escribe la nota de la resolución.",
+          "tooLong": "La nota no puede superar los 2000 caracteres.",
+          "invalid": "El servidor no ha aceptado la nota. Revísala e inténtalo de nuevo."
+        }
+      },
+      "outcome": {
+        "resolved": "Denuncia resuelta: ya no aparece en la cola.",
+        "dismissed": "Denuncia desestimada: ya no aparece en la cola.",
+        "gone": "Esta denuncia ya no existe o la ha resuelto otra persona. La cola se ha actualizado.",
+        "conflict": "Esta denuncia ya se resolvió. La cola se ha actualizado."
+      }
     }
   },
   "search": {
@@ -945,5 +1004,57 @@
       "confirm": "Activar avisos",
       "cancel": "Ahora no"
     }
+  },
+  "moderation": {
+    "more": {
+      "action": "Más opciones",
+      "label": "Más opciones de {{subject}}",
+      "title": "Más opciones de {{subject}}",
+      "close": "Cerrar",
+      "report": "Denunciar",
+      "block": "Bloquear",
+      "subject": {
+        "message": "un mensaje de {{name}} a las {{time}}"
+      }
+    },
+    "report": {
+      "title": "Denunciar",
+      "description": "Cuéntanos qué ocurre. El equipo de ChangeHouse lo revisará.",
+      "shortcuts": "Motivos frecuentes",
+      "reasons": {
+        "fake": "Anuncio falso",
+        "inappropriate": "Contenido inapropiado",
+        "harassment": "Acoso o trato ofensivo",
+        "scam": "Posible estafa"
+      },
+      "reasonLabel": "Motivo de la denuncia",
+      "reasonHint": "Elige un motivo frecuente o descríbelo con tus palabras (hasta 1000 caracteres).",
+      "send": "Enviar denuncia",
+      "cancel": "Cancelar",
+      "sent": "Gracias. Hemos recibido tu denuncia y el equipo la revisará.",
+      "errors": {
+        "required": "Indica el motivo de la denuncia.",
+        "tooLong": "El motivo no puede superar los 1000 caracteres.",
+        "rateLimited": "Has enviado muchas denuncias en poco tiempo. Inténtalo de nuevo dentro de una hora.",
+        "network": "No hemos podido enviar la denuncia. Comprueba tu conexión e inténtalo de nuevo.",
+        "notFound": "Ya no encontramos lo que quieres denunciar.",
+        "invalid": "El servidor no ha aceptado el motivo. Revísalo e inténtalo de nuevo.",
+        "unknown": "No hemos podido enviar la denuncia. Inténtalo de nuevo en unos minutos."
+      }
+    },
+    "block": {
+      "title": "Bloquear a {{name}}",
+      "description": "Dejaréis de veros: no verás sus viviendas ni esa persona verá las tuyas, y no podréis formar matches nuevos. Los matches que ya tenéis siguen abiertos; puedes retirarte desde su detalle.",
+      "confirm": "Bloquear",
+      "cancel": "Cancelar",
+      "done": "Has bloqueado a {{name}}. Dejaréis de veros.",
+      "retry": "Reintentar",
+      "errors": {
+        "network": "No hemos podido bloquear a {{name}}. Comprueba tu conexión e inténtalo de nuevo.",
+        "notFound": "Ya no encontramos a {{name}}.",
+        "unknown": "No hemos podido bloquear a {{name}}. Inténtalo de nuevo en unos minutos."
+      }
+    },
+    "dismiss": "Entendido"
   }
 }
