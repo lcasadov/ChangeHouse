@@ -5,7 +5,11 @@ import { principalOf } from '../../../../test/http.js';
 import { AddressNotResolvedError, HomeNotFoundError } from '../../../application/home/errors.js';
 import type { HomeView } from '../../../application/home/home-views.js';
 import type { Role } from '../../../domain/account/role.js';
-import { HomeIncompleteError, HomeNotEditableError } from '../../../domain/home/errors.js';
+import {
+  HomeIncompleteError,
+  HomeNotEditableError,
+  HomeNotPausableError,
+} from '../../../domain/home/errors.js';
 import { buildApp } from '../app.js';
 import type { HomeRouteOptions } from './homes.js';
 
@@ -33,6 +37,8 @@ function setup(options: { role?: Role | undefined; failWith?: Error } = {}) {
     listMyHomes: respond('listMyHomes', [VIEW]),
     getHome: respond('getHome', VIEW),
     submitHome: respond('submitHome', VIEW),
+    pauseHome: respond('pauseHome', VIEW),
+    resumeHome: respond('resumeHome', VIEW),
   };
   const app = buildApp({
     logger: false,
@@ -289,5 +295,90 @@ describe('POST /homes/{homeId}/submit', () => {
       code: 'HOME_INCOMPLETE',
       errors: [{ field: 'valueMinCents' }, { field: 'valueMaxCents' }],
     });
+  });
+});
+
+describe('POST /homes/{homeId}/pause y /resume', () => {
+  it('Scenario: Pausar - el owner pausa su vivienda: 200 con la ficha y delega en el caso de uso', async () => {
+    const { app, calls } = setup({ role: 'owner' });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: `/v1/homes/${HOME_ID}/pause`,
+      headers: AUTH,
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual(VIEW);
+    expect(calls).toEqual([{ operation: 'pauseHome', args: ['user-1', HOME_ID] }]);
+  });
+
+  it('Scenario: Reactivar - 200 con la ficha y delega en el caso de uso, también para un seeker', async () => {
+    for (const role of ['owner', 'seeker'] as const) {
+      const { app, calls } = setup({ role });
+
+      const response = await app.inject({
+        method: 'POST',
+        url: `/v1/homes/${HOME_ID}/resume`,
+        headers: AUTH,
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(calls).toEqual([{ operation: 'resumeHome', args: ['user-1', HOME_ID] }]);
+    }
+  });
+
+  it('Scenario: Pausar un borrador - el conflicto del dominio es un 409 con su código', async () => {
+    const { app } = setup({ role: 'owner', failWith: new HomeNotPausableError() });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: `/v1/homes/${HOME_ID}/pause`,
+      headers: AUTH,
+    });
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json()).toMatchObject({ code: 'HOME_NOT_PAUSABLE' });
+  });
+
+  it('Scenario: Pausar un borrador - un seeker (solo tiene borradores) llega al caso de uso, que decide el 409', async () => {
+    const { app, calls } = setup({ role: 'seeker', failWith: new HomeNotPausableError() });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: `/v1/homes/${HOME_ID}/pause`,
+      headers: AUTH,
+    });
+
+    expect(response.statusCode).toBe(409);
+    expect(calls).toEqual([{ operation: 'pauseHome', args: ['user-1', HOME_ID] }]);
+  });
+
+  it('agency y admin no gestionan viviendas: 403 sin llegar al caso de uso', async () => {
+    for (const role of ['agency', 'admin'] as const) {
+      const { app, calls } = setup({ role });
+
+      const response = await app.inject({
+        method: 'POST',
+        url: `/v1/homes/${HOME_ID}/pause`,
+        headers: AUTH,
+      });
+
+      expect(response.statusCode).toBe(403);
+      expect(calls).toEqual([]);
+    }
+  });
+
+  it('un identificador que no es un UUID es un 404 sin llegar al caso de uso', async () => {
+    const { app, calls } = setup({ role: 'owner' });
+
+    const responses = await Promise.all(
+      ['pause', 'resume'].map((action) =>
+        app.inject({ method: 'POST', url: `/v1/homes/no-es-uuid/${action}`, headers: AUTH }),
+      ),
+    );
+
+    expect(responses.map((response) => response.statusCode)).toEqual([404, 404]);
+    expect(calls).toEqual([]);
   });
 });

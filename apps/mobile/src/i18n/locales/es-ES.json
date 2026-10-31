@@ -477,7 +477,17 @@
         "closed": "Esta casa ya no está activa."
       },
       "managePhotos": "Gestionar fotos",
-      "photosTitle": "Fotos"
+      "photosTitle": "Fotos",
+      "pause": {
+        "action": "Pausar",
+        "hint": "No aparecerá en Explorar ni hará matches nuevos; tus matches siguen abiertos."
+      },
+      "resume": {
+        "action": "Reactivar",
+        "hint": "Volverá a aparecer en Explorar sin pasar otra vez por revisión."
+      },
+      "actionFailed": "No hemos podido cambiar el estado de tu casa. Comprueba tu conexión y vuelve a intentarlo.",
+      "stateChanged": "Tu casa ha cambiado de estado mientras tanto. Vuelve a Mis casas para ver cómo está ahora."
     },
     "vpp": {
       "title": "Vivienda protegida: {{regime}}",
@@ -549,6 +559,13 @@
       "notice": "No hemos podido publicar tu casa. Motivo: {{reason}}",
       "action": "Corregir y reenviar",
       "actionLabel": "Corregir y reenviar: {{title}}"
+    },
+    "reReview": {
+      "title": "Volverá a revisión antes de mostrarse",
+      "description": "Has cambiado datos que revisamos antes de publicar. Mientras la revisamos, tu casa no aparecerá en Explorar; tus matches siguen abiertos.",
+      "confirm": "Guardar y enviar a revisión",
+      "cancel": "Seguir editando",
+      "photosNotice": "Volverá a revisión antes de mostrarse: si añades o quitas fotos, revisaremos tu casa antes de volver a mostrarla en Explorar."
     }
   },
   "profile": {

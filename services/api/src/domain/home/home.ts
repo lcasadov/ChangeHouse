@@ -13,6 +13,8 @@ import {
   HomeIncompleteError,
   HomeNotEditableError,
   HomeNotInReviewError,
+  HomeNotPausableError,
+  HomeNotResumableError,
   HomeNotSubmittableError,
   InvalidModerationReasonError,
   ValueAboveVppMaxLegalPriceError,
@@ -109,7 +111,11 @@ const REQUIRED_FOR_SUBMIT = [
   'isPrimaryResidence',
 ] as const satisfies readonly (keyof Home)[];
 
-/** Cambiar estos datos de una vivienda ya publicada exige volver a moderarla (RF-18). */
+/**
+ * Cambiar estos datos de una vivienda publicada o pausada exige volver a moderarla (RF-18), igual
+ * que sus fotos, sus características (`features`) y su dirección. La visibilidad de la ubicación,
+ * la calificación energética, el año, la vivienda habitual y la hipoteca no son relevantes.
+ */
 const RELEVANT_FIELDS = [
   'type',
   'regime',
@@ -117,12 +123,19 @@ const RELEVANT_FIELDS = [
   'builtM2',
   'bedrooms',
   'bathrooms',
+  'floor',
+  'hasLift',
+  'garage',
+  'storageRoom',
   'valueMinCents',
   'valueMaxCents',
   'vppQualificationDate',
   'vppProtectionEnd',
   'vppMaxLegalPriceCents',
 ] as const satisfies readonly (keyof Home)[];
+
+/** Estados en los que la vivienda está o estaba a la vista: un cambio relevante la devuelve a revisión. */
+const RESUBMIT_ON_CHANGE: readonly HomeStatus[] = ['published', 'paused'];
 
 const NOT_EDITABLE: readonly HomeStatus[] = ['in_operation', 'closed'];
 
@@ -217,11 +230,21 @@ export function newDraft(params: NewDraft): Home {
   return home;
 }
 
+/** Las características son planas: iguales si coinciden clave a clave, sin importar el orden. */
+function sameFeatures(before: HomeFeatures, after: HomeFeatures): boolean {
+  const keys = new Set([...Object.keys(before), ...Object.keys(after)]) as Set<keyof HomeFeatures>;
+  return [...keys].every((key) => before[key] === after[key]);
+}
+
 function relevantChanged(before: Home, after: Home): boolean {
   const placeChanged =
     before.address !== after.address ||
     JSON.stringify(before.location) !== JSON.stringify(after.location);
-  return placeChanged || RELEVANT_FIELDS.some((field) => before[field] !== after[field]);
+  return (
+    placeChanged ||
+    !sameFeatures(before.features, after.features) ||
+    RELEVANT_FIELDS.some((field) => before[field] !== after[field])
+  );
 }
 
 /**
@@ -233,13 +256,31 @@ export function hasBeenPublished(home: Home): boolean {
   return home.status === 'published' || home.status === 'paused' || home.publishedAt !== null;
 }
 
+/** Lo que un cambio relevante deja anotado en la vivienda. */
+export interface RelevantChange {
+  readonly relevantChangedAt: Date;
+  /** Presentes solo si la vivienda vuelve a la cola de moderación. */
+  readonly status?: 'in_review';
+  readonly submittedAt?: Date;
+}
+
+/**
+ * Qué anota un cambio relevante (de la ficha o de las fotos) en `now`. Una vivienda publicada o
+ * pausada vuelve a `in_review` y se encola; una que ya se publicó alguna vez y ahora está en
+ * revisión o en borrador solo anota la fecha (RF-44). Si nunca se publicó, no hay nada que anotar.
+ */
+export function relevantChangeOf(home: Home, now: Date): RelevantChange | null {
+  if (RESUBMIT_ON_CHANGE.includes(home.status)) {
+    return { relevantChangedAt: now, status: 'in_review', submittedAt: now };
+  }
+  return hasBeenPublished(home) ? { relevantChangedAt: now } : null;
+}
+
 /**
  * Aplica los cambios del propietario. No se edita en `in_operation` ni `closed`. Una vivienda
- * publicada que cambia un dato relevante vuelve a `in_review`; una pausada se queda pausada, pero
- * el cambio queda anotado para moderarlo al reactivarla. Si ya se publicó alguna vez, el cambio
- * relevante queda anotado aunque ahora esté en revisión o en borrador. El valor no supera el
- * precio máximo legal de una protegida, y fuera de borrador una protegida lleva su fecha de
- * calificación.
+ * publicada o pausada que cambia un dato relevante vuelve a `in_review` (RF-18); los demás cambios
+ * relevantes se anotan según `relevantChangeOf`. El valor no supera el precio máximo legal de una
+ * protegida, y fuera de borrador una protegida lleva su fecha de calificación.
  */
 export function editHome(home: Home, changes: HomeChanges, now: Date): Home {
   assertEditable(home);
@@ -256,9 +297,22 @@ export function editHome(home: Home, changes: HomeChanges, now: Date): Home {
   if (home.status !== 'draft') assertQualified(edited);
 
   if (!relevantChanged(home, edited)) return edited;
-  const noted = hasBeenPublished(home) ? { ...edited, relevantChangedAt: now } : edited;
-  if (home.status !== 'published') return noted;
-  return { ...noted, status: 'in_review', submittedAt: now };
+  return { ...edited, ...relevantChangeOf(home, now) };
+}
+
+/**
+ * Pausa una vivienda publicada: deja de aparecer en el descubrimiento y de formar matches nuevos,
+ * pero conserva sus matches abiertos y su fecha de publicación (RF-17).
+ */
+export function pauseHome(home: Home): Home {
+  if (home.status !== 'published') throw new HomeNotPausableError();
+  return { ...home, status: 'paused' };
+}
+
+/** Reactiva una vivienda pausada sin pasar por moderación: los cambios relevantes ya la habrían sacado de `paused`. */
+export function resumeHome(home: Home): Home {
+  if (home.status !== 'paused') throw new HomeNotResumableError();
+  return { ...home, status: 'published' };
 }
 
 /** Campos obligatorios aún sin rellenar. */

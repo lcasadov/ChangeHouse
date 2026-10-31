@@ -13,6 +13,8 @@ interface HomeContext {
   ownHomeId: string;
   /** Una vivienda propia ya publicada, desde la que se decide (me gusta, descarte, deshacer). */
   ownPublishedHomeId: string;
+  /** Una vivienda propia pausada, que se puede reactivar. */
+  ownPausedHomeId: string;
   /** Una foto propia ya subida y sin confirmar (`pending`). */
   ownPhotoId: string;
   publishedHomeId: string;
@@ -85,6 +87,14 @@ const REQUESTS: Record<string, RequestTemplate> = {
     payload: () => ({ bedrooms: 2 }),
   },
   submitHome: { method: 'POST', url: (context) => `/v1/homes/${context.ownHomeId}/submit` },
+  pauseHome: {
+    method: 'POST',
+    url: (context) => `/v1/homes/${context.ownPublishedHomeId}/pause`,
+  },
+  resumeHome: {
+    method: 'POST',
+    url: (context) => `/v1/homes/${context.ownPausedHomeId}/resume`,
+  },
   createHomePhotoUpload: {
     method: 'POST',
     url: (context) => `/v1/homes/${context.ownHomeId}/photos`,
@@ -273,6 +283,7 @@ async function authorizationFor(
   const context: HomeContext = {
     ownHomeId: MISSING_HOME,
     ownPublishedHomeId: MISSING_HOME,
+    ownPausedHomeId: MISSING_HOME,
     ownPhotoId: MISSING_HOME,
     publishedHomeId: await publishedHome(),
     reviewHomeId: MISSING_HOME,
@@ -307,6 +318,15 @@ async function authorizationFor(
     context.ownPublishedHomeId = published.json<{ id: string }>().id;
     await sql`UPDATE homes SET status = 'published', published_at = now()
               WHERE id = ${context.ownPublishedHomeId}`;
+    const paused = await api.app.inject({
+      method: 'POST',
+      url: '/v1/homes',
+      headers,
+      payload: COMPLETE_HOME,
+    });
+    context.ownPausedHomeId = paused.json<{ id: string }>().id;
+    await sql`UPDATE homes SET status = 'paused', published_at = now()
+              WHERE id = ${context.ownPausedHomeId}`;
     // Con preferencias propias y de la vivienda, las lecturas y el borrado de la matriz tienen algo que devolver
     for (const url of [
       '/v1/me/search-preferences',

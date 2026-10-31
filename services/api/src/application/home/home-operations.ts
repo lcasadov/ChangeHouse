@@ -1,6 +1,14 @@
 import type { HomeInput, HomePatch } from '@changehouse/shared';
 
-import { editHome, type HomeLocation, newDraft, submitHome } from '../../domain/home/home.js';
+import {
+  editHome,
+  type Home,
+  type HomeLocation,
+  newDraft,
+  pauseHome,
+  resumeHome,
+  submitHome,
+} from '../../domain/home/home.js';
 import type { Clock } from '../clock.js';
 import type { IdGenerator } from '../id-generator.js';
 import { AddressNotResolvedError, HomeNotFoundError } from './errors.js';
@@ -104,6 +112,18 @@ async function submitOwnHome(deps: HomeDeps, ownerId: string, homeId: string): P
   return toHomeView(submitted, await photosOf(deps, homeId));
 }
 
+/** Aplica una transición de estado a una vivienda propia (ajena o inexistente: 404) y la guarda. */
+async function transitionOwnHome(
+  deps: HomeDeps,
+  ownerId: string,
+  homeId: string,
+  transition: (home: Home) => Home,
+): Promise<HomeView> {
+  const changed = transition(await ownHome(deps.homes, ownerId, homeId));
+  await deps.homes.save(changed);
+  return toHomeView(changed, await photosOf(deps, homeId));
+}
+
 /** Los casos de uso de las viviendas con sus dependencias ya inyectadas, listos para el transporte. */
 export function homeOperations(deps: HomeDeps) {
   return {
@@ -113,5 +133,9 @@ export function homeOperations(deps: HomeDeps) {
     listMyHomes: (ownerId: string) => listMyHomes(deps, ownerId),
     getHome: (viewerId: string, homeId: string) => getHome(deps, viewerId, homeId),
     submitHome: (ownerId: string, homeId: string) => submitOwnHome(deps, ownerId, homeId),
+    pauseHome: (ownerId: string, homeId: string) =>
+      transitionOwnHome(deps, ownerId, homeId, pauseHome),
+    resumeHome: (ownerId: string, homeId: string) =>
+      transitionOwnHome(deps, ownerId, homeId, resumeHome),
   };
 }

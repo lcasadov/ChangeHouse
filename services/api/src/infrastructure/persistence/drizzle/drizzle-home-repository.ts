@@ -4,7 +4,7 @@ import type {
   HomeRepository,
   ModerationListing,
 } from '../../../application/home/home-repository.js';
-import type { Home, HomeLocation } from '../../../domain/home/home.js';
+import type { Home, HomeLocation, RelevantChange } from '../../../domain/home/home.js';
 import { normalizeMunicipality } from '../../../domain/search-preferences/search-preferences.js';
 import type { AddressCipher } from '../../crypto/address-cipher.js';
 import type { Executor } from './database.js';
@@ -47,8 +47,8 @@ export class DrizzleHomeRepository implements HomeRepository {
     return row ? this.toHome(row) : null;
   }
 
-  async markRelevantChange(id: string, at: Date): Promise<void> {
-    await this.db.update(homes).set({ relevantChangedAt: at }).where(eq(homes.id, id));
+  async markRelevantChange(id: string, change: RelevantChange): Promise<void> {
+    await this.db.update(homes).set(change).where(eq(homes.id, id));
   }
 
   async listByOwner(ownerId: string): Promise<Home[]> {

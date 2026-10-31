@@ -1,3 +1,4 @@
+import type { HomePatch } from '@changehouse/shared';
 import { useTheme } from '@changehouse/ui';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -8,6 +9,7 @@ import { Dialog, FormScreen, Notice, ProgressBar, Text } from '../../ui';
 import { LoadingView } from '../session/LoadingView';
 import { CharacteristicsStep } from './CharacteristicsStep';
 import { firstIncompleteStep, TOTAL_STEPS, type WizardStep } from './home-form';
+import { changesRelevantData, returnsToReview } from './home-relevance';
 import { homeRoutes } from './home-routes';
 import type { Home } from './homes-api';
 import { HomesApiError } from './homes-api';
@@ -33,6 +35,21 @@ const STEP_TITLES = {
 } as const satisfies Record<WizardStep, string>;
 
 const PHOTOS_STEP: WizardStep = 1;
+const FIRST_DATA_STEP: WizardStep = 2;
+/** Último paso con datos: la edición de una vivienda publicada termina aquí, sin revisión final. */
+const LAST_DATA_STEP: WizardStep = 6;
+
+/**
+ * `create`: alta o borrador, los siete pasos. `edit`: una vivienda publicada o pausada cambia sus
+ * datos (pasos 2 a 6) y vuelve al detalle. `photos`: cualquier otra vivienda ya enviada solo
+ * gestiona sus fotos. Se decide al abrir: si la edición la devuelve a revisión, sigue editándose.
+ */
+type WizardMode = 'create' | 'edit' | 'photos';
+
+function modeOf(home: Home | undefined, initialStep: WizardStep): WizardMode {
+  if (home === undefined || home.status === 'draft') return 'create';
+  return initialStep !== PHOTOS_STEP && returnsToReview(home) ? 'edit' : 'photos';
+}
 
 const asStep = (value: number): WizardStep =>
   Math.min(Math.max(value, 1), TOTAL_STEPS) as WizardStep;
@@ -115,13 +132,16 @@ function WizardBody({ home, initialStep, onCreated }: Readonly<WizardBodyProps>)
   const theme = useTheme();
   const router = useRouter();
   const uploads = usePhotoUploads();
-  const [step, setStep] = useState<WizardStep>(initialStep);
+  const [mode] = useState(() => modeOf(home, initialStep));
+  const [step, setStep] = useState<WizardStep>(() =>
+    mode === 'edit' ? asStep(Math.min(initialStep, LAST_DATA_STEP)) : initialStep,
+  );
   const [confirmingExit, setConfirmingExit] = useState(false);
-  // Una vivienda ya enviada solo permite gestionar sus fotos, no repetir el alta
-  const photosOnly = home !== undefined && home.status !== 'draft';
+  // Respuesta pendiente al aviso de vuelta a revisión: `true` guarda, `false` sigue editando
+  const [pendingReview, setPendingReview] = useState<((save: boolean) => void) | null>(null);
 
   const leave = () => {
-    router.dismissTo(homeRoutes.list);
+    router.dismissTo(mode === 'edit' && home ? homeRoutes.detail(home.id) : homeRoutes.list);
   };
   const exit = () => {
     // Las fotos sin subir no se guardan en ningún sitio: se pide confirmación antes de perderlas
@@ -136,27 +156,47 @@ function WizardBody({ home, initialStep, onCreated }: Readonly<WizardBodyProps>)
       onCreated(savedHome.id);
       uploads.flush(savedHome.id);
     }
-    goTo(step + 1);
+    if (mode === 'edit' && step === LAST_DATA_STEP)
+      router.dismissTo(homeRoutes.detail(savedHome.id));
+    else goTo(step + 1);
+  };
+  /** Avisa antes de guardar un cambio relevante en una vivienda publicada o pausada (RF-18). */
+  const confirmSave = (patch: HomePatch): Promise<boolean> => {
+    if (!home || !returnsToReview(home) || !changesRelevantData(home, patch)) {
+      return Promise.resolve(true);
+    }
+    return new Promise((resolve) => {
+      setPendingReview(() => resolve);
+    });
+  };
+  const answerReview = (save: boolean) => {
+    pendingReview?.(save);
+    setPendingReview(null);
   };
 
+  const firstStep = mode === 'edit' ? FIRST_DATA_STEP : 1;
   const stepProps: StepProps = {
     home,
     onSaved: saved,
     onBack:
-      step > 1
+      step > firstStep
         ? () => {
             goTo(step - 1);
           }
         : undefined,
     onExit: exit,
+    confirmSave,
   };
 
-  if (photosOnly) {
+  if (mode === 'photos' && home) {
     return (
       <FormScreen>
         <Text variant="title" accessibilityRole="header">
           {t(STEP_TITLES[PHOTOS_STEP])}
         </Text>
+        {returnsToReview(home) ? (
+          <Notice tone="warning">{t('homes.reReview.photosNotice')}</Notice>
+        ) : null}
         <PhotosStep
           home={home}
           uploads={uploads}
@@ -211,6 +251,19 @@ function WizardBody({ home, initialStep, onCreated }: Readonly<WizardBodyProps>)
         }}
         onCancel={() => {
           setConfirmingExit(false);
+        }}
+      />
+      <Dialog
+        visible={pendingReview !== null}
+        title={t('homes.reReview.title')}
+        description={t('homes.reReview.description')}
+        confirmLabel={t('homes.reReview.confirm')}
+        cancelLabel={t('homes.reReview.cancel')}
+        onConfirm={() => {
+          answerReview(true);
+        }}
+        onCancel={() => {
+          answerReview(false);
         }}
       />
     </FormScreen>

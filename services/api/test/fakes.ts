@@ -76,7 +76,7 @@ import type {
 import type { Consent } from '../src/domain/account/consent.js';
 import type { User } from '../src/domain/account/user.js';
 import { InvalidImageError } from '../src/domain/home/errors.js';
-import type { Home, HomeLocation } from '../src/domain/home/home.js';
+import type { Home, HomeLocation, RelevantChange } from '../src/domain/home/home.js';
 import { firstFreePosition, type HomePhoto, MAX_PHOTOS } from '../src/domain/home/photo.js';
 import type { CompensationTerms, CycleHome } from '../src/domain/matching/cycle.js';
 import type { MatchState } from '../src/domain/matching/match.js';
@@ -196,9 +196,9 @@ export class InMemoryHomeRepository implements HomeRepository {
     return this.findById(id);
   }
 
-  markRelevantChange(id: string, at: Date): Promise<void> {
+  markRelevantChange(id: string, change: RelevantChange): Promise<void> {
     const home = this.homes.get(id);
-    if (home) this.homes.set(id, { ...home, relevantChangedAt: at });
+    if (home) this.homes.set(id, { ...home, ...change });
     return Promise.resolve();
   }
 

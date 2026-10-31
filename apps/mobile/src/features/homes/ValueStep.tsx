@@ -28,7 +28,7 @@ function legalCapOf(home: StepProps['home']): number | null {
  * Paso 5, valor y cargas: el rango en euros (se guarda en céntimos), la hipoteca y si es la
  * vivienda habitual. En una vivienda protegida, el máximo muestra el tope legal y no lo supera.
  */
-export function ValueStep({ home, onSaved, onBack, onExit }: Readonly<StepProps>) {
+export function ValueStep({ home, onSaved, onBack, onExit, confirmSave }: Readonly<StepProps>) {
   const { t } = useTranslation();
   const theme = useTheme();
   const update = useUpdateHome(home?.id ?? '');
@@ -43,6 +43,7 @@ export function ValueStep({ home, onSaved, onBack, onExit }: Readonly<StepProps>
   const { submit, saving, failure } = useStepSubmit(
     form,
     async (patch) => {
+      if (confirmSave && !(await confirmSave(patch))) return;
       onSaved(await update.mutateAsync(patch));
     },
     (error) => {

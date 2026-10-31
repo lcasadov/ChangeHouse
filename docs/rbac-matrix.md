@@ -193,7 +193,7 @@ operación de la API sin filas en ese fichero hace fallar la prueba.
 | `getHome` | 401 | ✅ pública / 404 | ✅ pública / 404 | ✅ completa | completa si `resourceOwner`; pública si `published`; si no, 404 |
 | `updateHome` | 401 | `resourceOwner` | `resourceOwner` | 403 | ajena → 404; estado → 409 |
 | `submitHome` | 401 | `resourceOwner` | `resourceOwner` | 403 | ídem |
-| `pauseHome` | 401 | — | `resourceOwner` | 403 | ídem |
+| `pauseHome` | 401 | `resourceOwner` | `resourceOwner` | 403 | ídem (un `seeker` solo tiene viviendas sin publicar: 409) |
 | `resumeHome` | 401 | `resourceOwner` | `resourceOwner` | 403 | ídem |
 | `createHomePhotoUpload` | 401 | `resourceOwner` | `resourceOwner` | 403 | ajena → 404 |
 | `completeHomePhotoUpload` | 401 | `resourceOwner` | `resourceOwner` | 403 | ajena → 404 |
