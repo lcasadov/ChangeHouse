@@ -23,6 +23,7 @@ import { matchOperations } from './application/matching/match-operations.js';
 import { moderationOperations } from './application/moderation/moderation-operations.js';
 import { reportOperations } from './application/moderation/report-operations.js';
 import type { ChatMessageLookup } from './application/moderation/report-sources.js';
+import { userSuspensionOperations } from './application/moderation/user-suspension.js';
 import {
   notificationHandlers,
   notificationOperations,
@@ -61,6 +62,7 @@ import {
 import { DrizzlePhotoRepository } from './infrastructure/persistence/drizzle/drizzle-photo-repository.js';
 import { DrizzleReportRepository } from './infrastructure/persistence/drizzle/drizzle-report-repository.js';
 import { DrizzleSearchPreferencesRepository } from './infrastructure/persistence/drizzle/drizzle-search-preferences-repository.js';
+import { DrizzleSuspensionUnitOfWork } from './infrastructure/persistence/drizzle/drizzle-suspension-unit-of-work.js';
 import { DrizzleUnitOfWork } from './infrastructure/persistence/drizzle/drizzle-unit-of-work.js';
 import { DrizzleUserRepository } from './infrastructure/persistence/drizzle/drizzle-user-repository.js';
 import { DrizzleWaitlistRepository } from './infrastructure/persistence/drizzle/drizzle-waitlist-repository.js';
@@ -170,6 +172,11 @@ export function createApi(config: ApiConfig, adapters: ApiAdapters = {}) {
     homes: homeRepository,
     photos: photoRepository,
     storage: photoStorage,
+    clock: systemClock,
+  });
+  const adminUsers = userSuspensionOperations({
+    units: new DrizzleSuspensionUnitOfWork(database.db),
+    ownership,
     clock: systemClock,
   });
   const preferencesRepository = new DrizzleSearchPreferencesRepository(database.db);
@@ -317,6 +324,7 @@ export function createApi(config: ApiConfig, adapters: ApiAdapters = {}) {
     homes,
     photos,
     adminHomes,
+    adminUsers,
     reports: {
       createReport: reportOps.createReport,
       blockUser: reportOps.blockUser,

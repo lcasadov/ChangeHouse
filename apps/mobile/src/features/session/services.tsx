@@ -16,6 +16,7 @@ import type { ModerationApi } from '../moderation/moderation-api';
 import type { PushNotifications } from '../notifications/push-notifications';
 import type { SearchPreferencesApi } from '../search/search-preferences-api';
 import type { ZoneSuggestions } from '../search/zone-suggestions';
+import type { AccountSuspensionSignal } from './account-suspension';
 
 /** Los puertos de salida que usa la interfaz; en la app van sobre Firebase y HTTP, en las pruebas son dobles. */
 export interface AppServices {
@@ -52,6 +53,8 @@ export interface AppServices {
   social: readonly SocialSignIn[];
   /** Dónde se leen los textos legales cuyas versiones se aceptan en el alta. */
   legalUrls: { terms: string; privacy: string };
+  /** El aviso de que la API ha respondido que la cuenta está suspendida. */
+  accountSuspension: AccountSuspensionSignal;
 }
 
 const ServicesContext = createContext<AppServices | null>(null);

@@ -227,7 +227,7 @@ matriz como datos, que no crea matches, los actores `seeker` y `owner` obtienen
 | `adminListReports` | 401 | 403 | 403 | ✅ | abiertas por defecto, de la más antigua a la más reciente, con evidencia |
 | `adminResolveReport` | 401 | 403 | 403 | ✅ | nota obligatoria (400); auditoría `report.resolve`/`report.dismiss` en la misma transacción; ya cerrada → 409 |
 | `adminListUsers` | 401 | 403 | 403 | ✅ | — |
-| `adminSetUserSuspension` | 401 | 403 | 403 | ✅ | auditoría |
+| `adminSetUserSuspension` | 401 | 403 | 403 | ✅ | motivo obligatorio (sin él, 400); auditoría en la misma transacción; a sí mismo u otro admin → 409 |
 | `adminGetMetrics` | 401 | 403 | 403 | ✅ | — |
 | `adminListAuditLog` | 401 | 403 | 403 | ✅ | — |
 | `adminListWaitlist` | 401 | 403 | 403 | ✅ | exportación CSV |
@@ -235,6 +235,12 @@ matriz como datos, que no crea matches, los actores `seeker` y `owner` obtienen
 
 `agency` no tiene operaciones en el MVP: todas le devuelven 403 salvo las de
 `self` (`getMe`, `upsertMe`, consentimientos, dispositivos, exportación).
+
+**Cuenta suspendida** (actor `suspended` en la matriz como datos: un `owner` suspendido). Toda
+operación autenticada le devuelve **403** con `code: ACCOUNT_SUSPENDED`, sea cual sea su rol, salvo
+`getMe` (200, con `suspended: true`) y `exportMyData`. Las operaciones
+públicas (`joinWaitlist`) no cambian. La regla vive en la política central (`allowSuspended` en
+`policy.ts`), no en cada caso de uso.
 
 ## 6 · Comportamiento ante denegación
 
@@ -263,8 +269,9 @@ y en `services/api/test/authorization/rbac-matrix.json`:
 - **Una operación implementada sin regla se deniega** (403 con token; 401 sin él).
 - La autorización corre en `onRequest`, antes de leer el cuerpo: sin token siempre es 401, aunque el
   cuerpo sea inválido.
-- ⚠️ PENDIENTE: usuario suspendido (403 `ACCOUNT_SUSPENDED`) — sin implementar; llega con la
-  administración de usuarios.
+- **Usuario suspendido** (403 `ACCOUNT_SUSPENDED`): implementado con `add-user-suspension`
+  (2026-10-23). `getMe` y `exportMyData` son las únicas operaciones que lo admiten; el resto, incluidas
+  `deleteMe`, las denuncias, los bloqueos y el chat, lo deniegan.
 - **Cuenta eliminada** (`add-account-deletion-and-export`): su token se trata como no válido (401) desde
   que se confirma la eliminación, aunque Firebase Auth tarde en darla de baja. `deleteMe` y
   `exportMyData` niegan con 403 a quien no tiene el rol (incluido `unregistered`); `deleteMe` no admite

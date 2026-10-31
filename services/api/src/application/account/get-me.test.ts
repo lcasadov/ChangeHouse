@@ -7,6 +7,13 @@ function setup(owners: string[] = []) {
   const users = new InMemoryUserRepository([
     makeUser({ id: 'u1', phone: '+34600111222', municipality: 'Madrid' }),
     makeUser({
+      id: 'u3',
+      firebaseUid: 'uid-3',
+      email: 'suspendido@example.com',
+      suspendedAt: new Date('2026-10-23T10:00:00.000Z'),
+      suspensionReason: 'Fraude reiterado',
+    }),
+    makeUser({
       id: 'u2',
       firebaseUid: 'uid-2',
       email: 'agencia@example.com',
@@ -33,7 +40,17 @@ describe('getMe', () => {
       isOver65: false,
       roles: ['seeker'],
       hasPublishedHome: false,
+      suspended: false,
     });
+  });
+
+  it('Scenario: Usuario suspendido usa la app - la cuenta indica la suspensión sin revelar el motivo', async () => {
+    const { run } = setup(['u3']);
+
+    const me = await run('u3');
+
+    expect(me).toMatchObject({ id: 'u3', suspended: true, roles: ['owner'] });
+    expect(JSON.stringify(me)).not.toContain('Fraude reiterado');
   });
 
   it('un usuario con vivienda publicada es owner y hasPublishedHome es verdadero', async () => {

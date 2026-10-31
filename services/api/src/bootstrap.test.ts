@@ -61,6 +61,7 @@ describe('createApi', () => {
       'adminListReports',
       'adminModerateHome',
       'adminResolveReport',
+      'adminSetUserSuspension',
       'blockUser',
       'completeHomePhotoUpload',
       'confirmMatch',

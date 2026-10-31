@@ -26,7 +26,10 @@ export const IDENTITY: VerifiedIdentity = {
   emailVerified: true,
 };
 
-/** Principal de prueba: sin `role` es una identidad autenticada que aún no está dada de alta. */
-export function principalOf(role?: Role, userId = 'user-1'): Principal {
-  return { identity: IDENTITY, account: role ? { userId, role } : null };
+/**
+ * Principal de prueba: sin `role` es una identidad autenticada que aún no está dada de alta; con
+ * `suspended`, una cuenta suspendida por un admin.
+ */
+export function principalOf(role?: Role, userId = 'user-1', suspended = false): Principal {
+  return { identity: IDENTITY, account: role ? { userId, role, suspended } : null };
 }

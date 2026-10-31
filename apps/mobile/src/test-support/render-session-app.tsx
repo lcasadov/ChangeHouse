@@ -10,6 +10,7 @@ import AdminLayout from '../../app/(tabs)/admin/_layout';
 import ModerationDetailRoute from '../../app/(tabs)/admin/[homeId]';
 import AdminQueueRoute from '../../app/(tabs)/admin/index';
 import AdminReportsRoute from '../../app/(tabs)/admin/reports';
+import AdminUsersRoute from '../../app/(tabs)/admin/users';
 import HomesLayout from '../../app/(tabs)/homes/_layout';
 import EditHomeRoute from '../../app/(tabs)/homes/[homeId]/edit';
 import HomeDetailRoute from '../../app/(tabs)/homes/[homeId]/index';
@@ -24,6 +25,7 @@ import MatchLayout from '../../app/match/[matchId]/_layout';
 import MatchChatRoute from '../../app/match/[matchId]/chat';
 import MatchDetailRoute from '../../app/match/[matchId]/index';
 import OnboardingRoute from '../../app/onboarding';
+import SuspendedRoute from '../../app/suspended';
 import { createApiClient } from '../api/client';
 import type { DataExporter } from '../features/account/data-exporter';
 import { createHttpAccountApi } from '../features/account/http-account-api';
@@ -43,6 +45,7 @@ import type { PushNotifications } from '../features/notifications/push-notificat
 import { createFixtureZoneSuggestions } from '../features/search/fixture-zone-suggestions';
 import { createHttpSearchPreferencesApi } from '../features/search/http-search-preferences-api';
 import type { ZoneSuggestions } from '../features/search/zone-suggestions';
+import { createAccountSuspensionSignal } from '../features/session/account-suspension';
 import type { AppServices } from '../features/session/services';
 import { SessionRoot } from '../features/session/SessionRoot';
 import { AppThemeProvider } from '../theme/AppThemeProvider';
@@ -73,6 +76,7 @@ export function fakeServices(overrides: Partial<AppServices> = {}): AppServices 
     adminApi: {
       listPending: () => Promise.resolve({ items: [], nextCursor: null }),
       moderate: () => Promise.reject(new Error('Sin moderación en este doble')),
+      setUserSuspension: () => Promise.reject(new Error('Sin usuarios en este doble')),
       listReports: () => Promise.resolve({ items: [], nextCursor: null }),
       resolveReport: () => Promise.reject(new Error('Sin denuncias en este doble')),
     },
@@ -122,6 +126,7 @@ export function fakeServices(overrides: Partial<AppServices> = {}): AppServices 
     addressSuggestions: createFixtureAddressSuggestions(),
     social: [],
     legalUrls: TEST_LEGAL_URLS,
+    accountSuspension: createAccountSuspensionSignal(),
     ...overrides,
   };
 }
@@ -167,10 +172,14 @@ export function renderSessionApp({
   theme = 'light',
   url = '/',
 }: SessionAppOptions) {
+  const accountSuspension = createAccountSuspensionSignal();
   const client = createApiClient({
     baseUrl: 'https://api.test',
     getToken: () => auth.getIdToken(),
     fetch: backend.fetch,
+    onAccountSuspended: () => {
+      accountSuspension.notify();
+    },
   });
   const services: AppServices = {
     auth,
@@ -191,6 +200,7 @@ export function renderSessionApp({
     pushNotifications,
     social,
     legalUrls: TEST_LEGAL_URLS,
+    accountSuspension,
   };
 
   function Root() {
@@ -209,6 +219,7 @@ export function renderSessionApp({
       '(auth)/access': AccessRoute,
       '(auth)/forgot-password': ForgotPasswordRoute,
       onboarding: OnboardingRoute,
+      suspended: SuspendedRoute,
       'discover/[homeId]': DiscoverDetailRoute,
       'match/[matchId]/_layout': MatchLayout,
       'match/[matchId]/index': MatchDetailRoute,
@@ -226,6 +237,7 @@ export function renderSessionApp({
       '(tabs)/admin/index': AdminQueueRoute,
       '(tabs)/admin/reports': AdminReportsRoute,
       '(tabs)/admin/[homeId]': ModerationDetailRoute,
+      '(tabs)/admin/users': AdminUsersRoute,
       '(tabs)/profile': ProfileRoute,
     },
     { initialUrl: url },

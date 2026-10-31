@@ -95,6 +95,12 @@ export {
   searchPreferencesSchema,
   validateSearchPreferences,
 } from './search-preferences.js';
+export {
+  MAX_SUSPENSION_REASON,
+  type SuspensionInput,
+  suspensionInputSchema,
+  validateSuspensionInput,
+} from './suspension.js';
 export type { FieldError, FieldErrorCode, Validation } from './validation.js';
 export {
   validateWaitlistInput,

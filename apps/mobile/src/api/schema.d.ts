@@ -13,7 +13,9 @@ export interface paths {
     };
     /**
      * Perfil del usuario autenticado
-     * @description Un usuario autenticado que aún no se ha dado de alta con `upsertMe` recibe 404.
+     * @description Un usuario autenticado que aún no se ha dado de alta con `upsertMe` recibe 404. Es la única
+     *     operación que responde a una cuenta suspendida (junto con `exportMyData`): lo indica con
+     *     `suspended: true`, sin el motivo, para que la app muestre la pantalla de cuenta suspendida.
      */
     get: operations['getMe'];
     /**
@@ -42,7 +44,10 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Exporta los datos personales del usuario (portabilidad, RF-05) */
+    /**
+     * Exporta los datos personales del usuario (portabilidad, RF-05)
+     * @description También la puede invocar una cuenta suspendida (`docs/rbac-matrix.md` §3).
+     */
     get: operations['exportMyData'];
     put?: never;
     post?: never;
@@ -882,7 +887,18 @@ export interface paths {
     get?: never;
     /**
      * Suspende o reactiva a un usuario
-     * @description Queda registrado en el log de auditoría (RF-93).
+     * @description Queda registrado en el log de auditoría (RF-93), en la misma transacción. El motivo es
+     *     obligatorio en ambos sentidos y es interno: no se devuelve ni se muestra al usuario.
+     *
+     *     Al suspender, los matches `open` o `confirmed` del usuario se cierran para todos (él queda
+     *     `withdrawn` y cada cierre se audita), y sus viviendas dejan de aparecer en el descubrimiento
+     *     y de formar matches nuevos. A partir de ese momento recibe 403 con `code: ACCOUNT_SUSPENDED`
+     *     en toda operación salvo `getMe` y `exportMyData`. Al reactivar recupera el acceso y sus
+     *     viviendas vuelven a aparecer, pero los matches cerrados no se reabren.
+     *
+     *     Repetir la decisión vigente (suspender a un suspendido, reactivar a un activo) responde 200
+     *     sin cambiar nada. Un admin no puede suspenderse a sí mismo (409, `code: CANNOT_SUSPEND_SELF`)
+     *     ni suspender a otro admin sin quitarle antes el rol (409, `code: CANNOT_SUSPEND_ADMIN`).
      */
     put: operations['adminSetUserSuspension'];
     post?: never;
@@ -1072,6 +1088,8 @@ export interface components {
       roles: components['schemas']['Role'][];
       /** @description true = owner; false = seeker */
       hasPublishedHome: boolean;
+      /** @description Cuenta suspendida por un admin; el motivo es interno y no se incluye */
+      suspended: boolean;
     };
     MeInput: {
       displayName: string;
@@ -1450,7 +1468,7 @@ export interface components {
         'application/problem+json': components['schemas']['Problem'];
       };
     };
-    /** @description Autenticado, pero sin el rol requerido */
+    /** @description Autenticado, pero sin el rol requerido, o con la cuenta suspendida (`code: ACCOUNT_SUSPENDED`) */
     Forbidden: {
       headers: {
         [name: string]: unknown;
@@ -2805,6 +2823,15 @@ export interface operations {
       401: components['responses']['Unauthorized'];
       403: components['responses']['Forbidden'];
       404: components['responses']['NotFound'];
+      /** @description El admin intenta suspenderse a sí mismo (`code: CANNOT_SUSPEND_SELF`) o suspender a otro admin (`code: CANNOT_SUSPEND_ADMIN`) */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
     };
   };
   adminGetMetrics: {

@@ -3,6 +3,10 @@ export type AuditAction =
   | 'home.approve'
   | 'home.reject'
   | 'match.withdraw'
+  /** Un match cerrado por la suspensión de uno de sus participantes; el actor es el admin. */
+  | 'match.close'
+  | 'user.suspend'
+  | 'user.reactivate'
   | 'user.delete'
   | 'report.resolve'
   | 'report.dismiss';

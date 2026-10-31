@@ -1,8 +1,19 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-/** Actores de la matriz: el rol (derivado o asignado) más el estado de la sesión. */
-export const ACTORS = ['anon', 'unregistered', 'seeker', 'owner', 'agency', 'admin'] as const;
+/**
+ * Actores de la matriz: el rol (derivado o asignado) más el estado de la sesión. `suspended` es un
+ * `owner` suspendido por un admin: solo consulta su cuenta (y las operaciones públicas).
+ */
+export const ACTORS = [
+  'anon',
+  'unregistered',
+  'seeker',
+  'owner',
+  'agency',
+  'admin',
+  'suspended',
+] as const;
 
 export type MatrixActor = (typeof ACTORS)[number];
 

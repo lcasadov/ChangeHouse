@@ -75,6 +75,46 @@ describe('decide', () => {
   });
 });
 
+describe('decide con una cuenta suspendida', () => {
+  it('deniega con 403 y ACCOUNT_SUSPENDED toda operación por roles, aunque el rol baste', () => {
+    for (const actor of ['seeker', 'owner', 'agency', 'admin'] as const) {
+      expect(decide({ kind: 'roles', roles: [actor] }, actor, true)).toEqual({
+        allowed: false,
+        status: 403,
+        code: 'ACCOUNT_SUSPENDED',
+      });
+    }
+  });
+
+  it('también deniega las operaciones para cualquier autenticado', () => {
+    expect(decide({ kind: 'authenticated' }, 'seeker', true)).toEqual({
+      allowed: false,
+      status: 403,
+      code: 'ACCOUNT_SUSPENDED',
+    });
+  });
+
+  it('una operación que admite cuentas suspendidas sigue exigiendo el rol', () => {
+    const access = { kind: 'roles', roles: ['seeker'], allowSuspended: true } as const;
+
+    expect(decide(access, 'seeker', true)).toEqual({ allowed: true });
+    expect(decide(access, 'owner', true)).toEqual({ allowed: false, status: 403 });
+  });
+
+  it('una operación pública no depende de la cuenta', () => {
+    expect(decide({ kind: 'public' }, 'seeker', true)).toEqual({ allowed: true });
+  });
+
+  it('en la política real solo getMe y exportMyData admiten cuentas suspendidas', () => {
+    const allowing = Object.entries(realPolicy)
+      .filter(([, access]) => decide(access, 'seeker', true).allowed)
+      .map(([operationId]) => operationId)
+      .filter((operationId) => realPolicy[operationId]?.kind !== 'public');
+
+    expect(allowing).toEqual(['getMe', 'exportMyData']);
+  });
+});
+
 describe('política de autorización', () => {
   it('declara solo las operaciones implementadas, con la lista de roles de la matriz', () => {
     const everyone: Role[] = ['seeker', 'owner', 'agency', 'admin'];
@@ -82,13 +122,14 @@ describe('política de autorización', () => {
     expect(realPolicy).toEqual({
       joinWaitlist: { kind: 'public' },
       upsertMe: { kind: 'authenticated' },
-      getMe: { kind: 'roles', roles: everyone, denyStatus: 404 },
+      // Admite una cuenta suspendida: la app la usa para mostrar la suspensión
+      getMe: { kind: 'roles', roles: everyone, denyStatus: 404, allowSuspended: true },
       listMyConsents: { kind: 'roles', roles: everyone, denyStatus: 404 },
       acceptConsent: { kind: 'roles', roles: everyone, denyStatus: 404 },
       registerDevice: { kind: 'roles', roles: everyone, denyStatus: 404 },
       // Eliminar la cuenta y exportar los datos (RF-05): la propia; agency solo puede exportar
       deleteMe: { kind: 'roles', roles: ['seeker', 'owner'] },
-      exportMyData: { kind: 'roles', roles: ['seeker', 'owner', 'agency'] },
+      exportMyData: { kind: 'roles', roles: ['seeker', 'owner', 'agency'], allowSuspended: true },
       // RC-19: agency y admin no publican ni gestionan viviendas; getHome añade al admin (forma pública)
       listMyHomes: { kind: 'roles', roles: ['seeker', 'owner'] },
       createHome: { kind: 'roles', roles: ['seeker', 'owner'] },
@@ -129,6 +170,8 @@ describe('política de autorización', () => {
       // Moderación: solo el admin (RF-18, RF-93)
       adminListHomes: { kind: 'roles', roles: ['admin'] },
       adminModerateHome: { kind: 'roles', roles: ['admin'] },
+      // Suspensión de usuarios: solo el admin (RF-90, RF-93)
+      adminSetUserSuspension: { kind: 'roles', roles: ['admin'] },
       // Denuncias y bloqueos (RF-63): owner y seeker; la cola y su resolución, solo el admin
       createReport: { kind: 'roles', roles: ['seeker', 'owner'] },
       blockUser: { kind: 'roles', roles: ['seeker', 'owner'] },
@@ -237,5 +280,84 @@ describe('autorización centralizada', () => {
     const entry = logs.parsed().find((line) => line['event'] === 'auth.not-found');
     expect(entry).toMatchObject({ level: 30, operationId: 'selfRead' });
     expect(logs.text()).not.toContain('ana@example.com');
+  });
+});
+
+describe('cuenta suspendida en el punto central de autorización', () => {
+  function suspendedApp(role: Role = 'owner') {
+    const logs = captureLogs();
+    const app = buildApp({
+      logger: logs.options,
+      security: {
+        authenticate: () => Promise.resolve(principalOf(role, 'user-9', true)),
+        policy: {
+          ...testPolicy,
+          selfRead: { kind: 'roles', roles: ['seeker', 'owner'], allowSuspended: true },
+          ownerAction: { kind: 'roles', roles: ['owner'] },
+        },
+      },
+    });
+    const executed: string[] = [];
+    app.get('/me', { config: { operationId: 'selfRead' } }, () => ({ ok: true }));
+    app.post('/likes', { config: { operationId: 'ownerAction' } }, () => {
+      executed.push('ownerAction');
+      return { ok: true };
+    });
+    app.get('/anyone', { config: { operationId: 'anyone' } }, () => ({ ok: true }));
+    app.get('/door', { config: { operationId: 'openDoor' } }, () => ({ ok: true }));
+    opened.push(app);
+    return { app, logs, executed };
+  }
+
+  it('Scenario: Usuario suspendido usa la app - una operación responde 403 Problem con ACCOUNT_SUSPENDED y no se ejecuta', async () => {
+    const { app, logs, executed } = suspendedApp();
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/likes',
+      headers: { authorization: 'Bearer token-de-prueba', 'x-correlation-id': 'corr-susp' },
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(response.headers['content-type']).toContain('application/problem+json');
+    expect(response.json()).toEqual({
+      type: 'https://changehouse.app/problems/forbidden',
+      title: 'Acceso denegado',
+      status: 403,
+      code: 'ACCOUNT_SUSPENDED',
+      correlationId: 'corr-susp',
+    });
+    expect(executed).toEqual([]);
+    expect(logs.parsed().find((entry) => entry['event'] === 'auth.suspended')).toMatchObject({
+      level: 40,
+      userId: 'user-9',
+      operationId: 'ownerAction',
+    });
+  });
+
+  it('Scenario: Usuario suspendido usa la app - la consulta de su cuenta sí responde', async () => {
+    const { app } = suspendedApp();
+
+    expect((await get(app, '/me', 'owner')).statusCode).toBe(200);
+  });
+
+  it('las operaciones para cualquier autenticado también se deniegan; las públicas no', async () => {
+    const { app } = suspendedApp('seeker');
+
+    const anyone = await get(app, '/anyone', 'seeker');
+    const door = await get(app, '/door', 'seeker');
+
+    expect(anyone.statusCode).toBe(403);
+    expect(anyone.json()).toMatchObject({ code: 'ACCOUNT_SUSPENDED' });
+    expect(door.statusCode).toBe(200);
+  });
+
+  it('una denegación por rol sin suspensión no lleva código', async () => {
+    const { app } = setup('seeker');
+
+    const response = await get(app, '/admin/homes', 'seeker');
+
+    expect(response.statusCode).toBe(403);
+    expect(response.json<object>()).not.toHaveProperty('code');
   });
 });

@@ -96,6 +96,7 @@ describe.skipIf(!emulatorAvailable())('cuenta y consentimientos con tokens reale
         'municipality',
         'phone',
         'roles',
+        'suspended',
       ]);
       const rows = await sql<
         { type: string; version: string; accepted_at: Date; user_id: string }[]

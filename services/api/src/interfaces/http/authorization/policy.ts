@@ -11,13 +11,20 @@ export type Access =
   | { kind: 'public' }
   /** Cualquier identidad verificada, esté o no dada de alta. */
   | { kind: 'authenticated' }
-  /** Solo los roles listados; quien aún no tiene cuenta nunca figura en la lista. */
-  | { kind: 'roles'; roles: readonly Role[]; denyStatus?: DenyStatus };
+  /**
+   * Solo los roles listados; quien aún no tiene cuenta nunca figura en la lista. Una cuenta
+   * suspendida se deniega salvo que la operación lo admita expresamente (`allowSuspended`).
+   */
+  | { kind: 'roles'; roles: readonly Role[]; denyStatus?: DenyStatus; allowSuspended?: true };
 
 /** Reglas por `operationId` del contrato (`docs/api/openapi.yaml`). Lo que no figura se deniega. */
 export type Policy = Readonly<Record<string, Access>>;
 
-export type Decision = { allowed: true } | { allowed: false; status: DenyStatus };
+/** Código estable de la denegación a una cuenta suspendida (`docs/rbac-matrix.md` §6). */
+export const ACCOUNT_SUSPENDED = 'ACCOUNT_SUSPENDED';
+
+export type Decision =
+  { allowed: true } | { allowed: false; status: DenyStatus; code?: typeof ACCOUNT_SUSPENDED };
 
 const ALL_ACCOUNT_ROLES: readonly Role[] = ['seeker', 'owner', 'agency', 'admin'];
 const HOME_OWNER_ROLES: readonly Role[] = ['seeker', 'owner'];
@@ -30,14 +37,17 @@ export const policy: Policy = {
   joinWaitlist: { kind: 'public' },
   // `self`: cualquier usuario autenticado, también sin alta previa (es lo que crea la cuenta)
   upsertMe: { kind: 'authenticated' },
-  // `self`: sin cuenta no hay nada que consultar, y no se distingue de un recurso inexistente
-  getMe: { kind: 'roles', roles: ALL_ACCOUNT_ROLES, denyStatus: 404 },
+  // `self`: sin cuenta no hay nada que consultar, y no se distingue de un recurso inexistente. Es
+  // una de las dos operaciones que admite una cuenta suspendida (la app la usa para mostrar la
+  // suspensión; la otra es `exportMyData`)
+  getMe: { kind: 'roles', roles: ALL_ACCOUNT_ROLES, denyStatus: 404, allowSuspended: true },
   listMyConsents: { kind: 'roles', roles: ALL_ACCOUNT_ROLES, denyStatus: 404 },
   acceptConsent: { kind: 'roles', roles: ALL_ACCOUNT_ROLES, denyStatus: 404 },
   // Eliminar la cuenta (RF-05): solo owner y seeker, como el resto de la gestión de viviendas; la
   // exportación también la hace `agency`. Siempre sobre la cuenta propia (`self`)
   deleteMe: { kind: 'roles', roles: HOME_OWNER_ROLES },
-  exportMyData: { kind: 'roles', roles: [...HOME_OWNER_ROLES, 'agency'] },
+  // Admite una cuenta suspendida: la persona conserva el derecho a llevarse sus datos
+  exportMyData: { kind: 'roles', roles: [...HOME_OWNER_ROLES, 'agency'], allowSuspended: true },
   registerDevice: { kind: 'roles', roles: ALL_ACCOUNT_ROLES, denyStatus: 404 },
   // Viviendas: `agency` y `admin` no publican ni gestionan viviendas propias (RC-19); la propiedad
   // de cada vivienda (`resourceOwner`) y su visibilidad las resuelve el caso de uso con un 404
@@ -89,6 +99,8 @@ export const policy: Policy = {
   // Moderación (RF-18, RF-93): solo el admin; la decisión queda auditada
   adminListHomes: { kind: 'roles', roles: ['admin'] },
   adminModerateHome: { kind: 'roles', roles: ['admin'] },
+  // Suspensión de usuarios (RF-90, RF-93): solo el admin; la decisión queda auditada
+  adminSetUserSuspension: { kind: 'roles', roles: ['admin'] },
   // Denuncias y bloqueos (RF-63): owner y seeker; la cola de denuncias y su resolución, solo el admin
   createReport: { kind: 'roles', roles: HOME_OWNER_ROLES },
   blockUser: { kind: 'roles', roles: HOME_OWNER_ROLES },
@@ -96,9 +108,17 @@ export const policy: Policy = {
   adminResolveReport: { kind: 'roles', roles: ['admin'] },
 };
 
-/** Único punto de decisión: ¿puede este actor invocar una operación con este acceso? */
-export function decide(access: Access, actor: Actor): Decision {
-  if (access.kind !== 'roles') return { allowed: true };
+/**
+ * Único punto de decisión: ¿puede este actor invocar una operación con este acceso? Una cuenta
+ * suspendida solo pasa por las operaciones públicas y por las que la admiten expresamente.
+ */
+export function decide(access: Access, actor: Actor, suspended = false): Decision {
+  if (access.kind === 'public') return { allowed: true };
+  const admitsSuspended = access.kind === 'roles' && access.allowSuspended === true;
+  if (suspended && !admitsSuspended) {
+    return { allowed: false, status: 403, code: ACCOUNT_SUSPENDED };
+  }
+  if (access.kind === 'authenticated') return { allowed: true };
   if (actor !== 'unregistered' && access.roles.includes(actor)) return { allowed: true };
   return { allowed: false, status: access.denyStatus ?? 403 };
 }

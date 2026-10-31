@@ -27,6 +27,9 @@ info:
       recurso no es secreta (p. ej. endpoints de administración) pero el rol no
       basta. **404** cuando el usuario no puede ver el recurso: no se revela su
       existencia (viviendas no publicadas ajenas, matches de otros).
+    - **Cuenta suspendida** por un admin: toda operación autenticada responde
+      **403** con `code: ACCOUNT_SUSPENDED`, salvo `getMe` (que lo indica con
+      `suspended: true`) y `exportMyData`. Las operaciones públicas no cambian.
     - Errores en `application/problem+json` (RFC 9457) con `correlationId`.
       Nunca trazas, consultas SQL ni nombres de tabla.
     - Correlación: toda petición admite la cabecera `X-Correlation-Id` (letras,
@@ -64,7 +67,10 @@ paths:
       tags: [cuenta]
       operationId: getMe
       summary: Perfil del usuario autenticado
-      description: Un usuario autenticado que aún no se ha dado de alta con `upsertMe` recibe 404.
+      description: |
+        Un usuario autenticado que aún no se ha dado de alta con `upsertMe` recibe 404. Es la única
+        operación que responde a una cuenta suspendida (junto con `exportMyData`): lo indica con
+        `suspended: true`, sin el motivo, para que la app muestre la pantalla de cuenta suspendida.
       x-roles: [owner, seeker, agency, admin]
       responses:
         '200':
@@ -119,6 +125,7 @@ paths:
       tags: [cuenta]
       operationId: exportMyData
       summary: Exporta los datos personales del usuario (portabilidad, RF-05)
+      description: También la puede invocar una cuenta suspendida (`docs/rbac-matrix.md` §3).
       x-roles: [owner, seeker, agency]
       responses:
         '200':
@@ -1231,7 +1238,19 @@ paths:
       tags: [administracion]
       operationId: adminSetUserSuspension
       summary: Suspende o reactiva a un usuario
-      description: Queda registrado en el log de auditoría (RF-93).
+      description: |
+        Queda registrado en el log de auditoría (RF-93), en la misma transacción. El motivo es
+        obligatorio en ambos sentidos y es interno: no se devuelve ni se muestra al usuario.
+
+        Al suspender, los matches `open` o `confirmed` del usuario se cierran para todos (él queda
+        `withdrawn` y cada cierre se audita), y sus viviendas dejan de aparecer en el descubrimiento
+        y de formar matches nuevos. A partir de ese momento recibe 403 con `code: ACCOUNT_SUSPENDED`
+        en toda operación salvo `getMe` y `exportMyData`. Al reactivar recupera el acceso y sus
+        viviendas vuelven a aparecer, pero los matches cerrados no se reabren.
+
+        Repetir la decisión vigente (suspender a un suspendido, reactivar a un activo) responde 200
+        sin cambiar nada. Un admin no puede suspenderse a sí mismo (409, `code: CANNOT_SUSPEND_SELF`)
+        ni suspender a otro admin sin quitarle antes el rol (409, `code: CANNOT_SUSPEND_ADMIN`).
       x-roles: [admin]
       requestBody:
         required: true
@@ -1254,6 +1273,13 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: >-
+            El admin intenta suspenderse a sí mismo (`code: CANNOT_SUSPEND_SELF`) o suspender a otro
+            admin (`code: CANNOT_SUSPEND_ADMIN`)
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
   /admin/metrics:
     get:
       tags: [administracion]
@@ -1419,7 +1445,8 @@ components:
         application/problem+json:
           schema: { $ref: '#/components/schemas/Problem' }
     Forbidden:
-      description: Autenticado, pero sin el rol requerido
+      description: >-
+        Autenticado, pero sin el rol requerido, o con la cuenta suspendida (`code: ACCOUNT_SUSPENDED`)
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/Problem' }
@@ -1541,7 +1568,8 @@ components:
 
     Me:
       type: object
-      required: [id, email, displayName, roles, meetsVppRequirements, isOver65, hasPublishedHome]
+      required:
+        [id, email, displayName, roles, meetsVppRequirements, isOver65, hasPublishedHome, suspended]
       properties:
         id: { type: string, format: uuid }
         email: { type: string, format: email }
@@ -1555,6 +1583,9 @@ components:
           type: array
           items: { $ref: '#/components/schemas/Role' }
         hasPublishedHome: { type: boolean, description: 'true = owner; false = seeker' }
+        suspended:
+          type: boolean
+          description: Cuenta suspendida por un admin; el motivo es interno y no se incluye
     MeInput:
       type: object
       additionalProperties: false

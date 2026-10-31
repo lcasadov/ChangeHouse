@@ -1,5 +1,5 @@
 import { createApiClient } from '../../api/client';
-import { FakeBackend, me } from '../../test-support/fake-backend';
+import { adminUser, FakeBackend, me } from '../../test-support/fake-backend';
 import { completeHome } from '../../test-support/fake-homes';
 import { storedReport } from '../../test-support/fake-reports';
 import { AdminApiError } from './admin-api';
@@ -154,6 +154,69 @@ describe('moderate', () => {
     expect(
       await failureOf(setup(backend).moderate(home.id, { decision: 'approve' })),
     ).toMatchObject({ kind: 'network' });
+  });
+});
+
+describe('setUserSuspension', () => {
+  const BETO = adminUser();
+
+  it('Scenario: Suspender con motivo - envía la decisión con su motivo y devuelve el usuario actualizado', async () => {
+    const backend = new FakeBackend({ profile: ADMIN, users: [BETO] });
+
+    const user = await setup(backend).setUserSuspension(BETO.id, {
+      suspended: true,
+      reason: 'Fraude reiterado',
+    });
+
+    expect(user).toEqual({ ...BETO, suspended: true });
+    expect(backend.requests).toMatchObject([
+      {
+        method: 'PUT',
+        path: `/admin/users/${BETO.id}/suspension`,
+        body: { suspended: true, reason: 'Fraude reiterado' },
+      },
+    ]);
+  });
+
+  it.each([
+    ['inexistente', '0198f3a0-0000-7000-8000-00000000dead', 'not-found'],
+    ['él mismo', ADMIN.id, 'cannot-suspend-self'],
+  ] as const)('traduce el rechazo de un usuario %s a %s', async (_case, userId, kind) => {
+    const backend = new FakeBackend({ profile: ADMIN, users: [BETO] });
+
+    const failure = await failureOf(
+      setup(backend).setUserSuspension(userId, { suspended: true, reason: 'Fraude' }),
+    );
+
+    expect(failure).toMatchObject({ kind });
+  });
+
+  it('suspender a otro admin se traduce a cannot-suspend-admin', async () => {
+    const other = adminUser({ id: '0198f3a0-0000-7000-8000-0000000000c3', roles: ['admin'] });
+    const backend = new FakeBackend({ profile: ADMIN, users: [other] });
+
+    const failure = await failureOf(
+      setup(backend).setUserSuspension(other.id, { suspended: true, reason: 'Fraude' }),
+    );
+
+    expect(failure).toMatchObject({ kind: 'cannot-suspend-admin' });
+  });
+
+  it('sin el rol admin es forbidden, y sin red es network', async () => {
+    const forbidden = await failureOf(
+      setup(new FakeBackend({ profile: me(), users: [BETO] })).setUserSuspension(BETO.id, {
+        suspended: true,
+        reason: 'Fraude',
+      }),
+    );
+    const offline = new FakeBackend({ profile: ADMIN, users: [BETO] });
+    offline.failNext = 'network';
+    const network = await failureOf(
+      setup(offline).setUserSuspension(BETO.id, { suspended: false, reason: 'Recurso' }),
+    );
+
+    expect(forbidden).toMatchObject({ kind: 'forbidden' });
+    expect(network).toMatchObject({ kind: 'network' });
   });
 });
 

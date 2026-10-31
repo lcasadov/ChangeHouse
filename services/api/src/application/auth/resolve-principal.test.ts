@@ -46,7 +46,26 @@ describe('resolvePrincipal', () => {
 
     await expect(run('good')).resolves.toEqual({
       identity,
-      account: { userId: 'u1', role: 'seeker' },
+      account: { userId: 'u1', role: 'seeker', suspended: false },
+    });
+  });
+
+  it('un usuario suspendido conserva su rol y queda marcado como suspendido', async () => {
+    const { run } = setup({
+      users: [
+        makeUser({
+          id: 'u1',
+          firebaseUid: 'uid-1',
+          suspendedAt: new Date('2026-10-23T10:00:00.000Z'),
+          suspensionReason: 'Fraude reiterado',
+        }),
+      ],
+      owners: ['u1'],
+    });
+
+    await expect(run('good')).resolves.toEqual({
+      identity,
+      account: { userId: 'u1', role: 'owner', suspended: true },
     });
   });
 

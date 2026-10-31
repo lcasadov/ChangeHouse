@@ -14,6 +14,22 @@ import { FakeSearchPreferences } from './fake-search-preferences';
 import { json, problem } from './http-responses';
 
 type DiscoveryCard = components['schemas']['DiscoveryCard'];
+export type AdminUser = components['schemas']['AdminUser'];
+
+/** Un usuario tal como lo ve el admin; cada prueba cambia solo lo que le importa. */
+export function adminUser(overrides: Partial<AdminUser> = {}): AdminUser {
+  return {
+    id: '0198f3a0-0000-7000-8000-0000000000b2',
+    email: 'beto@example.com',
+    displayName: 'Beto',
+    roles: ['owner'],
+    suspended: false,
+    createdAt: '2026-10-01T09:00:00.000Z',
+    ...overrides,
+  };
+}
+
+const SUSPENSION_PATH = /^\/admin\/users\/([^/]+)\/suspension$/;
 
 export interface RecordedRequest {
   method: string;
@@ -33,6 +49,7 @@ export function me(overrides: Partial<Me> = {}): Me {
     meetsVppRequirements: false,
     isOver65: false,
     hasPublishedHome: false,
+    suspended: false,
     ...overrides,
   };
 }
@@ -89,6 +106,8 @@ export class FakeBackend {
   readonly reports = new FakeReports();
   /** La cola de moderación sobre esas mismas viviendas. */
   private readonly moderation: FakeModeration;
+  /** Los usuarios que el admin puede suspender o reactivar, por id. */
+  readonly users = new Map<string, AdminUser>();
 
   constructor({
     registered = false,
@@ -97,6 +116,7 @@ export class FakeBackend {
     searchPreferences = DEFAULT_SEARCH_PREFERENCES,
     discoveryCards = [],
     matches = [],
+    users = [],
   }: {
     registered?: boolean;
     profile?: Me;
@@ -107,8 +127,11 @@ export class FakeBackend {
     discoveryCards?: readonly DiscoveryCard[];
     /** Los matches que ya tiene el usuario; por defecto, ninguno. */
     matches?: readonly Match[];
+    /** Los usuarios que un admin puede suspender o reactivar; por defecto, ninguno. */
+    users?: readonly AdminUser[];
   } = {}) {
     this.registered = registered;
+    for (const user of users) this.users.set(user.id, user);
     this.profile = profile;
     this.homes = new FakeHomes(homes);
     this.searchPreferences = new FakeSearchPreferences(this.homes, searchPreferences);
@@ -189,8 +212,16 @@ export class FakeBackend {
       this.failNext = null;
       return this.fail(failure);
     }
+    // Como la API: una cuenta suspendida solo consulta su cuenta
+    if (this.profile.suspended && !(method === 'GET' && path === '/me')) {
+      return problem(403, { code: 'ACCOUNT_SUSPENDED' });
+    }
     if (path.startsWith('/admin/')) {
       if (!this.profile.roles.includes('admin')) return problem(403);
+      const suspension = SUSPENSION_PATH.exec(path);
+      if (suspension && method === 'PUT') {
+        return this.setSuspension(suspension[1] ?? '', body as { suspended: boolean });
+      }
       return (
         this.reports.respondAdmin(path, method, search, body) ??
         this.moderation.respond(path, method, search, body)
@@ -233,6 +264,17 @@ export class FakeBackend {
     if (method === 'DELETE') return this.deleteAccount();
     if (method === 'GET') return this.registered ? json(200, this.profile) : problem(404);
     return this.upsert(body as UpsertBody);
+  }
+
+  /** `adminSetUserSuspension` con sus reglas: ni a uno mismo ni a otro admin. */
+  private setSuspension(userId: string, body: { suspended: boolean }): Response {
+    if (userId === this.profile.id) return problem(409, { code: 'CANNOT_SUSPEND_SELF' });
+    const user = this.users.get(userId);
+    if (!user) return problem(404);
+    if (user.roles.includes('admin')) return problem(409, { code: 'CANNOT_SUSPEND_ADMIN' });
+    const updated = { ...user, suspended: body.suspended };
+    this.users.set(userId, updated);
+    return json(200, updated);
   }
 
   private deleteAccount(): Response {
