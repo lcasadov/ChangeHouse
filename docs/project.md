@@ -473,9 +473,9 @@ todavía: la fuente es el `README.md`. Los comandos y rutas quedan como
 | `$PROJECT_NAME` | decisión del usuario (2026-10-18) | alta |
 | Organización | deducido | baja |
 | `$PROJECT_DESCRIPTION`, `$LANGUAGE`, `$FRAMEWORK`, `$BUILD_TOOL`, `$DB`, `$ORM`, `$STATE_MANAGEMENT`, `$TEST_FRAMEWORKS`, `$PROPERTY_TESTING_LIB` | README §8 | alta |
-| `$ARCH_STYLE`, estructura de directorios | README §9 | media (sin código) |
-| `$INSTALL_CMD`, `$RUN_CMD`, `$LINT_CMD`, `$BUILD_VERIFY_CMD`, `$TEST_CMD`, `$TYPECHECK_CMD`, `$COVERAGE_CMD`, `$TEST_UNIT_CMD`, migraciones | README §8 «Comandos previstos» | baja (no ejecutados) |
-| `$SRC_ROOT`, `$FRONTEND_ROOT` | README §9 | media (rutas aún inexistentes) |
+| `$ARCH_STYLE`, estructura de directorios | README §9 y código (`services/api`, `apps/mobile`) | alta |
+| `$INSTALL_CMD`, `$RUN_CMD`, `$LINT_CMD`, `$BUILD_VERIFY_CMD`, `$TEST_CMD`, `$TYPECHECK_CMD`, `$COVERAGE_CMD`, `$TEST_UNIT_CMD`, migraciones | `package.json` raíz y CI (`.github/workflows`) | alta (ejecutados en local y en CI) |
+| `$SRC_ROOT`, `$FRONTEND_ROOT` | README §9 y código | alta (rutas existentes) |
 | `$UI_FRAMEWORK` (versión de SDK), `$UI_LIBRARY`, `$BUNDLER` | deducido | baja |
 | `$THEMES`, `$A11Y_LEVEL`, `$BROWSER_MATRIX` | README §7 (RNF-40/41/43) | alta |
 | `$STYLE_GUIDE_DOC`, `$CODE_STANDARDS_DOC`, `$RBAC_MATRIX_DOC`, `$API_CONTRACT` | deducido (rutas que generan los prompts 06, 07, 09 y 10) | media |
