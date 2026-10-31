@@ -106,6 +106,11 @@ export const policy: Policy = {
   blockUser: { kind: 'roles', roles: HOME_OWNER_ROLES },
   adminListReports: { kind: 'roles', roles: ['admin'] },
   adminResolveReport: { kind: 'roles', roles: ['admin'] },
+  // Panel de administración (RF-90, RF-91, RF-93, RF-101): consultas de solo lectura, solo el admin
+  adminListUsers: { kind: 'roles', roles: ['admin'] },
+  adminGetMetrics: { kind: 'roles', roles: ['admin'] },
+  adminListAuditLog: { kind: 'roles', roles: ['admin'] },
+  adminListWaitlist: { kind: 'roles', roles: ['admin'] },
 };
 
 /**

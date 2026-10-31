@@ -6,6 +6,7 @@ import { accountOperations } from './application/account/account-operations.js';
 import { finishAccountDeletion } from './application/account/finish-account-deletion.js';
 import type { HomeOwnership } from './application/account/home-ownership.js';
 import type { IdentityRemover } from './application/account/identity-remover.js';
+import { adminOperations } from './application/admin/admin-operations.js';
 import { resolvePrincipal } from './application/auth/resolve-principal.js';
 import type { ChatChannel } from './application/chat/chat-channel.js';
 import type { ChatImageStorage } from './application/chat/chat-image-storage.js';
@@ -43,6 +44,12 @@ import { createFirebaseNotifier } from './infrastructure/notifications/firebase-
 import { createDatabase } from './infrastructure/persistence/drizzle/database.js';
 import { DrizzleAccountDeletionUnitOfWork } from './infrastructure/persistence/drizzle/drizzle-account-deletion-unit-of-work.js';
 import { DrizzleAccountExportReader } from './infrastructure/persistence/drizzle/drizzle-account-export.js';
+import {
+  DrizzleAuditReader,
+  DrizzleMetricsReader,
+  DrizzleUserDirectory,
+  DrizzleWaitlistReader,
+} from './infrastructure/persistence/drizzle/drizzle-admin-readers.js';
 import { DrizzleBlockRepository } from './infrastructure/persistence/drizzle/drizzle-block-repository.js';
 import { DrizzleChatMemberships } from './infrastructure/persistence/drizzle/drizzle-chat-memberships.js';
 import { DrizzleChatSetup } from './infrastructure/persistence/drizzle/drizzle-chat-setup.js';
@@ -178,6 +185,12 @@ export function createApi(config: ApiConfig, adapters: ApiAdapters = {}) {
     units: new DrizzleSuspensionUnitOfWork(database.db),
     ownership,
     clock: systemClock,
+  });
+  const adminPanel = adminOperations({
+    metrics: new DrizzleMetricsReader(database.db),
+    users: new DrizzleUserDirectory(database.db),
+    audit: new DrizzleAuditReader(database.db),
+    waitlist: new DrizzleWaitlistReader(database.db),
   });
   const preferencesRepository = new DrizzleSearchPreferencesRepository(database.db);
   const searchPreferences = searchPreferencesOperations({
@@ -325,6 +338,7 @@ export function createApi(config: ApiConfig, adapters: ApiAdapters = {}) {
     photos,
     adminHomes,
     adminUsers,
+    adminPanel,
     reports: {
       createReport: reportOps.createReport,
       blockUser: reportOps.blockUser,

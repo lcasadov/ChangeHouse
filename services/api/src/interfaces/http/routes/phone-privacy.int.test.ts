@@ -166,6 +166,10 @@ const HOMES_REQUESTS: Record<string, RequestTemplate> = {
     payload: () => ({ userId: MISSING_ID }),
   },
   adminListReports: { method: 'GET', url: '/v1/admin/reports' },
+  adminListUsers: { method: 'GET', url: '/v1/admin/users' },
+  adminGetMetrics: { method: 'GET', url: '/v1/admin/metrics?from=2026-10-01&to=2026-10-31' },
+  adminListAuditLog: { method: 'GET', url: '/v1/admin/audit-log' },
+  adminListWaitlist: { method: 'GET', url: '/v1/admin/waitlist' },
   adminResolveReport: {
     method: 'PATCH',
     url: `/v1/admin/reports/${MISSING_ID}`,

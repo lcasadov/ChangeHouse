@@ -6,6 +6,7 @@ import { generateCorrelationId, registerProblemHandling } from './problem.js';
 import { type AccountDataRouteOptions, accountDataRoutes } from './routes/account-data.js';
 import { type AccountRouteOptions, accountRoutes } from './routes/accounts.js';
 import { type AdminHomeRouteOptions, adminHomeRoutes } from './routes/admin-homes.js';
+import { type AdminPanelRouteOptions, adminPanelRoutes } from './routes/admin-panel.js';
 import { type AdminReportRouteOptions, adminReportRoutes } from './routes/admin-reports.js';
 import { type AdminUserRouteOptions, adminUserRoutes } from './routes/admin-users.js';
 import { type DecisionRouteOptions, decisionRoutes } from './routes/decisions.js';
@@ -45,6 +46,7 @@ export interface AppOptions {
   matches?: MatchRouteOptions;
   reports?: ReportRouteOptions;
   adminReports?: AdminReportRouteOptions;
+  adminPanel?: AdminPanelRouteOptions;
 }
 
 /** Confía solo en los `hops` saltos más cercanos: la IP real es la que añadió el último proxy. */
@@ -125,6 +127,7 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
       if (options.matches) await versioned.register(matchRoutes(options.matches));
       if (options.reports) await versioned.register(reportRoutes(options.reports));
       if (options.adminReports) await versioned.register(adminReportRoutes(options.adminReports));
+      if (options.adminPanel) await versioned.register(adminPanelRoutes(options.adminPanel));
     },
     { prefix: API_PREFIX },
   );
