@@ -34,37 +34,37 @@
       "key": "T1",
       "id": 280,
       "parent": 278,
-      "state": "doing"
+      "state": "done"
     },
     {
       "key": "B1",
       "id": 281,
       "parent": 278,
-      "state": "doing"
+      "state": "done"
     },
     {
       "key": "B2",
       "id": 282,
       "parent": 279,
-      "state": "doing"
+      "state": "done"
     },
     {
       "key": "T2",
       "id": 283,
       "parent": 278,
-      "state": "doing"
+      "state": "done"
     },
     {
       "key": "F1",
       "id": 284,
       "parent": 279,
-      "state": "doing"
+      "state": "done"
     },
     {
       "key": "V1",
       "id": 285,
       "parent": 278,
-      "state": "doing"
+      "state": "done"
     }
   ],
   "bugs": [],
