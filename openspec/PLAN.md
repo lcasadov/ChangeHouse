@@ -24,6 +24,18 @@ personas; la zona generada la reescribe `plan-sync` en cada operación.
 | add-notifications | D · MVP | add-match-chat | Push y email |
 | add-home-vpp-regime | D · MVP | add-home-listing | |
 | add-home-pause-resume | D · MVP | add-home-moderation | |
+| add-account-deletion-and-export | D · MVP | add-user-profile | RGPD y tiendas |
+| add-reports-and-blocking | D · MVP | add-match-chat | |
+| add-user-suspension | D · MVP | add-reports-and-blocking | |
+| add-admin-panel | D · MVP | add-home-moderation, add-waitlist | Incluye exportación de la lista de espera |
+| add-landing-blog | D · MVP | add-landing | Prioridad baja |
+
+<!-- catalogo:generado:inicio -->
+
+## Estado (generado)
+
+| change | estado | % | completadas/total | fase |
+|---|---|---|---|---|
 | add-account-deletion-and-export | ❌ SIN EMPEZAR | 0 % | 0/6 | ❌ SIN EMPEZAR |
 | add-admin-panel | ❌ SIN EMPEZAR | 0 % | 0/5 | ❌ SIN EMPEZAR |
 | add-reports-and-blocking | ❌ SIN EMPEZAR | 0 % | 0/6 | ❌ SIN EMPEZAR |
