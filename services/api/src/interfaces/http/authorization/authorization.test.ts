@@ -85,6 +85,7 @@ describe('política de autorización', () => {
       getMe: { kind: 'roles', roles: everyone, denyStatus: 404 },
       listMyConsents: { kind: 'roles', roles: everyone, denyStatus: 404 },
       acceptConsent: { kind: 'roles', roles: everyone, denyStatus: 404 },
+      registerDevice: { kind: 'roles', roles: everyone, denyStatus: 404 },
       // RC-19: agency y admin no publican ni gestionan viviendas; getHome añade al admin (forma pública)
       listMyHomes: { kind: 'roles', roles: ['seeker', 'owner'] },
       createHome: { kind: 'roles', roles: ['seeker', 'owner'] },

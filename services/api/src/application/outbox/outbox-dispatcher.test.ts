@@ -110,6 +110,40 @@ describe('OutboxDispatcher.dispatch', () => {
   });
 });
 
+describe('OutboxDispatcher - carga del hecho', () => {
+  it('entrega al manejador el agregado y la carga registrada con el hecho (nula si no la tiene)', async () => {
+    const outbox = new InMemoryOutbox();
+    const received: [string, unknown][] = [];
+    const dispatcher = new OutboxDispatcher({
+      store: outbox,
+      handlers: {
+        'message.sent': (aggregateId, payload) => {
+          received.push([aggregateId, payload]);
+          return Promise.resolve();
+        },
+      },
+      clock: { now: () => NOW },
+      intervalMs: INTERVAL_MS,
+      onError: () => undefined,
+    });
+    await outbox.enqueue({
+      id: 'e1',
+      type: 'message.sent',
+      aggregateId: 'mensaje-1',
+      payload: { matchId: 'm1', senderId: 'u1' },
+      at: NOW,
+    });
+    await outbox.enqueue({ id: 'e2', type: 'message.sent', aggregateId: 'mensaje-2', at: NOW });
+
+    await dispatcher.dispatch();
+
+    expect(received).toEqual([
+      ['mensaje-1', { matchId: 'm1', senderId: 'u1' }],
+      ['mensaje-2', null],
+    ]);
+  });
+});
+
 describe('OutboxDispatcher.kick, start y stop', () => {
   it('kick despacha sin esperar y nunca lanza, aunque falle el almacén', async () => {
     const outbox = new InMemoryOutbox();

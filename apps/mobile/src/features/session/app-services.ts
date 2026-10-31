@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+
 import { createApiClient } from '../../api/client';
 import { createHttpAccountApi } from '../account/http-account-api';
 import { createHttpAdminApi } from '../admin/http-admin-api';
@@ -20,6 +22,8 @@ import { createHttpHomesApi } from '../homes/http-homes-api';
 import { createExpoPhotoPicker } from '../homes/photo-picker';
 import { createXhrPhotoUploader } from '../homes/xhr-photo-uploader';
 import { createHttpMatchesApi } from '../matches/http-matches-api';
+import { createExpoPushNotifications } from '../notifications/expo-push-notifications';
+import { createNoPushNotifications } from '../notifications/no-push-notifications';
 import { createFixtureZoneSuggestions } from '../search/fixture-zone-suggestions';
 import { createHttpSearchPreferencesApi } from '../search/http-search-preferences-api';
 import type { AppServices } from './services';
@@ -64,6 +68,9 @@ export function createAppServices(
     matchesApi: createHttpMatchesApi(client),
     chatApi: createHttpChatApi(client),
     chatMessages: createFirestoreChatMessages(env),
+    // En la web no hay push
+    pushNotifications:
+      Platform.OS === 'web' ? createNoPushNotifications() : createExpoPushNotifications(),
     searchPreferencesApi: createHttpSearchPreferencesApi(client),
     // Sin servicio de zonas real todavía: las sugerencias de prueba (ver design.md de add-search-preferences)
     zoneSuggestions: createFixtureZoneSuggestions(),

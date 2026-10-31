@@ -174,6 +174,11 @@ const REQUESTS: Record<string, RequestTemplate> = {
     url: (context) => `/v1/admin/homes/${context.reviewHomeId}/moderation`,
     payload: () => ({ decision: 'approve' }),
   },
+  registerDevice: {
+    method: 'PUT',
+    url: '/v1/me/devices',
+    payload: () => ({ fcmToken: 'token-de-la-matriz', platform: 'android' }),
+  },
   acceptConsent: {
     method: 'POST',
     url: '/v1/me/consents',

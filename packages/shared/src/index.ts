@@ -21,6 +21,14 @@ export {
   sendMessageInputSchema,
   validateSendMessageInput,
 } from './chat.js';
+export {
+  DEVICE_PLATFORMS,
+  type DeviceInput,
+  deviceInputSchema,
+  type DevicePlatform,
+  MAX_FCM_TOKEN_LENGTH,
+  validateDeviceInput,
+} from './device.js';
 export { FIXTURE_PLACES, type FixturePlace } from './fixture-places.js';
 export {
   ENERGY_RATINGS,

@@ -10,7 +10,9 @@ import type { Clock } from '../clock.js';
 import { type HomePublicView, toHomePublicView, toPhotoViews } from '../home/home-views.js';
 import type { PhotoRepository } from '../home/photo-repository.js';
 import type { PhotoStorage } from '../home/photo-storage.js';
+import type { IdGenerator } from '../id-generator.js';
 import { encodeCursor, type ModerationCursor } from '../moderation/cursor.js';
+import { MATCH_CLOSED, MATCH_CONFIRMED } from '../outbox/outbox.js';
 import type { MatchUnitOfWork } from './match-unit-of-work.js';
 import {
   type MatchDetailView,
@@ -27,6 +29,7 @@ export interface MatchDeps {
   storage: Pick<PhotoStorage, 'publicUrl'>;
   units: MatchUnitOfWork;
   clock: Clock;
+  ids: IdGenerator;
 }
 
 export interface MyMatchesQuery {
@@ -126,19 +129,28 @@ async function getMatch(
 
 /** El participante confirma su interés; el último en confirmar lleva el match a `confirmed`. */
 function confirmMatch(deps: MatchDeps, userId: string, matchId: string): Promise<MatchView> {
-  return deps.units.run(async ({ matches }) => {
+  return deps.units.run(async ({ matches, outbox }) => {
     const match = await matches.findForUpdate(matchId);
     if (!match) throw new MatchNotFoundError();
     const confirmed = confirmInterest(match, userId);
     // Confirmar de nuevo devuelve el mismo match: no hay nada que escribir
     if (confirmed !== match) await matches.saveState(matchId, confirmed);
+    // El último en confirmar lleva el match a `confirmed`: el aviso sale con ese mismo cambio
+    if (confirmed !== match && confirmed.status === 'confirmed') {
+      await outbox.enqueue({
+        id: deps.ids.next(),
+        type: MATCH_CONFIRMED,
+        aggregateId: matchId,
+        at: deps.clock.now(),
+      });
+    }
     return toMatchView(confirmed);
   });
 }
 
 /** El participante se retira: el match se cierra para todos y la retirada queda auditada (RN-10). */
 function withdrawFromMatchOf(deps: MatchDeps, userId: string, matchId: string): Promise<MatchView> {
-  return deps.units.run(async ({ matches, audit }) => {
+  return deps.units.run(async ({ matches, audit, outbox }) => {
     const match = await matches.findForUpdate(matchId);
     if (!match) throw new MatchNotFoundError();
     const closed = withdrawFromMatch(match, userId);
@@ -148,6 +160,12 @@ function withdrawFromMatchOf(deps: MatchDeps, userId: string, matchId: string): 
       action: 'match.withdraw',
       entity: 'match',
       entityId: matchId,
+      at: deps.clock.now(),
+    });
+    await outbox.enqueue({
+      id: deps.ids.next(),
+      type: MATCH_CLOSED,
+      aggregateId: matchId,
       at: deps.clock.now(),
     });
     return toMatchView(closed);

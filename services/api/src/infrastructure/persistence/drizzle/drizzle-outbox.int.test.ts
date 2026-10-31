@@ -44,6 +44,31 @@ describe('DrizzleOutbox.enqueue', () => {
   });
 });
 
+describe('DrizzleOutbox - carga del hecho', () => {
+  it('guarda la carga con el hecho y la entrega al procesarlo; sin carga entrega null', async () => {
+    await outbox.enqueue({
+      id: EVENT_A,
+      type: 'message.sent',
+      aggregateId: MATCH_A,
+      payload: { matchId: MATCH_B, senderId: EVENT_B },
+      at: AT,
+    });
+    await outbox.enqueue({ id: EVENT_B, type: 'match.closed', aggregateId: MATCH_B, at: LATER });
+    const seen: unknown[] = [];
+
+    await outbox.processPending(
+      10,
+      (event) => {
+        seen.push(event.payload);
+        return Promise.resolve();
+      },
+      LATER,
+    );
+
+    expect(seen).toEqual([{ matchId: MATCH_B, senderId: EVENT_B }, null]);
+  });
+});
+
 describe('DrizzleOutbox.processPending', () => {
   it('entrega los pendientes del más antiguo al más reciente y marca los procesados con la fecha dada', async () => {
     await outbox.enqueue({ id: EVENT_B, type: 'match.created', aggregateId: MATCH_B, at: LATER });

@@ -22,6 +22,7 @@ export function testConfig(overrides: Partial<ApiConfig> = {}): ApiConfig {
     databaseUrl: inject('databaseUrl'),
     landingOrigin: 'https://landing.test',
     appOrigins: ['https://app.test'],
+    appPublicUrl: 'https://app.test',
     trustProxyHops: 0,
     waitlistRateLimit: { max: 1000, windowSeconds: 600 },
     likesPerDay: 10,

@@ -6,6 +6,7 @@ import {
   InMemoryMatchHomes,
   InMemoryMatchReader,
   InMemoryMatchUnitOfWork,
+  InMemoryOutbox,
   InMemoryPhotoRepository,
   InMemoryPhotoStorage,
 } from './fakes.js';
@@ -18,8 +19,10 @@ export function matchEnv(records: MatchRecord[]) {
   const homes = new InMemoryHomeRepository();
   const photos = new InMemoryPhotoRepository();
   const audit = new InMemoryAuditLog();
-  const units = new InMemoryMatchUnitOfWork(reader, audit);
+  const outbox = new InMemoryOutbox();
+  const units = new InMemoryMatchUnitOfWork(reader, audit, outbox);
   const matchHomes = new InMemoryMatchHomes(homes);
+  let sequence = 0;
   const operations = matchOperations({
     matches: reader,
     homes: matchHomes,
@@ -27,6 +30,7 @@ export function matchEnv(records: MatchRecord[]) {
     storage: new InMemoryPhotoStorage(),
     units,
     clock: { now: () => MATCH_NOW },
+    ids: { next: () => `evento-${String(++sequence)}` },
   });
-  return { reader, homes, photos, audit, units, matchHomes, operations };
+  return { reader, homes, photos, audit, units, matchHomes, operations, outbox };
 }

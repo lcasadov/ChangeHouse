@@ -89,3 +89,29 @@ describe('upsertMe', () => {
     expect(await kindOf(setup(backend).upsertMe(input))).toBe(kind);
   });
 });
+
+describe('registerDevice', () => {
+  it('registra el token y el sistema del dispositivo (PUT /me/devices)', async () => {
+    const backend = new FakeBackend({ registered: true });
+
+    await setup(backend).registerDevice({ fcmToken: 'fcm-1', platform: 'android' });
+
+    expect(backend.requests).toMatchObject([
+      { method: 'PUT', path: '/me/devices', body: { fcmToken: 'fcm-1', platform: 'android' } },
+    ]);
+  });
+
+  it.each([
+    ['unauthorized', 'unauthorized'],
+    ['invalid', 'invalid'],
+    ['server', 'server'],
+    ['network', 'network'],
+  ] as const)('traduce el fallo %s a %s', async (failure, kind) => {
+    const backend = new FakeBackend({ registered: true });
+    backend.failNext = failure;
+
+    expect(
+      await kindOf(setup(backend).registerDevice({ fcmToken: 'fcm-1', platform: 'ios' })),
+    ).toBe(kind);
+  });
+});

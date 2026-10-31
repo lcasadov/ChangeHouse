@@ -1,12 +1,19 @@
 import type { Clock } from '../clock.js';
-import type { OutboxProcessor, PendingOutboxEvent, ProcessSummary } from './outbox.js';
+import type {
+  OutboxPayload,
+  OutboxProcessor,
+  PendingOutboxEvent,
+  ProcessSummary,
+} from './outbox.js';
 
 const BATCH_SIZE = 50;
 
 export interface OutboxDispatcherDeps {
   store: OutboxProcessor;
   /** Un manejador por tipo de hecho, que recibe el identificador del agregado. */
-  handlers: Readonly<Record<string, (aggregateId: string) => Promise<void>>>;
+  handlers: Readonly<
+    Record<string, (aggregateId: string, payload: OutboxPayload | null) => Promise<void>>
+  >;
   clock: Clock;
   /** Cada cuánto se reintentan los pendientes mientras el despachador está en marcha. */
   intervalMs: number;
@@ -42,7 +49,13 @@ export class OutboxDispatcher {
   /** Despacha sin esperar y sin lanzar nunca: lo usa la petición HTTP que acaba de crear el hecho. */
   kick(): void {
     this.dispatch().catch((error: unknown) => {
-      this.deps.onError(error, { id: '', type: 'dispatch', aggregateId: '', attempts: 0 });
+      this.deps.onError(error, {
+        id: '',
+        type: 'dispatch',
+        aggregateId: '',
+        payload: null,
+        attempts: 0,
+      });
     });
   }
 
@@ -87,7 +100,7 @@ export class OutboxDispatcher {
     try {
       const handler = this.deps.handlers[event.type];
       if (!handler) throw new Error(`No hay manejador para el hecho ${event.type}`);
-      await handler(event.aggregateId);
+      await handler(event.aggregateId, event.payload);
     } catch (error) {
       this.deps.onError(error, event);
       throw error;

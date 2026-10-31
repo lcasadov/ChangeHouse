@@ -21,6 +21,7 @@ export class DrizzleOutboxWriter implements OutboxWriter {
         id: event.id,
         type: event.type,
         aggregateId: event.aggregateId,
+        payload: event.payload ?? null,
         createdAt: event.at,
       })
       .onConflictDoNothing({ target: [outbox.type, outbox.aggregateId] });
@@ -54,6 +55,7 @@ export class DrizzleOutbox extends DrizzleOutboxWriter implements OutboxProcesso
             id: row.id,
             type: row.type,
             aggregateId: row.aggregateId,
+            payload: row.payload,
             attempts: row.attempts,
           });
           await tx.update(outbox).set({ processedAt: at }).where(eq(outbox.id, row.id));

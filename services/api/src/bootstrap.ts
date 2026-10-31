@@ -17,6 +17,12 @@ import type { PhotoStorage } from './application/home/photo-storage.js';
 import type { PlaceResolver } from './application/home/place-resolver.js';
 import { matchOperations } from './application/matching/match-operations.js';
 import { moderationOperations } from './application/moderation/moderation-operations.js';
+import {
+  notificationHandlers,
+  notificationOperations,
+} from './application/notifications/notification-operations.js';
+import type { Notifier } from './application/notifications/notifier.js';
+import type { UserContactDirectory } from './application/notifications/user-contact-directory.js';
 import { MATCH_CREATED } from './application/outbox/outbox.js';
 import { OutboxDispatcher } from './application/outbox/outbox-dispatcher.js';
 import { searchPreferencesOperations } from './application/search-preferences/search-preferences-operations.js';
@@ -26,16 +32,21 @@ import { createFirebaseIdentityVerifier } from './infrastructure/auth/firebase-i
 import { createFirestoreChatChannel } from './infrastructure/chat/firestore-chat-channel.js';
 import { AddressCipher } from './infrastructure/crypto/address-cipher.js';
 import { SharpImageProcessor } from './infrastructure/images/sharp-image-processor.js';
+import { createFirebaseNotifier } from './infrastructure/notifications/firebase-notifier.js';
 import { createDatabase } from './infrastructure/persistence/drizzle/database.js';
 import { DrizzleChatSetup } from './infrastructure/persistence/drizzle/drizzle-chat-setup.js';
 import { DrizzleDecisionUnitOfWork } from './infrastructure/persistence/drizzle/drizzle-decision-unit-of-work.js';
+import { DrizzleDeviceRepository } from './infrastructure/persistence/drizzle/drizzle-device-repository.js';
 import { DrizzleDiscoveryRepository } from './infrastructure/persistence/drizzle/drizzle-discovery-repository.js';
 import { DrizzleHomeOwnership } from './infrastructure/persistence/drizzle/drizzle-home-ownership.js';
 import { DrizzleHomeRepository } from './infrastructure/persistence/drizzle/drizzle-home-repository.js';
 import { DrizzleMatchHomes } from './infrastructure/persistence/drizzle/drizzle-match-homes.js';
 import { DrizzleMatchRepository } from './infrastructure/persistence/drizzle/drizzle-match-repository.js';
 import { DrizzleMatchUnitOfWork } from './infrastructure/persistence/drizzle/drizzle-match-unit-of-work.js';
-import { DrizzleOutbox } from './infrastructure/persistence/drizzle/drizzle-outbox.js';
+import {
+  DrizzleOutbox,
+  DrizzleOutboxWriter,
+} from './infrastructure/persistence/drizzle/drizzle-outbox.js';
 import { DrizzlePhotoRepository } from './infrastructure/persistence/drizzle/drizzle-photo-repository.js';
 import { DrizzleSearchPreferencesRepository } from './infrastructure/persistence/drizzle/drizzle-search-preferences-repository.js';
 import { DrizzleUnitOfWork } from './infrastructure/persistence/drizzle/drizzle-unit-of-work.js';
@@ -66,6 +77,10 @@ export interface ApiAdapters {
   chatChannel?: ChatChannel;
   /** Por defecto, el bucket privado de Cloud Storage (o fake-gcs-server). */
   chatImageStorage?: ChatImageStorage;
+  /** Por defecto, FCM y la colección `mail` de Firestore (Trigger Email). */
+  notifier?: Notifier;
+  /** Por defecto, Firebase Auth (o su emulador): email y verificación de cada participante. */
+  userContacts?: UserContactDirectory;
 }
 
 const MS_PER_SECOND = 1000;
@@ -161,27 +176,58 @@ export function createApi(config: ApiConfig, adapters: ApiAdapters = {}) {
     storage: photoStorage,
     units: new DrizzleMatchUnitOfWork(database.db),
     clock: adapters.clock ?? systemClock,
+    ids: uuidV7Generator,
   });
   const chatChannel = chatChannelFor(config, adapters.chatChannel);
   const chat = chatOperations({
     matches: matchRepository,
     setup: new DrizzleChatSetup(database.db),
     channel: chatChannel.channel,
+    outbox: new DrizzleOutboxWriter(database.db),
+    onEnqueueError: (error) => {
+      app.log.error({ err: error }, 'No se pudo registrar el aviso de un mensaje ya publicado');
+    },
     storage: adapters.chatImageStorage ?? new CloudChatImageStorage(config.storage),
     images: adapters.imageProcessor ?? new SharpImageProcessor(),
     clock: adapters.clock ?? systemClock,
     ids: uuidV7Generator,
   });
-  // Crea el chat de cada match nuevo fuera de su transacción: tras la petición, al arrancar y cada intervalo
+  const firebaseNotifier = createFirebaseNotifier(config.firebase);
+  const notifications = notificationOperations({
+    devices: new DrizzleDeviceRepository(database.db),
+    roster: new DrizzleChatSetup(database.db),
+    push: (adapters.notifier ?? firebaseNotifier.notifier).push,
+    email: (adapters.notifier ?? firebaseNotifier.notifier).email,
+    contacts: adapters.userContacts ?? firebaseNotifier.contacts,
+    appUrl: config.appPublicUrl,
+    clock: adapters.clock ?? systemClock,
+  });
+  const notificationOutbox = notificationHandlers(notifications);
+  // Crea el chat y avisa de cada hecho fuera de su transacción: tras la petición, al arrancar y cada intervalo
   const outbox = new OutboxDispatcher({
     store: new DrizzleOutbox(database.db),
-    handlers: { [MATCH_CREATED]: chat.createChatForMatch },
+    handlers: {
+      ...notificationOutbox,
+      // Primero el chat (idempotente) y luego el aviso: si el aviso falla, el reintento no duplica el chat
+      [MATCH_CREATED]: async (matchId) => {
+        await chat.createChatForMatch(matchId);
+        await notificationOutbox[MATCH_CREATED](matchId);
+      },
+    },
     clock: adapters.clock ?? systemClock,
     intervalMs: config.outbox.intervalSeconds * MS_PER_SECOND,
     onError: (error, event) => {
       app.log.error({ err: error, outboxEventId: event.id }, 'No se pudo despachar el hecho');
     },
   });
+  /** Tras la operación, despacha sin esperar los hechos que haya registrado. */
+  function kickAfter<A extends unknown[], R>(operation: (...args: A) => Promise<R>) {
+    return async (...args: A): Promise<R> => {
+      const result = await operation(...args);
+      outbox.kick();
+      return result;
+    };
+  }
   const app = buildApp({
     logger: config.logger,
     landingOrigin: config.landingOrigin,
@@ -195,6 +241,7 @@ export function createApi(config: ApiConfig, adapters: ApiAdapters = {}) {
       rateLimit: config.waitlistRateLimit,
     },
     accounts,
+    devices: { registerDevice: notifications.registerDevice },
     homes,
     photos,
     adminHomes,
@@ -208,7 +255,13 @@ export function createApi(config: ApiConfig, adapters: ApiAdapters = {}) {
         return result;
       },
     },
-    matches: { ...matches, ...chat },
+    matches: {
+      ...matches,
+      ...chat,
+      confirmMatch: kickAfter(matches.confirmMatch),
+      withdrawFromMatch: kickAfter(matches.withdrawFromMatch),
+      sendMatchMessage: kickAfter(chat.sendMatchMessage),
+    },
   });
 
   return {
@@ -218,6 +271,7 @@ export function createApi(config: ApiConfig, adapters: ApiAdapters = {}) {
       await outbox.stop();
       await app.close();
       await chatChannel.close();
+      await firebaseNotifier.close();
       await closeIdentity();
       await database.close();
     },

@@ -214,6 +214,7 @@ export class FakeBackend {
     if (path === '/me/homes' || path.startsWith('/homes')) {
       return this.homes.respond(method, path, body);
     }
+    if (path === '/me/devices') return new Response(null, { status: 204 });
     if (path !== '/me') return problem(404);
     if (method === 'GET') return this.registered ? json(200, this.profile) : problem(404);
     return this.upsert(body as UpsertBody);

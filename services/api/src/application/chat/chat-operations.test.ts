@@ -1,10 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   InMemoryChatChannel,
   InMemoryChatImageStorage,
   InMemoryChatSetup,
   InMemoryMatchReader,
+  InMemoryOutbox,
   StubImageProcessor,
 } from '../../../test/fakes.js';
 import {
@@ -78,6 +79,8 @@ function setup(record: MatchRecord = match()) {
   }
   const storage = new InMemoryChatImageStorage();
   const images = new StubImageProcessor();
+  const outbox = new InMemoryOutbox();
+  const enqueueErrors: unknown[] = [];
   let sequence = 0;
   const operations = chatOperations({
     matches: reader,
@@ -85,10 +88,12 @@ function setup(record: MatchRecord = match()) {
     channel,
     storage,
     images,
+    outbox,
+    onEnqueueError: (error) => enqueueErrors.push(error),
     clock: { now: () => NOW },
     ids: { next: () => `id-${String(++sequence)}` },
   });
-  return { operations, reader, chatSetup, channel, storage, images };
+  return { operations, reader, chatSetup, channel, storage, images, outbox, enqueueErrors };
 }
 
 describe('createChatForMatch', () => {
@@ -224,6 +229,84 @@ describe('sendMatchMessage - texto', () => {
     await expect(
       operations.sendMatchMessage(ANA, MATCH_ID, { kind: 'text', text: 'hola' }),
     ).rejects.toThrow('Firestore');
+  });
+});
+
+describe('sendMatchMessage - aviso en la bandeja de salida', () => {
+  it('Scenario: Nuevo mensaje - un texto registra message.sent con el id del mensaje, el match y el remitente, sin el texto', async () => {
+    const { operations, outbox } = setup();
+
+    const view = await operations.sendMatchMessage(ANA, MATCH_ID, {
+      kind: 'text',
+      text: 'Vivo en la calle Mayor 5',
+    });
+
+    expect(outbox.events).toEqual([
+      {
+        id: 'id-2',
+        type: 'message.sent',
+        aggregateId: view.id,
+        payload: { matchId: MATCH_ID, senderId: ANA },
+        attempts: 0,
+        processedAt: null,
+      },
+    ]);
+    expect(JSON.stringify(outbox.events)).not.toContain('calle Mayor');
+  });
+
+  it('una imagen también avisa', async () => {
+    const { operations, storage, outbox } = setup();
+    storage.originals.set(chatUploadPath(MATCH_ID, ANA, UPLOAD_ID), Buffer.from('IMG:foto'));
+
+    const view = await operations.sendMatchMessage(ANA, MATCH_ID, {
+      kind: 'image',
+      imageUploadId: UPLOAD_ID,
+    });
+
+    expect(outbox.events.map((event) => [event.type, event.aggregateId])).toEqual([
+      ['message.sent', view.id],
+    ]);
+  });
+
+  it('si el mensaje no se publica (match cerrado o Firestore caído) no se avisa de nada', async () => {
+    const closed = setup(match({ status: 'closed' }));
+    await expect(
+      closed.operations.sendMatchMessage(ANA, MATCH_ID, { kind: 'text', text: 'hola' }),
+    ).rejects.toBeInstanceOf(MatchNotOpenError);
+    const down = setup();
+    down.channel.failures = 1;
+    await expect(
+      down.operations.sendMatchMessage(ANA, MATCH_ID, { kind: 'text', text: 'hola' }),
+    ).rejects.toThrow('Firestore');
+
+    expect(closed.outbox.events).toEqual([]);
+    expect(down.outbox.events).toEqual([]);
+  });
+});
+
+describe('sendMatchMessage - fallo al encolar el aviso', () => {
+  it('Scenario: Fallo del envío - si falla el registro del aviso el mensaje ya publicado se confirma igualmente y el error se registra', async () => {
+    const { operations, outbox, channel, enqueueErrors } = setup();
+    vi.spyOn(outbox, 'enqueue').mockRejectedValue(new Error('PostgreSQL no disponible'));
+
+    const view = await operations.sendMatchMessage(ANA, MATCH_ID, { kind: 'text', text: 'hola' });
+
+    expect(view).toMatchObject({ kind: 'text', text: 'hola' });
+    expect(channel.chats.get(MATCH_ID)?.messages).toHaveLength(1);
+    expect(enqueueErrors).toHaveLength(1);
+    expect(String(enqueueErrors[0])).toContain('PostgreSQL');
+  });
+
+  it('también con una imagen: se responde con la imagen publicada y se registra el error', async () => {
+    const { operations, outbox, storage, enqueueErrors } = setup();
+    storage.originals.set(chatUploadPath(MATCH_ID, ANA, UPLOAD_ID), Buffer.from('IMG:foto'));
+    vi.spyOn(outbox, 'enqueue').mockRejectedValue(new Error('PostgreSQL no disponible'));
+
+    await expect(
+      operations.sendMatchMessage(ANA, MATCH_ID, { kind: 'image', imageUploadId: UPLOAD_ID }),
+    ).resolves.toMatchObject({ kind: 'image' });
+
+    expect(enqueueErrors).toHaveLength(1);
   });
 });
 
