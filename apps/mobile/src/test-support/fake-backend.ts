@@ -4,6 +4,7 @@ import type { components } from '../api/schema';
 import type { Me } from '../features/account/account-api';
 import type { Home } from '../features/homes/homes-api';
 import type { SearchPreferences } from '../features/search/search-preferences-api';
+import { FakeAdminPanel } from './fake-admin-panel';
 import { FakeDecisions } from './fake-decisions';
 import { FakeDiscovery } from './fake-discovery';
 import { FakeHomes } from './fake-homes';
@@ -37,6 +38,8 @@ export interface RecordedRequest {
   authorization: string | null;
   /** La cadena de consulta (`?status=…`); ausente si la petición no lleva. */
   search?: string;
+  /** La cabecera `Accept` si la petición la fija (p. ej. `text/csv`). */
+  accept?: string;
   body: unknown;
 }
 
@@ -108,6 +111,8 @@ export class FakeBackend {
   private readonly moderation: FakeModeration;
   /** Los usuarios que el admin puede suspender o reactivar, por id. */
   readonly users = new Map<string, AdminUser>();
+  /** Métricas, auditoría y lista de espera del panel; los usuarios son `users`. */
+  readonly adminPanel = new FakeAdminPanel(() => [...this.users.values()]);
 
   constructor({
     registered = false,
@@ -183,6 +188,7 @@ export class FakeBackend {
       method: input.method,
       path,
       ...(search ? { search } : {}),
+      ...(input.headers.get('accept') ? { accept: input.headers.get('accept') ?? '' } : {}),
       authorization: input.headers.get('authorization'),
       body: raw === '' ? undefined : (JSON.parse(raw) as unknown),
     });
@@ -199,6 +205,7 @@ export class FakeBackend {
       path,
       new URLSearchParams(search),
       raw === '' ? undefined : (JSON.parse(raw) as unknown),
+      input.headers.get('accept'),
     );
   };
 
@@ -206,7 +213,13 @@ export class FakeBackend {
     return this.requests.filter((request) => request.method === method && request.path === path);
   }
 
-  private respond(method: string, path: string, search: URLSearchParams, body: unknown): Response {
+  private respond(
+    method: string,
+    path: string,
+    search: URLSearchParams,
+    body: unknown,
+    accept: string | null,
+  ): Response {
     const failure = this.failNext;
     if (failure) {
       this.failNext = null;
@@ -223,6 +236,7 @@ export class FakeBackend {
         return this.setSuspension(suspension[1] ?? '', body as { suspended: boolean });
       }
       return (
+        this.adminPanel.respond(path, method, search, accept) ??
         this.reports.respondAdmin(path, method, search, body) ??
         this.moderation.respond(path, method, search, body)
       );

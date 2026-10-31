@@ -1,1 +1,1 @@
-export { UserSuspensionScreen as default } from '../../../src/features/admin/UserSuspensionScreen';
+export { UsersScreen as default } from '../../../src/features/admin/UsersScreen';

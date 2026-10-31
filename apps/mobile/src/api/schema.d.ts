@@ -865,7 +865,11 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Usuarios (RF-90) */
+    /**
+     * Usuarios (RF-90)
+     * @description De la cuenta más reciente a la más antigua; no incluye cuentas borradas. `q` busca por
+     *     prefijo del email o del nombre visible, sin distinguir mayúsculas ni tildes.
+     */
     get: operations['adminListUsers'];
     put?: never;
     post?: never;
@@ -915,7 +919,13 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Métricas agregadas (RF-91) */
+    /**
+     * Métricas agregadas (RF-91)
+     * @description El periodo son días naturales de Europe/Madrid, ambos extremos incluidos. `to` anterior a
+     *     `from`, o un periodo de más de 366 días, responde 400 señalando `to`. `publishedHomesByZone`
+     *     agrupa por municipio o, si falta, por barrio o zona. `operations` son los matches del
+     *     periodo en estado `in_operation`.
+     */
     get: operations['adminGetMetrics'];
     put?: never;
     post?: never;
@@ -949,7 +959,13 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Lista de espera, consultable y exportable (RF-101) */
+    /**
+     * Lista de espera, consultable y exportable (RF-101)
+     * @description De la alta más reciente a la más antigua. Con `Accept: text/csv` devuelve todas las altas
+     *     del filtro (sin paginar) en CSV con las columnas email, municipio, tipo de vivienda, qué
+     *     busca y fecha de consentimiento; las celdas que empiezan por `=`, `+`, `-` o `@` se
+     *     prefijan con `'` para evitar la inyección de fórmulas.
+     */
     get: operations['adminListWaitlist'];
     put?: never;
     post?: never;
@@ -1406,7 +1422,7 @@ export interface components {
     Metrics: {
       signups: number;
       publishedHomesByZone: {
-        /** @description Barrio o zona (`areaName`) */
+        /** @description Municipio o */
         zone: string;
         count: number;
       }[];
@@ -2788,6 +2804,7 @@ export interface operations {
           };
         };
       };
+      400: components['responses']['BadRequest'];
       401: components['responses']['Unauthorized'];
       403: components['responses']['Forbidden'];
     };
@@ -2885,6 +2902,7 @@ export interface operations {
           };
         };
       };
+      400: components['responses']['BadRequest'];
       401: components['responses']['Unauthorized'];
       403: components['responses']['Forbidden'];
     };
@@ -2916,6 +2934,7 @@ export interface operations {
           'text/csv': string;
         };
       };
+      400: components['responses']['BadRequest'];
       401: components['responses']['Unauthorized'];
       403: components['responses']['Forbidden'];
     };

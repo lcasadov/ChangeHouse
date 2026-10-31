@@ -3,6 +3,7 @@ import { Redirect, Stack, useLocalSearchParams } from 'expo-router';
 
 import { ModerationDetailScreen } from './ModerationDetailScreen';
 import { useIsAdmin } from './use-is-admin';
+import { UserSuspensionScreen } from './UserSuspensionScreen';
 
 /**
  * Pila de la pestaña «Administración»: la cola y el detalle de una vivienda. Quien no tiene el rol
@@ -23,4 +24,10 @@ export function AdminStack() {
 export function ModerationDetailRoute() {
   const { homeId } = useLocalSearchParams<{ homeId: string }>();
   return <ModerationDetailScreen homeId={homeId} />;
+}
+
+/** `/admin/user-suspension?userId=…`: suspender o reactivar al usuario elegido en el listado. */
+export function UserSuspensionRoute() {
+  const { userId } = useLocalSearchParams<{ userId?: string }>();
+  return <UserSuspensionScreen initialUserId={userId ?? ''} />;
 }

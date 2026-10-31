@@ -3,51 +3,29 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { FlatList, RefreshControl, View } from 'react-native';
 
-import { Button, EmptyState, Notice, Screen, Text } from '../../ui';
+import { Button, EmptyState, Notice, Text } from '../../ui';
 import { LoadingView } from '../session/LoadingView';
 import { adminRoutes } from './admin-routes';
+import { AdminScreen } from './AdminScreen';
 import { ModerationCard } from './ModerationCard';
 import { homesOf, useModerationQueue } from './use-moderation';
 
-/** Entrada a «Denuncias», visible también cuando la cola de viviendas está vacía o no carga. */
-function ReportsEntry() {
-  const { t } = useTranslation();
-  const router = useRouter();
-  return (
-    <Button
-      variant="secondary"
-      label={t('admin.reports.open')}
-      onPress={() => {
-        router.push(adminRoutes.reports);
-      }}
-    />
-  );
-}
-
 /**
  * Pestaña «Administración»: la cola de viviendas en revisión, la más antigua primero. Se carga por
- * páginas («Cargar más») y se refresca tirando hacia abajo. Sin nada pendiente, lo dice. En todos los
- * casos ofrece la suspensión de usuarios.
+ * páginas («Cargar más») y se refresca tirando hacia abajo. Sin nada pendiente, lo dice.
  */
 export function AdminQueueScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
   const router = useRouter();
   const queue = useModerationQueue();
-  const openUsers = () => {
-    router.push(adminRoutes.users);
-  };
-  const usersEntry = (
-    <Button variant="secondary" label={t('admin.users.entry')} onPress={openUsers} />
-  );
 
   if (queue.isPending) return <LoadingView />;
 
   if (!queue.data) {
     return (
-      <Screen>
+      <AdminScreen>
         <View style={{ gap: theme.space[4], paddingVertical: theme.space[5] }}>
-          <ReportsEntry />
           <Notice
             tone="danger"
             action={{
@@ -59,31 +37,27 @@ export function AdminQueueScreen() {
           >
             {t('admin.queue.loadFailed')}
           </Notice>
-          {usersEntry}
         </View>
-      </Screen>
+      </AdminScreen>
     );
   }
 
   const homes = homesOf(queue.data);
   if (homes.length === 0) {
     return (
-      <Screen>
-        <View style={{ paddingTop: theme.space[5] }}>
-          <ReportsEntry />
-        </View>
+      <AdminScreen>
+        <View style={{ paddingTop: theme.space[5] }}></View>
         <EmptyState
           icon="checkmark-done-outline"
           title={t('admin.queue.empty.title')}
           description={t('admin.queue.empty.description')}
-          secondaryAction={{ label: t('admin.users.entry'), onPress: openUsers }}
         />
-      </Screen>
+      </AdminScreen>
     );
   }
 
   return (
-    <Screen>
+    <AdminScreen>
       <FlatList
         testID="moderation-queue"
         data={homes}
@@ -103,8 +77,6 @@ export function AdminQueueScreen() {
               {t('admin.title')}
             </Text>
             <Text tone="textMuted">{t('admin.queue.intro')}</Text>
-            {usersEntry}
-            <ReportsEntry />
           </View>
         }
         renderItem={({ item }) => (
@@ -133,6 +105,6 @@ export function AdminQueueScreen() {
           </View>
         }
       />
-    </Screen>
+    </AdminScreen>
   );
 }
