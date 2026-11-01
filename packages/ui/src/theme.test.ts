@@ -44,6 +44,7 @@ describe('themes', () => {
         'matchGradientEnd',
         'photoScrimStart',
         'photoScrimEnd',
+        'photoVeil',
         'overlay',
       ].sort(),
     );

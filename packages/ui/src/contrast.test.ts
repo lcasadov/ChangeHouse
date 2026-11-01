@@ -91,3 +91,45 @@ describe('texto sobre fotos', () => {
     },
   );
 });
+
+/** Color resultante de un `rgba(r,g,b,a)` aplicado sobre un fondo `#RRGGBB`. */
+function composite(rgba: string, background: string): string {
+  const match = /^rgba\((\d+),(\d+),(\d+),([\d.]+)\)$/.exec(rgba);
+  if (!match) throw new Error(`Color no válido: ${rgba}`);
+  const alpha = Number(match[4]);
+  const base = Number.parseInt(background.slice(1), 16);
+  const channels = [16, 8, 0].map((shift, index) => {
+    const under = (base >> shift) & 255;
+    return Math.round(Number(match[index + 1]) * alpha + under * (1 - alpha));
+  });
+  return `#${channels.map((c) => c.toString(16).padStart(2, '0')).join('')}`;
+}
+
+describe('velo sobre fotografía y vídeo', () => {
+  it.each(['light', 'dark'] as const)(
+    'textOnPhoto alcanza 4,5:1 sobre photoVeil aun encima de un píxel blanco en %s',
+    (name) => {
+      const { color } = themes[name];
+      const worstCase = composite(color.photoVeil, '#FFFFFF');
+      expect(contrastRatio(color.textOnPhoto, worstCase)).toBeGreaterThanOrEqual(
+        MIN_TEXT_CONTRAST,
+      );
+    },
+  );
+
+  it('el velo es el mismo en los dos temas: la foto no cambia con el tema', () => {
+    expect(themes.dark.color.photoVeil).toBe(themes.light.color.photoVeil);
+  });
+});
+
+describe('navegación principal', () => {
+  it.each(['light', 'dark'] as const)(
+    'la sección activa (primary sobre surfaceMuted) alcanza 4,5:1 en %s',
+    (name) => {
+      const { color } = themes[name];
+      expect(contrastRatio(color.primary, color.surfaceMuted)).toBeGreaterThanOrEqual(
+        MIN_TEXT_CONTRAST,
+      );
+    },
+  );
+});

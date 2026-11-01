@@ -11,9 +11,9 @@
 
 ## 2. Tokens
 
-- [ ] T2 Escribir las pruebas de contraste del token `color.photoVeil` (blanco sobre el velo encima de un píxel blanco ≥ 4,5:1) y de `primary` sobre `surfaceMuted` en los dos temas, y comprobar que fallan. ref: Navegación principal legible · est: 1h · disc: qa
+- [x] T2 Escribir las pruebas de contraste del token `color.photoVeil` (blanco sobre el velo encima de un píxel blanco ≥ 4,5:1) y de `primary` sobre `surfaceMuted` en los dos temas, y comprobar que fallan. ref: Navegación principal legible · est: 1h · disc: qa
   - GIVEN el velo sobre blanco puro WHEN se mide el texto blanco THEN el contraste es de al menos 4,5:1
-- [ ] F1 Añadir `color.photoVeil` a `packages/ui` (TS y CSS) y a `docs/style-guide.md`, y verificar que pasan las pruebas de T2. ref: Navegación principal legible · est: 1h · disc: front
+- [x] F1 Añadir `color.photoVeil` a `packages/ui` (TS y CSS) y a `docs/style-guide.md`, y verificar que pasan las pruebas de T2. ref: Navegación principal legible · est: 1h · disc: front
   - GIVEN el tema oscuro WHEN se lee `photoVeil` THEN existe con el mismo valor que en el claro
 
 ## 3. Landing

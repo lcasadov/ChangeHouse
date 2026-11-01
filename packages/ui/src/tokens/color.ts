@@ -29,6 +29,8 @@ export interface ColorTokens {
   /** Degradado inferior sobre fotos para texto blanco. */
   photoScrimStart: string;
   photoScrimEnd: string;
+  /** Velo uniforme sobre fotografía o vídeo de fondo: texto blanco ≥ 4,5:1 aun sobre un píxel blanco. */
+  photoVeil: string;
   overlay: string;
 }
 
@@ -37,6 +39,7 @@ const TEXT_ON_PHOTO = '#FFFFFF';
 const MATCH_GRADIENT_END = '#F472B6';
 const PHOTO_SCRIM_START = 'rgba(0,0,0,0)';
 const PHOTO_SCRIM_END = 'rgba(0,0,0,0.72)';
+const PHOTO_VEIL = 'rgba(12,16,28,0.58)';
 
 export const lightColors: ColorTokens = {
   bg: '#FFFFFF',
@@ -63,6 +66,7 @@ export const lightColors: ColorTokens = {
   matchGradientEnd: MATCH_GRADIENT_END,
   photoScrimStart: PHOTO_SCRIM_START,
   photoScrimEnd: PHOTO_SCRIM_END,
+  photoVeil: PHOTO_VEIL,
   overlay: 'rgba(18,24,38,0.5)',
 };
 
@@ -91,5 +95,6 @@ export const darkColors: ColorTokens = {
   matchGradientEnd: MATCH_GRADIENT_END,
   photoScrimStart: PHOTO_SCRIM_START,
   photoScrimEnd: PHOTO_SCRIM_END,
+  photoVeil: PHOTO_VEIL,
   overlay: 'rgba(0,0,0,0.6)',
 };
