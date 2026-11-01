@@ -323,7 +323,8 @@ async function uploadPhotos(person, homeId, config) {
     });
     const response = await fetch(upload.uploadUrl, {
       method: 'PUT',
-      headers: { 'content-type': 'image/jpeg' },
+      // El rango de tamaño va firmado en la URL: sin esta cabecera Cloud Storage rechaza la subida
+      headers: { 'content-type': 'image/jpeg', 'x-goog-content-length-range': '0,26214400' },
       body: await photo(config.color, room, config.name.split(' ')[0], index),
     });
     if (!response.ok)

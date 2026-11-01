@@ -208,6 +208,7 @@ export class FakeMatches {
   private readonly addresses = new Map<string, string>();
   /** Las viviendas cuyo participante ha autorizado mostrar su teléfono, por match. */
   private readonly sharing = new Set<string>();
+  private readonly blockClosures = new Map<string, string>();
   pageSize = DEFAULT_PAGE_SIZE;
 
   constructor(
@@ -242,6 +243,18 @@ export class FakeMatches {
   /** La siguiente consulta del detalle o acción sobre un match responde con ese error. */
   rejectNextAction(status: number, extra: Record<string, unknown> = {}): void {
     this.actionFailure = { status, extra };
+  }
+
+  /** Bloquear a ese usuario cierra el match (con ese motivo, sin retirada de nadie). */
+  blockClosesMatch(userId: string, matchId: string): void {
+    this.blockClosures.set(userId, matchId);
+  }
+
+  /** `blockUser`: cierra los matches abiertos o confirmados con la persona bloqueada. */
+  closeOnBlock(userId: string): void {
+    const matchId = this.blockClosures.get(userId);
+    const match = this.items.find((candidate) => candidate.id === matchId);
+    if (match && (match.status === 'open' || match.status === 'confirmed')) match.status = 'closed';
   }
 
   /** Otro participante se retira mientras tanto: el match queda cerrado sin que la app lo sepa. */
@@ -297,9 +310,14 @@ export class FakeMatches {
     const homes = match.participants
       .map((participant) => this.publicHome(participant.givesHomeId))
       .filter((home): home is HomePublic => home !== undefined);
+    // Como la API: con el match cerrado o quien mira retirado no hay dirección ni teléfonos
+    const mine = match.participants.find((participant) => this.isMine(participant.homeId));
+    const contactVisible =
+      (match.status === 'open' || match.status === 'confirmed') && mine?.status !== 'withdrawn';
     return {
       ...match,
       participants: match.participants.map((participant) => {
+        if (!contactVisible) return { ...participant, phone: null, sharesPhone: false };
         const shares = this.sharing.has(`${match.id}:${participant.homeId}`);
         return {
           ...participant,
@@ -325,7 +343,12 @@ export class FakeMatches {
     if (!match || !mine) return problem(404);
     if (action === undefined)
       return method === 'GET' ? json(200, this.detailOf(match)) : problem(404);
-    if (match.status !== 'open' && !(match.status === 'confirmed' && action !== 'confirm')) {
+    const revoking = action === 'phone-sharing' && (body as { share: boolean }).share === false;
+    if (
+      !revoking &&
+      match.status !== 'open' &&
+      !(match.status === 'confirmed' && action !== 'confirm')
+    ) {
       return problem(409, { code: 'MATCH_NOT_OPEN' });
     }
     if (action === 'phone-sharing') {

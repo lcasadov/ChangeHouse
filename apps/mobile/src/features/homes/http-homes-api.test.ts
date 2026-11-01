@@ -280,6 +280,29 @@ describe('fotos', () => {
     });
   });
 
+  it('Scenario: Demasiadas fotos pendientes - con 25 pendientes es too-many-pending (409 TOO_MANY_PENDING_PHOTOS)', async () => {
+    const home = draftHome();
+    const backend = new FakeBackend({ homes: [home] });
+    backend.homes.seedPending(home.id, 25);
+
+    expect(await failureOf(setup(backend).createPhotoUpload(home.id, 'image/png'))).toMatchObject({
+      kind: 'too-many-pending',
+    });
+  });
+
+  it('confirmar con el procesado saturado es busy (503 IMAGE_PROCESSING_BUSY)', async () => {
+    const home = draftHome();
+    const backend = new FakeBackend({ homes: [home] });
+    const api = setup(backend);
+    const target = await upload(api, home.id);
+    backend.homes.receiveUpload(target.uploadUrl, true);
+    backend.homes.busyCompletions = 1;
+
+    expect(await failureOf(api.completePhotoUpload(home.id, target.photoId))).toMatchObject({
+      kind: 'busy',
+    });
+  });
+
   it('un fichero que no es imagen es invalid-image (422 INVALID_IMAGE)', async () => {
     const home = draftHome();
     const backend = new FakeBackend({ homes: [home] });

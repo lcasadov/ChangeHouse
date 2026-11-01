@@ -217,12 +217,18 @@ describe('setPhoneSharing', () => {
     ]);
   });
 
-  it('un match cerrado responde not-open', async () => {
+  it('autorizar en un match cerrado responde not-open (409 MATCH_NOT_OPEN)', async () => {
     const { api, match } = withMatch({ status: 'closed' });
 
-    expect(await failureOf(api.setPhoneSharing(match.id, false))).toMatchObject({
+    expect(await failureOf(api.setPhoneSharing(match.id, true))).toMatchObject({
       kind: 'not-open',
     });
+  });
+
+  it('Scenario: Revocar en un match cerrado - la API acepta retirar la autorización en cualquier estado', async () => {
+    const { api, match } = withMatch({ status: 'closed' });
+
+    await expect(api.setPhoneSharing(match.id, false)).resolves.toBeUndefined();
   });
 
   it('un cuerpo no válido es invalid', async () => {

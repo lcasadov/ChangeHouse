@@ -19,6 +19,8 @@ export type PhotoFailure =
   | 'invalidImage'
   | 'notUploaded'
   | 'limit'
+  | 'tooManyPending'
+  | 'busy'
   | 'notEditable'
   | 'network'
   | 'unknown';
@@ -28,6 +30,7 @@ const RETRYABLE: ReadonlySet<PhotoFailure> = new Set([
   'upload',
   'notUploaded',
   'network',
+  'busy',
   'unknown',
 ]);
 
@@ -45,6 +48,8 @@ export class UploadTransferError extends Error {
 const FAILURE_OF_KIND: Partial<Record<HomesApiError['kind'], PhotoFailure>> = {
   network: 'network',
   'photo-limit': 'limit',
+  'too-many-pending': 'tooManyPending',
+  busy: 'busy',
   'invalid-image': 'invalidImage',
   'photo-not-uploaded': 'notUploaded',
   conflict: 'notEditable',

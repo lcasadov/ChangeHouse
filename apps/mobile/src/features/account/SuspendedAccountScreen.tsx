@@ -6,11 +6,12 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { Button, Link, Screen, Text } from '../../ui';
 import { useSignOut } from '../auth/use-sign-out';
 import { useServices } from '../session/services';
+import { AccountActions } from './AccountActions';
 
 /**
  * Pantalla de una cuenta suspendida por un admin: el motivo general (nunca el interno), cómo
- * contactar y cerrar sesión. Es lo único que puede hacer: la API le deniega el resto. La descarga de
- * sus datos se añadirá cuando la API implemente `exportMyData`.
+ * contactar, exportar sus datos, eliminar su cuenta y cerrar sesión. Es lo único que puede hacer:
+ * la API le deniega el resto. La exportación y la eliminación son las mismas de «Perfil».
  */
 export function SuspendedAccountScreen() {
   const { t } = useTranslation();
@@ -51,6 +52,7 @@ export function SuspendedAccountScreen() {
         <View style={styles.icon}>
           <Link label={t('account.suspended.contactLink')} href={legalUrls.privacy} />
         </View>
+        <AccountActions />
         <Button
           variant="secondary"
           label={t('auth.signOut')}

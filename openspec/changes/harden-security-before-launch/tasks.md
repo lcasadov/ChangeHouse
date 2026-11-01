@@ -25,14 +25,14 @@
 
 ## 2. App
 
-- [ ] T6 Escribir las pruebas de componentes del match cerrado sin dirección ni teléfono, de vaciar el teléfono en el perfil, de «Eliminar mi cuenta» en la pantalla de suspensión y de los mensajes de 409 y 429 en las subidas, y comprobar que fallan. ref: Borrar el teléfono · est: 3h · disc: qa
+- [x] T6 Escribir las pruebas de componentes del match cerrado sin dirección ni teléfono, de vaciar el teléfono en el perfil, de «Eliminar mi cuenta» en la pantalla de suspensión y de los mensajes de 409 y 429 en las subidas, y comprobar que fallan. ref: Borrar el teléfono · est: 3h · disc: qa
   - GIVEN un usuario suspendido WHEN abre la app THEN ve «Eliminar mi cuenta» junto a exportar y cerrar sesión
-- [ ] F1 Implementar esas pantallas y mensajes, regenerar los tipos del contrato y verificar que pasan las pruebas de T6. ref: Eliminar la cuenta · est: 5h · disc: front
+- [x] F1 Implementar esas pantallas y mensajes, regenerar los tipos del contrato y verificar que pasan las pruebas de T6. ref: Eliminar la cuenta · est: 5h · disc: front
   - GIVEN un perfil con teléfono WHEN se vacía el campo y se guarda THEN la cuenta queda sin teléfono
 
 ## 3. Plataforma
 
-- [ ] D1 Añadir la CSP y `X-Frame-Options` a la app y a la landing en `firebase.json`, generar los orígenes por entorno en el despliegue y comprobar con los E2E de la web que no hay violaciones. ref: Cabeceras de seguridad de la web · est: 3h · disc: devops
+- [x] D1 Añadir la CSP y `X-Frame-Options` a la app y a la landing en `firebase.json`, generar los orígenes por entorno en el despliegue y comprobar con los E2E de la web que no hay violaciones. ref: Cabeceras de seguridad de la web · est: 3h · disc: devops
   - GIVEN la app servida con la CSP WHEN se recorren los flujos E2E THEN no hay violaciones en la consola
 - [x] D2 Desplegar las reglas en PROD y crear los buckets con ciclo de vida, lectura sin listado y permisos acotados en `infra/gcp/bootstrap.sh`. ref: Reglas y almacenamiento desplegados en todos los entornos · est: 3h · disc: devops
   - GIVEN el script de infraestructura WHEN crea el bucket público THEN concede `legacyObjectReader` y no `objectViewer` a `allUsers`

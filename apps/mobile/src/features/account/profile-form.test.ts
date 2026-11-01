@@ -40,9 +40,9 @@ describe('formValuesOf', () => {
 });
 
 describe('profileResolver', () => {
-  it('devuelve los datos validados con el teléfono vacío como no indicado', async () => {
+  it('devuelve los datos validados con el teléfono vacío como null, que lo borra', async () => {
     expect(await resolve(valid)).toEqual({
-      values: { ...valid, phone: undefined },
+      values: { ...valid, phone: null },
       errors: {},
     });
   });

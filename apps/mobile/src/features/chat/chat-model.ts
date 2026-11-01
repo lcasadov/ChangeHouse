@@ -24,7 +24,14 @@ export const formatCount = (value: number, language: string): string =>
 
 /** Por qué un envío no ha salido; cada valor tiene su texto en `chat.failure`. */
 export type OutgoingFailure =
-  'network' | 'server' | 'notReady' | 'tooLong' | 'invalidImage' | 'closed';
+  | 'network'
+  | 'server'
+  | 'notReady'
+  | 'tooLong'
+  | 'invalidImage'
+  | 'rateLimited'
+  | 'busy'
+  | 'closed';
 
 const FAILURE_OF_KIND: Partial<Record<ChatApiError['kind'], OutgoingFailure>> = {
   network: 'network',
@@ -32,6 +39,8 @@ const FAILURE_OF_KIND: Partial<Record<ChatApiError['kind'], OutgoingFailure>> = 
   'not-open': 'closed',
   'not-ready': 'notReady',
   'invalid-image': 'invalidImage',
+  'rate-limited': 'rateLimited',
+  busy: 'busy',
   // La imagen no llegó al almacenamiento: se vuelve a subir al reintentar
   'image-not-uploaded': 'network',
 };
@@ -43,7 +52,13 @@ export function failureOf(error: unknown): OutgoingFailure {
 }
 
 /** Lo que se arregla volviendo a intentarlo; el resto solo se puede descartar. */
-const RETRYABLE: ReadonlySet<OutgoingFailure> = new Set(['network', 'server', 'notReady']);
+const RETRYABLE: ReadonlySet<OutgoingFailure> = new Set([
+  'network',
+  'server',
+  'notReady',
+  'rateLimited',
+  'busy',
+]);
 
 export const canRetry = (failure: OutgoingFailure | undefined): boolean =>
   failure !== undefined && RETRYABLE.has(failure);

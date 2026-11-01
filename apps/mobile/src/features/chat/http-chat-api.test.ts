@@ -132,6 +132,26 @@ describe('createImageUpload', () => {
     });
   });
 
+  it('Scenario: Demasiadas imágenes en una hora - un 429 CHAT_IMAGE_RATE_LIMITED es rate-limited', async () => {
+    const { api } = setup(() =>
+      problem(429, { code: 'CHAT_IMAGE_RATE_LIMITED' }, { 'retry-after': '1800' }),
+    );
+
+    expect(await failureOf(api.createImageUpload(MATCH, 'image/png'))).toMatchObject({
+      kind: 'rate-limited',
+    });
+  });
+
+  it('un envío con el procesado de imágenes saturado (503 IMAGE_PROCESSING_BUSY) es busy', async () => {
+    const { api } = setup(() =>
+      problem(503, { code: 'IMAGE_PROCESSING_BUSY' }, { 'retry-after': '5' }),
+    );
+
+    expect(await failureOf(api.sendMessage(MATCH, { imageUploadId: 'u-1' }))).toMatchObject({
+      kind: 'busy',
+    });
+  });
+
   it('traduce un match cerrado', async () => {
     const { api } = setup(() => problem(409, { code: 'MATCH_NOT_OPEN' }));
 

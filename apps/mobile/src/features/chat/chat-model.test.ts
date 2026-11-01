@@ -233,6 +233,8 @@ describe('failureOf', () => {
     ['not-open', 'closed'],
     ['not-ready', 'notReady'],
     ['invalid-image', 'invalidImage'],
+    ['rate-limited', 'rateLimited'],
+    ['busy', 'busy'],
     ['image-not-uploaded', 'network'],
     ['server', 'server'],
     ['unauthorized', 'server'],
@@ -250,6 +252,8 @@ describe('canRetry', () => {
     expect(canRetry('network')).toBe(true);
     expect(canRetry('server')).toBe(true);
     expect(canRetry('notReady')).toBe(true);
+    expect(canRetry('rateLimited')).toBe(true);
+    expect(canRetry('busy')).toBe(true);
   });
 
   it('no se reintenta lo que volvería a fallar igual', () => {

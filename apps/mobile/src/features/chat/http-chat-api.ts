@@ -20,6 +20,8 @@ const FORBIDDEN = 403;
 const NOT_FOUND = 404;
 const CONFLICT = 409;
 const UNPROCESSABLE = 422;
+const TOO_MANY_REQUESTS = 429;
+const SERVICE_UNAVAILABLE = 503;
 
 const CONFLICT_KINDS: Record<string, ChatApiErrorKind> = {
   MATCH_NOT_OPEN: 'not-open',
@@ -35,6 +37,8 @@ const STATUS_KINDS: Record<number, ChatApiErrorKind> = {
   [UNAUTHORIZED]: 'unauthorized',
   [FORBIDDEN]: 'forbidden',
   [NOT_FOUND]: 'not-found',
+  [TOO_MANY_REQUESTS]: 'rate-limited',
+  [SERVICE_UNAVAILABLE]: 'busy',
 };
 
 /** El mensaje de campo con el que la API señala un texto de más de 2.000 caracteres. */

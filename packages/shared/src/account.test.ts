@@ -167,12 +167,12 @@ describe('validateProfileForm', () => {
     });
   });
 
-  it('un teléfono vacío es un teléfono no indicado y un municipio vacío es válido', () => {
+  it('Scenario: Borrar el teléfono del perfil - un teléfono vacío se envía como null para borrarlo y un municipio vacío es válido', () => {
     const result = validateProfileForm({ ...form, phone: '   ', municipality: '' });
 
     expect(result).toEqual({
       success: true,
-      data: { ...form, phone: undefined, municipality: '' },
+      data: { ...form, phone: null, municipality: '' },
     });
   });
 

@@ -47,7 +47,7 @@ export function AuditScreen() {
               {
                 key: 'actor',
                 header: t('admin.audit.columns.actor'),
-                value: (e) => e.actorId ?? '',
+                value: (e) => e.actorId ?? t('admin.audit.systemActor'),
               },
               { key: 'action', header: t('admin.audit.columns.action'), value: (e) => e.action },
               { key: 'entity', header: t('admin.audit.columns.entity'), value: (e) => e.entity },

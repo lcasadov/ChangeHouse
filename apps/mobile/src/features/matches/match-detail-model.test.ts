@@ -79,6 +79,20 @@ describe('detailViewOf', () => {
     },
   );
 
+  it('Scenario: Match cerrado sin datos de contacto - quien se ha retirado no ve contacto ni puede compartir su teléfono', () => {
+    const view = detailViewOf(
+      fakeMatchDetail({
+        mineHomeId: MINE,
+        theirHomeId: THEIRS,
+        status: 'open',
+        mineStatus: 'withdrawn',
+      }),
+      own,
+    );
+
+    expect(view).toMatchObject({ canSharePhone: false, showContact: false });
+  });
+
   it('indica quién se ha retirado', () => {
     const view = detailViewOf(
       fakeMatchDetail({

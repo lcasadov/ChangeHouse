@@ -1,5 +1,11 @@
 import type { PhotoUploader, PhotoUploadTarget } from './photo-uploader';
 
+/**
+ * El rango de tamaño que firma la API en la URL (0 a 25 MB): Cloud Storage rechaza la subida si la
+ * cabecera falta o no coincide.
+ */
+const CONTENT_LENGTH_RANGE = '0,26214400';
+
 const SUCCESS_MIN = 200;
 const SUCCESS_MAX = 300;
 
@@ -12,6 +18,7 @@ function send(
     const request = new XMLHttpRequest();
     request.open('PUT', target.url);
     request.setRequestHeader('Content-Type', target.contentType);
+    request.setRequestHeader('x-goog-content-length-range', CONTENT_LENGTH_RANGE);
     request.upload.onprogress = (event) => {
       if (event.lengthComputable) onProgress(event.loaded / event.total);
     };
