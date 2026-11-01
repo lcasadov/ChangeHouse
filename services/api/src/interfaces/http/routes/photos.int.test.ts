@@ -251,6 +251,44 @@ describe.skipIf(!emulatorAvailable())('fotos de la vivienda con tokens reales', 
     expect(published.status).toBe(404);
   });
 
+  it('Scenario: Demasiadas fotos pendientes - con 25 pendientes pedir otra URL da 409 TOO_MANY_PENDING_PHOTOS y no crea la foto', async () => {
+    const user = await registered();
+    const homeId = await createHome(user);
+    for (let index = 0; index < 25; index += 1) {
+      const id = crypto.randomUUID();
+      await sql`INSERT INTO home_photos (id, home_id, status, storage_path)
+                VALUES (${id}, ${homeId}, 'pending', ${`homes/${homeId}/${id}.webp`})`;
+    }
+
+    const response = await call(user, 'POST', `/v1/homes/${homeId}/photos`, {
+      contentType: 'image/jpeg',
+    });
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json()).toMatchObject({ code: 'TOO_MANY_PENDING_PHOTOS' });
+    expect(await sql`SELECT 1 FROM home_photos`).toHaveLength(25);
+  });
+
+  it('Scenario: Imagen con demasiados píxeles - confirmar una foto de 10.000 × 10.000 da 422 INVALID_IMAGE y no se publica', async () => {
+    const user = await registered();
+    const homeId = await createHome(user);
+    const huge = await sharp({
+      create: { width: 10_000, height: 10_000, channels: 3, background: { r: 1, g: 2, b: 3 } },
+    })
+      .png({ compressionLevel: 1 })
+      .toBuffer();
+    const photoId = await requestAndUpload(user, homeId, huge, 'image/png');
+
+    const response = await complete(user, homeId, photoId);
+
+    expect(response.statusCode, response.body).toBe(422);
+    expect(response.json()).toMatchObject({ code: 'INVALID_IMAGE' });
+    expect(await sql`SELECT 1 FROM home_photos`).toHaveLength(0);
+    expect((await fetch(`${storage.publicBaseUrl}/homes/${homeId}/${photoId}.webp`)).status).toBe(
+      404,
+    );
+  });
+
   it('Scenario: Límite de 20 fotos - con 20 fotos listas pedir otra URL da 409 y no crea nada', async () => {
     const user = await registered();
     const homeId = await createHome(user);

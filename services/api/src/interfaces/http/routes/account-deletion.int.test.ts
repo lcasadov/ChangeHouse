@@ -222,6 +222,58 @@ describe.skipIf(!emulatorAvailable() || !firestoreAvailable())(
       expect(everything).not.toContain('+34600111222');
     });
 
+    it('Scenario: Datos tras la eliminación - sus viviendas pierden la dirección y la ubicación exactas y el otro participante deja de ver el contacto', async () => {
+      const { ana, anaHome, beto, matchId } = await scenario.pair();
+      await sql`UPDATE users SET phone = '+34600111222' WHERE id = ${ana.id}`;
+      await scenario.call(ana, 'PUT', `/v1/matches/${matchId}/phone-sharing`, { share: true });
+      const before = await scenario.call(beto, 'GET', `/v1/matches/${matchId}`);
+
+      const response = await deleteAccount(ana);
+      await settleOutbox();
+
+      expect(before.body).toContain('+34600111222');
+      expect(response.statusCode, response.body).toBe(204);
+      const [home] = await sql<
+        { exact_address: Buffer | null; exact_location: string | null; approx: string | null }[]
+      >`SELECT exact_address, exact_location, approx_location AS approx FROM homes WHERE id = ${anaHome}`;
+      expect(home?.exact_address).toBeNull();
+      expect(home?.exact_location).toBeNull();
+      const shares = await sql<{ shares_phone: boolean }[]>`
+        SELECT shares_phone FROM match_participants WHERE match_id = ${matchId}`;
+      expect(shares.every((row) => !row.shares_phone)).toBe(true);
+      const after = await scenario.call(beto, 'GET', `/v1/matches/${matchId}`);
+      expect(after.statusCode, after.body).toBe(200);
+      expect(after.body).not.toContain('+34600111222');
+      expect(after.body).not.toContain('Calle Mayor');
+    });
+
+    it('Scenario: Usuario suspendido elimina su cuenta - responde 204 y las denuncias y la auditoría de su suspensión se conservan', async () => {
+      const { ana, beto } = await scenario.pair();
+      const reported = await scenario.call(beto, 'POST', '/v1/reports', {
+        targetType: 'user',
+        targetId: ana.id,
+        reason: 'Fraude reiterado',
+      });
+      expect(reported.statusCode, reported.body).toBe(201);
+      const admin = await scenario.registered('Admin');
+      await sql`UPDATE users SET assigned_role = 'admin' WHERE id = ${admin.id}`;
+      const suspended = await scenario.call(admin, 'PUT', `/v1/admin/users/${ana.id}/suspension`, {
+        suspended: true,
+        reason: 'Fraude reiterado',
+      });
+      expect(suspended.statusCode, suspended.body).toBe(200);
+
+      const response = await deleteAccount(ana);
+      await settleOutbox();
+
+      expect(response.statusCode, response.body).toBe(204);
+      expect((await userRow(ana.id))?.deleted_at).toBeInstanceOf(Date);
+      expect(await sql`SELECT 1 FROM reports WHERE target_id = ${ana.id}`).toHaveLength(1);
+      const audit = await sql<{ action: string }[]>`
+        SELECT action FROM audit_log WHERE entity_id = ${ana.id}`;
+      expect(audit.map((row) => row.action).sort()).toEqual(['user.delete', 'user.suspend']);
+    });
+
     it('borra preferencias, dispositivos, me gusta y descartes del usuario, y las fotos de sus viviendas', async () => {
       const { ana, anaHome } = await scenario.pair();
       const carla = await scenario.registered('Carla');

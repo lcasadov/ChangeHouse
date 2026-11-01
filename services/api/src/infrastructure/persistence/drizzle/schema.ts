@@ -144,9 +144,10 @@ export const homes = pgTable(
     valueMaxCents: bigint('value_max_cents', { mode: 'number' }),
     isPrimaryResidence: boolean('is_primary_residence'),
     mortgageOutstandingCents: bigint('mortgage_outstanding_cents', { mode: 'number' }),
-    exactAddress: bytea('exact_address').notNull(),
+    // Nulos solo en la vivienda de una cuenta eliminada: el borrado de la cuenta los sobrescribe (RGPD art. 17)
+    exactAddress: bytea('exact_address'),
     locationVisibility: locationVisibilityEnum('location_visibility').notNull().default('area'),
-    exactLocation: geographyPoint('exact_location').notNull(),
+    exactLocation: geographyPoint('exact_location'),
     approxLocation: geographyPoint('approx_location').notNull(),
     areaName: text('area_name').notNull(),
     // Municipio tal como lo da el servicio de direcciones y su forma comparable con las preferencias
@@ -226,12 +227,14 @@ export const auditLog = pgTable(
   'audit_log',
   {
     id: bigint('id', { mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
-    actorId: uuid('actor_id')
-      .notNull()
-      .references(() => users.id, { onDelete: 'restrict' }),
+    // Nulo cuando la acción la hace el sistema (la purga de retención)
+    actorId: uuid('actor_id').references(() => users.id, { onDelete: 'restrict' }),
     action: text('action').notNull(),
     entity: text('entity').notNull(),
-    entityId: uuid('entity_id').notNull(),
+    // Nulo cuando la acción recae en un conjunto de entidades (la purga)
+    entityId: uuid('entity_id'),
+    // Recuentos de la acción (p. ej. chats purgados); nunca datos personales
+    detail: jsonb('detail').$type<Record<string, number>>(),
     at: timestamp('at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index('audit_log_entity_idx').on(table.entity, table.entityId)],
@@ -379,8 +382,18 @@ export const matches = pgTable(
     // Chat de grupo en Firestore: lo rellena el despachador del outbox cuando lo crea (`add-match-chat`)
     chatId: text('chat_id'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    // Cuándo pasó a `closed`: de aquí cuenta el plazo de conservación del chat (12 meses)
+    closedAt: timestamp('closed_at', { withTimezone: true }),
+    // Cuándo se purgaron los mensajes e imágenes de su chat por retención
+    chatPurgedAt: timestamp('chat_purged_at', { withTimezone: true }),
   },
-  (table) => [check('matches_type_range', sql`${table.type} IN (2, 3)`)],
+  (table) => [
+    // La purga solo mira los cerrados con el chat sin purgar
+    index('matches_chat_purge_idx')
+      .on(table.closedAt)
+      .where(sql`${table.status} = 'closed' AND ${table.chatPurgedAt} IS NULL`),
+    check('matches_type_range', sql`${table.type} IN (2, 3)`),
+  ],
 );
 
 /**

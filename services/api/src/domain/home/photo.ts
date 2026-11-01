@@ -1,6 +1,6 @@
 import type { HomeStatus } from '@changehouse/shared';
 
-import { HomeMinPhotosError, PhotoLimitReachedError } from './errors.js';
+import { HomeMinPhotosError, PhotoLimitReachedError, TooManyPendingPhotosError } from './errors.js';
 
 /** Estados de una foto: `pending` desde que se emite la URL de subida; `ready` cuando se ha procesado. */
 export const PHOTO_STATUSES = ['pending', 'ready'] as const;
@@ -27,6 +27,14 @@ export function firstFreePosition(taken: readonly number[]): number | null {
     if (!taken.includes(position)) return position;
   }
   return null;
+}
+
+/** Fotos pendientes de confirmar (URL emitida y sin procesar) que una vivienda admite a la vez. */
+export const MAX_PENDING_PHOTOS = 25;
+
+/** Pedir otra URL de subida con el cupo de pendientes lleno es un conflicto. */
+export function assertCanRequestUpload(pendingPhotos: number): void {
+  if (pendingPhotos >= MAX_PENDING_PHOTOS) throw new TooManyPendingPhotosError();
 }
 
 /** Solo las fotos procesadas cuentan para el máximo. */

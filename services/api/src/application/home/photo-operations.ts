@@ -9,6 +9,7 @@ import { assertEditable, type Home, relevantChangeOf } from '../../domain/home/h
 import {
   assertCanAddPhoto,
   assertCanDeletePhoto,
+  assertCanRequestUpload,
   type HomePhoto,
 } from '../../domain/home/photo.js';
 import type { Clock } from '../clock.js';
@@ -78,6 +79,7 @@ async function createPhotoUpload(
   const home = await ownHome(deps.homes, ownerId, homeId);
   assertEditable(home);
   assertCanAddPhoto(await deps.photos.countReady(homeId));
+  assertCanRequestUpload(await deps.photos.countPending(homeId));
 
   const now = deps.clock.now();
   const photoId = deps.ids.next();

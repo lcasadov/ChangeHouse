@@ -57,4 +57,9 @@ export interface ChatChannel {
    * chat que no existe no es un error.
    */
   anonymizeParticipant(chatId: string, anonymization: ParticipantAnonymization): Promise<void>;
+  /**
+   * Borra todos los mensajes del chat (retención a los 12 meses del cierre) y conserva el chat. Es
+   * idempotente y un chat que no existe no es un error.
+   */
+  purgeMessages(chatId: string): Promise<void>;
 }

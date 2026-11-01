@@ -6,6 +6,7 @@ import type { Executor } from './database.js';
 import {
   accountDismissals,
   dismissals,
+  homes,
   likes,
   matches,
   matchParticipants,
@@ -54,6 +55,13 @@ export class DrizzleAccountDeletionStore implements AccountDeletionStore {
       )
       .orderBy(asc(matches.id));
     return [...new Set(rows.map((row) => row.id))];
+  }
+
+  async eraseExactLocation(userId: string): Promise<void> {
+    await this.db
+      .update(homes)
+      .set({ exactAddress: null, exactLocation: null })
+      .where(eq(homes.ownerId, userId));
   }
 
   async eraseDerivedData(userId: string): Promise<void> {

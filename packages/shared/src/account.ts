@@ -29,7 +29,8 @@ const phoneSchema = z.string().regex(E164);
 export const profileSchema = z.strictObject({
   displayName: displayNameSchema,
   municipality: municipalitySchema.optional(),
-  phone: phoneSchema.optional(),
+  // `null` borra el teléfono; omitirlo no lo toca
+  phone: phoneSchema.nullable().optional(),
   meetsVppRequirements: z.boolean().optional(),
   isOver65: z.boolean().optional(),
 });

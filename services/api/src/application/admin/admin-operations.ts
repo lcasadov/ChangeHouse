@@ -39,7 +39,8 @@ export interface UserDirectory {
 
 export interface AuditRecord {
   id: number;
-  actorId: string;
+  /** `null` en las entradas del sistema (la purga de retención). */
+  actorId: string | null;
   action: string;
   entity: string;
   entityId: string | null;
@@ -83,7 +84,8 @@ export interface Page<T> {
 
 export interface AuditEntryView {
   id: number;
-  actorId: string;
+  /** `null` en las entradas del sistema (la purga de retención). */
+  actorId: string | null;
   action: string;
   entity: string;
   entityId: string | null;

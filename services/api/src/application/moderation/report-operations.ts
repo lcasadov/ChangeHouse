@@ -1,12 +1,14 @@
 import type { ReportInput, ReportResolutionInput, ReportStatus } from '@changehouse/shared';
 
+import { withdrawFromMatch } from '../../domain/matching/match.js';
 import { openReport, type Report, resolveReport } from '../../domain/moderation/report.js';
 import type { UserRepository } from '../account/user-repository.js';
 import type { Clock } from '../clock.js';
 import type { HomeRepository } from '../home/home-repository.js';
 import type { IdGenerator } from '../id-generator.js';
+import { MATCH_CLOSED } from '../outbox/outbox.js';
 import type { AuditAction } from './audit-log.js';
-import type { BlockRepository } from './block-repository.js';
+import type { BlockScope, BlockUnitOfWork } from './block-repository.js';
 import { encodeCursor, type ModerationCursor } from './cursor.js';
 import {
   CannotBlockSelfError,
@@ -24,7 +26,7 @@ export interface ReportDeps {
   units: UnitOfWork;
   homes: Pick<HomeRepository, 'findById'>;
   users: Pick<UserRepository, 'findById'>;
-  blocks: BlockRepository;
+  blockUnits: BlockUnitOfWork;
   memberships: ChatMemberships;
   messages: ChatMessageLookup;
   clock: Clock;
@@ -132,7 +134,48 @@ async function blockUser(deps: ReportDeps, blockerId: string, blockedId: string)
   if (blockerId === blockedId) throw new CannotBlockSelfError();
   const user = await deps.users.findById(blockedId);
   if (user === null || user.deletedAt !== null) throw new UserToBlockNotFoundError();
-  await deps.blocks.add(blockerId, blockedId, deps.clock.now());
+  await deps.blockUnits.run(async (scope) => {
+    const now = deps.clock.now();
+    await scope.blocks.add(blockerId, blockedId, now);
+    await closeSharedMatches(deps, scope, blockerId, blockedId, now);
+  });
+}
+
+/**
+ * Cierra para todos los matches `open` o `confirmed` en los que participan los dos (con ello su chat
+ * queda en solo lectura). Quien bloquea queda `withdrawn`, y el aviso del cierre solo nombra a los
+ * demás participantes: quien bloquea no recibe nada.
+ */
+async function closeSharedMatches(
+  deps: ReportDeps,
+  scope: BlockScope,
+  blockerId: string,
+  blockedId: string,
+  now: Date,
+): Promise<void> {
+  const shared = (await scope.matches.findActiveForUpdate(blockerId)).filter((match) =>
+    match.participants.some((participant) => participant.userId === blockedId),
+  );
+  for (const match of shared) {
+    await scope.matches.saveState(match.id, withdrawFromMatch(match, blockerId));
+    await scope.audit.record({
+      actorId: blockerId,
+      action: 'match.block_close',
+      entity: 'match',
+      entityId: match.id,
+      at: now,
+    });
+    const recipients = match.participants
+      .map((participant) => participant.userId)
+      .filter((userId) => userId !== blockerId);
+    await scope.outbox.enqueue({
+      id: deps.ids.next(),
+      type: MATCH_CLOSED,
+      aggregateId: match.id,
+      payload: { recipients: [...new Set(recipients)].join(',') },
+      at: now,
+    });
+  }
 }
 
 async function adminListReports(

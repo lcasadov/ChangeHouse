@@ -32,6 +32,12 @@ class QuotaExceededError extends DomainError {
   override readonly retryAfterSeconds = 4321;
 }
 
+class ProcessingBusyError extends DomainError {
+  readonly code = 'PROCESSING_BUSY';
+  override readonly kind = 'unavailable' as const;
+  override readonly retryAfterSeconds = 30;
+}
+
 const PROBE = { config: { operationId: 'probe' } };
 
 function appWithFailingRoutes(logger?: ReturnType<typeof captureLogs>['logger']) {
@@ -51,6 +57,9 @@ function appWithFailingRoutes(logger?: ReturnType<typeof captureLogs>['logger'])
   });
   app.get('/limited', PROBE, () => {
     throw Object.assign(new Error('Rate limit exceeded'), { statusCode: 429 });
+  });
+  app.get('/busy', PROBE, () => {
+    throw new ProcessingBusyError('detalle interno que no debe salir');
   });
   app.get('/rule', PROBE, () => {
     throw new RuleBrokenError('detalle interno que no debe salir');
@@ -220,6 +229,19 @@ describe('formato único de error (Problem)', () => {
       code: 'PARAMETER_MISSING',
       errors: [{ field: 'homeId', message: 'required' }],
     });
+    expect(response.body).not.toContain('detalle interno');
+    await app.close();
+  });
+
+  it('Scenario: Procesado saturado - un servicio no disponible del dominio responde 503 con su código y Retry-After', async () => {
+    const app = appWithFailingRoutes();
+
+    const response = await app.inject({ method: 'GET', url: '/busy' });
+
+    expect(response.statusCode).toBe(503);
+    expect(response.headers['retry-after']).toBe('30');
+    expect(response.headers['content-type']).toContain('application/problem+json');
+    expect(response.json()).toMatchObject({ status: 503, code: 'PROCESSING_BUSY' });
     expect(response.body).not.toContain('detalle interno');
     await app.close();
   });

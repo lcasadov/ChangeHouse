@@ -3,6 +3,11 @@ import { describe, expect, it } from 'vitest';
 import { loadConfig } from './config.js';
 
 const ADDRESS_KEY = Buffer.alloc(32, 7).toString('base64');
+/** Obligatorios en Cloud Run (CORS): sin ellos la API no arranca. */
+const CLOUD_ORIGINS = {
+  LANDING_ORIGIN: 'https://changehouse.app',
+  APP_ORIGIN: 'https://app.changehouse.app',
+};
 const base = {
   DATABASE_URL: 'postgres://u:p@localhost:5432/db',
   FIREBASE_PROJECT_ID: 'changehouse-des',
@@ -87,22 +92,65 @@ describe('loadConfig', () => {
     }
   });
 
+  describe('orígenes de CORS en Cloud Run', () => {
+    const cloudRun = { ...base, K_SERVICE: 'api', GOOGLE_PLACES_SERVER_KEY: 'k' };
+
+    it('Scenario: Falta un origen en la nube - sin APP_ORIGIN falla al arrancar nombrando la variable', () => {
+      expect(() =>
+        loadConfig({ ...cloudRun, LANDING_ORIGIN: CLOUD_ORIGINS.LANDING_ORIGIN }),
+      ).toThrow('Falta la variable APP_ORIGIN en Cloud Run');
+    });
+
+    it('Scenario: Falta un origen en la nube - sin LANDING_ORIGIN falla al arrancar nombrando la variable', () => {
+      expect(() => loadConfig({ ...cloudRun, APP_ORIGIN: CLOUD_ORIGINS.APP_ORIGIN })).toThrow(
+        'Falta la variable LANDING_ORIGIN en Cloud Run',
+      );
+    });
+
+    it('una variable vacía cuenta como ausente', () => {
+      expect(() => loadConfig({ ...cloudRun, ...CLOUD_ORIGINS, APP_ORIGIN: '' })).toThrow(
+        /APP_ORIGIN/,
+      );
+    });
+
+    it('con los dos orígenes arranca y los usa', () => {
+      expect(loadConfig({ ...cloudRun, ...CLOUD_ORIGINS })).toMatchObject({
+        landingOrigin: 'https://changehouse.app',
+        appOrigins: ['https://app.changehouse.app'],
+      });
+    });
+
+    it('en local siguen teniendo valor por defecto', () => {
+      expect(loadConfig({ ...base })).toMatchObject({
+        landingOrigin: 'http://localhost:4321',
+        appOrigins: ['http://localhost:8081'],
+      });
+    });
+  });
+
   it('APP_PUBLIC_URL es obligatoria en Cloud Run', () => {
     const withoutUrl: Record<string, string> = { ...base };
     delete withoutUrl['APP_PUBLIC_URL'];
 
     expect(() =>
-      loadConfig({ ...withoutUrl, K_SERVICE: 'api', GOOGLE_PLACES_SERVER_KEY: 'k' }),
+      loadConfig({
+        ...withoutUrl,
+        ...CLOUD_ORIGINS,
+        K_SERVICE: 'api',
+        GOOGLE_PLACES_SERVER_KEY: 'k',
+      }),
     ).toThrow(/APP_PUBLIC_URL/);
   });
 
   it('confía en un salto de proxy en Cloud Run (K_SERVICE) y se puede fijar a mano', () => {
     expect(
-      loadConfig({ ...base, K_SERVICE: 'api', GOOGLE_PLACES_SERVER_KEY: 'k' }).trustProxyHops,
+      loadConfig({ ...base, ...CLOUD_ORIGINS, K_SERVICE: 'api', GOOGLE_PLACES_SERVER_KEY: 'k' })
+        .trustProxyHops,
     ).toBe(1);
     expect(
       loadConfig({
         ...base,
+        ...CLOUD_ORIGINS,
         K_SERVICE: 'api',
         GOOGLE_PLACES_SERVER_KEY: 'k',
         TRUST_PROXY_HOPS: '2',
@@ -112,6 +160,7 @@ describe('loadConfig', () => {
       loadConfig({
         ...base,
         TRUST_PROXY_HOPS: '0',
+        ...CLOUD_ORIGINS,
         K_SERVICE: 'api',
         GOOGLE_PLACES_SERVER_KEY: 'k',
       }).trustProxyHops,
@@ -120,6 +169,20 @@ describe('loadConfig', () => {
 
   it('desactiva el logger de la aplicación en pruebas', () => {
     expect(loadConfig({ ...base, NODE_ENV: 'test' }).logger).toBe(false);
+  });
+
+  it('Scenario: Sin fecha de lanzamiento - LAUNCH_DATE es opcional y, ausente, queda sin definir', () => {
+    expect(loadConfig({ ...base }).launchDate).toBeUndefined();
+    expect(loadConfig({ ...base, LAUNCH_DATE: '' }).launchDate).toBeUndefined();
+  });
+
+  it('lee LAUNCH_DATE como fecha (AAAA-MM-DD, medianoche UTC) y rechaza lo que no lo es', () => {
+    expect(loadConfig({ ...base, LAUNCH_DATE: '2027-03-01' }).launchDate).toEqual(
+      new Date('2027-03-01T00:00:00.000Z'),
+    );
+    for (const invalid of ['pronto', '2027-13-45', '01/03/2027', '1700000000']) {
+      expect(() => loadConfig({ ...base, LAUNCH_DATE: invalid })).toThrow(/LAUNCH_DATE/);
+    }
   });
 
   it('exige DATABASE_URL', () => {
@@ -154,9 +217,12 @@ describe('loadConfig', () => {
   });
 
   it('se niega a arrancar en Cloud Run sin la clave de Google Places: no se resolverían direcciones reales', () => {
-    expect(() => loadConfig({ ...base, K_SERVICE: 'api' })).toThrow(/GOOGLE_PLACES_SERVER_KEY/);
+    expect(() => loadConfig({ ...base, ...CLOUD_ORIGINS, K_SERVICE: 'api' })).toThrow(
+      /GOOGLE_PLACES_SERVER_KEY/,
+    );
     expect(
-      loadConfig({ ...base, K_SERVICE: 'api', GOOGLE_PLACES_SERVER_KEY: 'clave' }).places.serverKey,
+      loadConfig({ ...base, ...CLOUD_ORIGINS, K_SERVICE: 'api', GOOGLE_PLACES_SERVER_KEY: 'clave' })
+        .places.serverKey,
     ).toBe('clave');
   });
 
@@ -177,6 +243,7 @@ describe('loadConfig', () => {
     expect(() =>
       loadConfig({
         ...base,
+        ...CLOUD_ORIGINS,
         K_SERVICE: 'api',
         GOOGLE_PLACES_SERVER_KEY: 'k',
         FIRESTORE_EMULATOR_HOST: 'localhost:8085',
@@ -199,6 +266,7 @@ describe('loadConfig', () => {
     expect(() =>
       loadConfig({
         ...base,
+        ...CLOUD_ORIGINS,
         K_SERVICE: 'api',
         GOOGLE_PLACES_SERVER_KEY: 'k',
         FIREBASE_AUTH_EMULATOR_HOST: 'localhost:9099',
@@ -260,7 +328,12 @@ describe('loadConfig', () => {
     });
 
     it('se niega a arrancar en Cloud Run sin los dos buckets: las fotos no tendrían dónde vivir', () => {
-      const cloudRun = { ...withoutBuckets, K_SERVICE: 'api', GOOGLE_PLACES_SERVER_KEY: 'k' };
+      const cloudRun = {
+        ...withoutBuckets,
+        ...CLOUD_ORIGINS,
+        K_SERVICE: 'api',
+        GOOGLE_PLACES_SERVER_KEY: 'k',
+      };
 
       expect(() => loadConfig(cloudRun)).toThrow(/STORAGE_PRIVATE_BUCKET/);
       expect(() => loadConfig({ ...cloudRun, STORAGE_PRIVATE_BUCKET: 'privado' })).toThrow(
@@ -272,6 +345,7 @@ describe('loadConfig', () => {
       expect(() =>
         loadConfig({
           ...base,
+          ...CLOUD_ORIGINS,
           K_SERVICE: 'api',
           GOOGLE_PLACES_SERVER_KEY: 'k',
           FAKE_GCS_HOST: 'localhost:4443',

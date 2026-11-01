@@ -304,15 +304,45 @@ describe.skipIf(!emulatorAvailable() || !firestoreAvailable())(
         expect(await sql`SELECT 1 FROM matches`).toHaveLength(0);
       });
 
-      it('Scenario: Bloquear no cierra matches existentes - el match sigue abierto para los dos', async () => {
+      // Requisito MODIFIED «Bloquear a un usuario»: antes el match seguía abierto; ahora se cierra
+      it('Scenario: El bloqueo cierra el match y su chat - el match queda cerrado para los dos y queda auditado', async () => {
         const { ana, beto, matchId } = await scenario.pair();
 
-        await block(ana, beto.id);
+        const response = await block(ana, beto.id);
         const mine = await scenario.call(ana, 'GET', `/v1/matches/${matchId}`);
         const theirs = await scenario.call(beto, 'GET', `/v1/matches/${matchId}`);
 
-        expect(mine.json<{ status: string }>().status).toBe('open');
-        expect(theirs.json<{ status: string }>().status).toBe('open');
+        expect(response.statusCode, response.body).toBe(204);
+        expect(mine.json<{ status: string }>().status).toBe('closed');
+        expect(theirs.json<{ status: string }>().status).toBe('closed');
+        expect(
+          await sql`SELECT 1 FROM audit_log WHERE actor_id = ${ana.id} AND action = 'match.block_close' AND entity_id = ${matchId}`,
+        ).toHaveLength(1);
+      });
+
+      it('Scenario: El bloqueo cierra el match y su chat - un mensaje nuevo del bloqueado se rechaza con 409 y no se publica', async () => {
+        const { ana, beto, matchId } = await chatWithMessage();
+
+        await block(ana, beto.id);
+        const fromBlocked = await scenario.call(beto, 'POST', `/v1/matches/${matchId}/messages`, {
+          text: 'Hola otra vez',
+        });
+        const fromBlocker = await scenario.call(ana, 'POST', `/v1/matches/${matchId}/messages`, {
+          text: 'Y yo',
+        });
+
+        expect([fromBlocked.statusCode, fromBlocker.statusCode]).toEqual([409, 409]);
+        expect(fromBlocked.json<{ code?: string }>()).toMatchObject({ code: 'MATCH_NOT_OPEN' });
+      });
+
+      it('un bloqueo sin match entre los dos no cierra los demás matches de quien bloquea', async () => {
+        const { ana, matchId } = await scenario.pair();
+        const carla = await scenario.registered('Carla');
+
+        await block(ana, carla.id);
+        const detail = await scenario.call(ana, 'GET', `/v1/matches/${matchId}`);
+
+        expect(detail.json<{ status: string }>().status).toBe('open');
       });
     });
 

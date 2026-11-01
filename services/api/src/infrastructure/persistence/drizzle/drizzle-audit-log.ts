@@ -12,6 +12,7 @@ export class DrizzleAuditLog implements AuditLog {
       action: entry.action,
       entity: entry.entity,
       entityId: entry.entityId,
+      ...(entry.detail ? { detail: entry.detail } : {}),
       at: entry.at,
     });
   }

@@ -128,6 +128,13 @@ export class FirestoreChatChannel implements ChatChannel, ChatMessageLookup {
     return null;
   }
 
+  async purgeMessages(chatId: string): Promise<void> {
+    // Solo la subcolección de mensajes: el chat conserva sus participantes y el match su historial
+    await this.firestore.recursiveDelete(
+      this.firestore.collection('chats').doc(chatId).collection('messages'),
+    );
+  }
+
   async anonymizeParticipant(
     chatId: string,
     anonymization: ParticipantAnonymization,

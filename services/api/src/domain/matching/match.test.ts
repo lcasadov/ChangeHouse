@@ -6,6 +6,7 @@ import {
   ensureCanChat,
   ensureCanSharePhone,
   ensureParticipant,
+  isContactVisibleTo,
   isLiveMatch,
   type MatchState,
   type ParticipantStatus,
@@ -184,5 +185,26 @@ describe('isLiveMatch', () => {
     ['expired', false],
   ] as const)('un match %s: vivo = %s', (status, live) => {
     expect(isLiveMatch({ status, participants: [] })).toBe(live);
+  });
+});
+
+describe('isContactVisibleTo', () => {
+  it.each([
+    ['open', 'pending', true],
+    ['confirmed', 'confirmed', true],
+    ['closed', 'pending', false],
+    ['expired', 'pending', false],
+    ['in_operation', 'pending', false],
+    ['open', 'withdrawn', false],
+    ['confirmed', 'withdrawn', false],
+  ] as const)(
+    'un match %s con el solicitante %s: datos de contacto visibles = %s',
+    (status, mine, visible) => {
+      expect(isContactVisibleTo(match(status, mine, 'pending'), 'user-a')).toBe(visible);
+    },
+  );
+
+  it('quien no participa no los ve nunca', () => {
+    expect(isContactVisibleTo(match('open', 'pending', 'pending'), 'user-c')).toBe(false);
   });
 });

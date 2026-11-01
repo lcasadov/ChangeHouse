@@ -17,6 +17,7 @@ const CONFLICT_STATUS = 409;
 const NOT_FOUND_STATUS = 404;
 const BAD_REQUEST_STATUS = 400;
 const TOO_MANY_REQUESTS_STATUS = 429;
+const SERVICE_UNAVAILABLE_STATUS = 503;
 
 /** Cómo se traduce cada clase de violación de negocio. */
 const DOMAIN_STATUS: Record<DomainErrorKind, number> = {
@@ -25,6 +26,7 @@ const DOMAIN_STATUS: Record<DomainErrorKind, number> = {
   not_found: NOT_FOUND_STATUS,
   invalid_request: BAD_REQUEST_STATUS,
   rate_limited: TOO_MANY_REQUESTS_STATUS,
+  unavailable: SERVICE_UNAVAILABLE_STATUS,
 };
 
 export interface FieldError {
@@ -55,6 +57,7 @@ const PROBLEM_KINDS: Record<number, ProblemKind> = {
   415: { slug: 'unsupported-media-type', title: 'Tipo de contenido no admitido' },
   422: { slug: 'unprocessable', title: 'Regla de negocio incumplida' },
   429: { slug: 'too-many-requests', title: 'Demasiadas peticiones' },
+  503: { slug: 'unavailable', title: 'Servicio no disponible temporalmente' },
 };
 const BAD_REQUEST_KIND: ProblemKind = { slug: 'bad-request', title: 'Petición no válida' };
 const INTERNAL_KIND: ProblemKind = { slug: 'internal', title: 'Error interno' };
@@ -91,8 +94,8 @@ function buildProblem(
   correlationId: string,
   extra: { code?: string; errors?: FieldError[] } = {},
 ): Problem {
-  const kind =
-    status >= INTERNAL_ERROR_STATUS ? INTERNAL_KIND : (PROBLEM_KINDS[status] ?? BAD_REQUEST_KIND);
+  const fallback = status >= INTERNAL_ERROR_STATUS ? INTERNAL_KIND : BAD_REQUEST_KIND;
+  const kind = PROBLEM_KINDS[status] ?? fallback;
   return {
     type: `${PROBLEM_TYPE_BASE}/${kind.slug}`,
     title: kind.title,

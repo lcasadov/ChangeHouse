@@ -70,6 +70,10 @@ class FlakyChannel implements ChatChannel {
   anonymizeParticipant(...args: Parameters<ChatChannel['anonymizeParticipant']>) {
     return this.real.anonymizeParticipant(...args);
   }
+
+  purgeMessages(...args: Parameters<ChatChannel['purgeMessages']>) {
+    return this.real.purgeMessages(...args);
+  }
 }
 
 const sql = openSql();
@@ -471,6 +475,20 @@ describe.skipIf(!emulatorAvailable() || !firestoreAvailable())(
         expect(invalid.json()).toMatchObject({ code: 'INVALID_IMAGE' });
         expect(stolen.statusCode).toBe(422);
         expect(await messagesOf(matchId)).toHaveLength(1);
+      });
+
+      it('Scenario: Demasiadas imágenes en una hora - tras 30 subidas la petición 31 responde 429 con Retry-After y no emite URL', async () => {
+        const { ana, matchId } = await pair();
+        for (let index = 0; index < 30; index += 1) {
+          expect((await requestUpload(ana, matchId)).statusCode).toBe(201);
+        }
+
+        const limited = await requestUpload(ana, matchId);
+
+        expect(limited.statusCode, limited.body).toBe(429);
+        expect(limited.json()).toMatchObject({ code: 'CHAT_IMAGE_RATE_LIMITED', status: 429 });
+        expect(Number(limited.headers['retry-after'])).toBeGreaterThan(0);
+        expect(limited.body).not.toContain('uploadUrl');
       });
     });
   },

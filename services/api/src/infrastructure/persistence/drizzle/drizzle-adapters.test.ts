@@ -84,6 +84,33 @@ describe('DrizzleAuditLog', () => {
   });
 });
 
+describe('DrizzleAuditLog: entradas del sistema', () => {
+  it('Scenario: Purga programada - guarda la entrada sin actor ni entidad y con el recuento en el detalle', async () => {
+    const { db, calls } = fakeDb(undefined);
+    const at = new Date('2026-10-19T10:00:00.000Z');
+
+    await new DrizzleAuditLog(db).record({
+      actorId: null,
+      action: 'retention.purge',
+      entity: 'chat',
+      entityId: null,
+      detail: { count: 4 },
+      at,
+    });
+
+    expect(calls[1]?.args).toEqual([
+      {
+        actorId: null,
+        action: 'retention.purge',
+        entity: 'chat',
+        entityId: null,
+        detail: { count: 4 },
+        at,
+      },
+    ]);
+  });
+});
+
 describe('DrizzleAdminGrants', () => {
   it('findByEmail devuelve la fila encontrada o null', async () => {
     const user = makeUser();
@@ -439,6 +466,26 @@ describe('DrizzleMatchRepository: decisiones y detalle', () => {
     const { db, calls } = fakeDb(undefined);
 
     await new DrizzleMatchRepository(db).saveState('m-1', {
+      status: 'confirmed',
+      participants: [
+        { homeId: 'a', userId: 'u-a', status: 'confirmed' },
+        { homeId: 'b', userId: 'u-b', status: 'confirmed' },
+      ],
+    });
+
+    expect(calls.filter((call) => call.method === 'update')).toHaveLength(3);
+    expect(calls.filter((call) => call.method === 'set').map((call) => call.args[0])).toEqual([
+      { status: 'confirmed' },
+      { status: 'confirmed' },
+      { status: 'confirmed' },
+    ]);
+  });
+
+  // Requisito MODIFIED «Teléfono solo con autorización»: todo cierre retira la autorización de todos
+  it('saveState de un match cerrado retira además la autorización del teléfono de todos', async () => {
+    const { db, calls } = fakeDb(undefined);
+
+    await new DrizzleMatchRepository(db).saveState('m-1', {
       status: 'closed',
       participants: [
         { homeId: 'a', userId: 'u-a', status: 'withdrawn' },
@@ -446,9 +493,11 @@ describe('DrizzleMatchRepository: decisiones y detalle', () => {
       ],
     });
 
-    expect(calls.filter((call) => call.method === 'update')).toHaveLength(3);
+    expect(calls.filter((call) => call.method === 'update')).toHaveLength(4);
     expect(calls.filter((call) => call.method === 'set').map((call) => call.args[0])).toEqual([
-      { status: 'closed' },
+      // El primer cierre también fija `closed_at` (de ahí cuenta la retención del chat)
+      { status: 'closed', closedAt: expect.anything() as unknown },
+      { sharesPhone: false },
       { status: 'withdrawn' },
       { status: 'confirmed' },
     ]);

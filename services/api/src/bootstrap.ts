@@ -33,12 +33,15 @@ import type { Notifier } from './application/notifications/notifier.js';
 import type { UserContactDirectory } from './application/notifications/user-contact-directory.js';
 import { MATCH_CREATED, USER_DELETED } from './application/outbox/outbox.js';
 import { OutboxDispatcher } from './application/outbox/outbox-dispatcher.js';
+import { retentionOperations } from './application/retention/retention-purge.js';
+import { RetentionSchedule } from './application/retention/retention-schedule.js';
 import { searchPreferencesOperations } from './application/search-preferences/search-preferences-operations.js';
 import { joinWaitlist } from './application/waitlist/join-waitlist.js';
 import type { ApiConfig } from './config.js';
 import { createFirebaseIdentityVerifier } from './infrastructure/auth/firebase-identity-verifier.js';
 import { createFirestoreChatChannel } from './infrastructure/chat/firestore-chat-channel.js';
 import { AddressCipher } from './infrastructure/crypto/address-cipher.js';
+import { LimitedImageProcessor } from './infrastructure/images/limited-image-processor.js';
 import { SharpImageProcessor } from './infrastructure/images/sharp-image-processor.js';
 import { createFirebaseNotifier } from './infrastructure/notifications/firebase-notifier.js';
 import { createDatabase } from './infrastructure/persistence/drizzle/database.js';
@@ -50,7 +53,7 @@ import {
   DrizzleUserDirectory,
   DrizzleWaitlistReader,
 } from './infrastructure/persistence/drizzle/drizzle-admin-readers.js';
-import { DrizzleBlockRepository } from './infrastructure/persistence/drizzle/drizzle-block-repository.js';
+import { DrizzleBlockUnitOfWork } from './infrastructure/persistence/drizzle/drizzle-block-unit-of-work.js';
 import { DrizzleChatMemberships } from './infrastructure/persistence/drizzle/drizzle-chat-memberships.js';
 import { DrizzleChatSetup } from './infrastructure/persistence/drizzle/drizzle-chat-setup.js';
 import { DrizzleDecisionUnitOfWork } from './infrastructure/persistence/drizzle/drizzle-decision-unit-of-work.js';
@@ -68,6 +71,7 @@ import {
 } from './infrastructure/persistence/drizzle/drizzle-outbox.js';
 import { DrizzlePhotoRepository } from './infrastructure/persistence/drizzle/drizzle-photo-repository.js';
 import { DrizzleReportRepository } from './infrastructure/persistence/drizzle/drizzle-report-repository.js';
+import { DrizzleRetentionUnitOfWork } from './infrastructure/persistence/drizzle/drizzle-retention.js';
 import { DrizzleSearchPreferencesRepository } from './infrastructure/persistence/drizzle/drizzle-search-preferences-repository.js';
 import { DrizzleSuspensionUnitOfWork } from './infrastructure/persistence/drizzle/drizzle-suspension-unit-of-work.js';
 import { DrizzleUnitOfWork } from './infrastructure/persistence/drizzle/drizzle-unit-of-work.js';
@@ -75,6 +79,7 @@ import { DrizzleUserRepository } from './infrastructure/persistence/drizzle/driz
 import { DrizzleWaitlistRepository } from './infrastructure/persistence/drizzle/drizzle-waitlist-repository.js';
 import { FixturePlaceResolver } from './infrastructure/places/fixture-place-resolver.js';
 import { GooglePlaceResolver } from './infrastructure/places/google-place-resolver.js';
+import { SlidingWindowRateLimiter } from './infrastructure/rate-limit/sliding-window-rate-limiter.js';
 import { CloudChatImageStorage } from './infrastructure/storage/cloud-chat-image-storage.js';
 import { CloudPhotoStorage } from './infrastructure/storage/cloud-photo-storage.js';
 import { systemClock, uuidV7Generator } from './infrastructure/system.js';
@@ -109,6 +114,11 @@ export interface ApiAdapters {
 }
 
 const MS_PER_SECOND = 1000;
+/** Cada cuánto corre la purga de retención. */
+const RETENTION_INTERVAL_MS = 24 * 3_600_000;
+const MS_PER_HOUR = 3_600_000;
+/** Subidas de imágenes del chat que un usuario puede pedir por hora. */
+const CHAT_IMAGE_UPLOADS_PER_HOUR = 30;
 
 /** El canal sustituido por las pruebas o, por defecto, Firestore con su propia aplicación de Firebase. */
 function chatChannelFor(
@@ -166,11 +176,14 @@ export function createApi(config: ApiConfig, adapters: ApiAdapters = {}) {
     ids: uuidV7Generator,
   });
 
+  // Un único procesador (y su semáforo) para fotos de viviendas e imágenes del chat
+  const imageProcessor =
+    adapters.imageProcessor ?? new LimitedImageProcessor(new SharpImageProcessor());
   const photos = photoOperations({
     homes: homeRepository,
     photos: photoRepository,
     storage: photoStorage,
-    images: adapters.imageProcessor ?? new SharpImageProcessor(),
+    images: imageProcessor,
     clock: systemClock,
     ids: uuidV7Generator,
   });
@@ -246,6 +259,7 @@ export function createApi(config: ApiConfig, adapters: ApiAdapters = {}) {
     channel: adapters.chatChannel,
     messages: adapters.chatMessages,
   });
+  const chatImageStorage = adapters.chatImageStorage ?? new CloudChatImageStorage(config.storage);
   const chat = chatOperations({
     matches: matchRepository,
     setup: new DrizzleChatSetup(database.db),
@@ -254,8 +268,12 @@ export function createApi(config: ApiConfig, adapters: ApiAdapters = {}) {
     onEnqueueError: (error) => {
       app.log.error({ err: error }, 'No se pudo registrar el aviso de un mensaje ya publicado');
     },
-    storage: adapters.chatImageStorage ?? new CloudChatImageStorage(config.storage),
-    images: adapters.imageProcessor ?? new SharpImageProcessor(),
+    storage: chatImageStorage,
+    uploadLimiter: new SlidingWindowRateLimiter({
+      limit: CHAT_IMAGE_UPLOADS_PER_HOUR,
+      windowMs: MS_PER_HOUR,
+    }),
+    images: imageProcessor,
     clock: adapters.clock ?? systemClock,
     ids: uuidV7Generator,
   });
@@ -264,7 +282,7 @@ export function createApi(config: ApiConfig, adapters: ApiAdapters = {}) {
     units: new DrizzleUnitOfWork(database.db, cipher),
     homes: homeRepository,
     users,
-    blocks: new DrizzleBlockRepository(database.db),
+    blockUnits: new DrizzleBlockUnitOfWork(database.db),
     memberships: new DrizzleChatMemberships(database.db),
     messages: chatChannel.messages,
     clock: adapters.clock ?? systemClock,
@@ -311,6 +329,19 @@ export function createApi(config: ApiConfig, adapters: ApiAdapters = {}) {
       app.log.error({ err: error, outboxEventId: event.id }, 'No se pudo despachar el hecho');
     },
   });
+  const retentionPurge = retentionOperations({
+    units: new DrizzleRetentionUnitOfWork(database.db),
+    channel: chatChannel.channel,
+    storage: chatImageStorage,
+    clock: adapters.clock ?? systemClock,
+    launchDate: config.launchDate,
+    onError: (error, matchId) => {
+      app.log.error({ err: error, matchId }, 'No se pudo purgar el chat de un match');
+    },
+  });
+  const retention = new RetentionSchedule(retentionPurge.run, RETENTION_INTERVAL_MS, (error) => {
+    app.log.error({ err: error }, 'La purga de retención ha fallado');
+  });
   /** Tras la operación, despacha sin esperar los hechos que haya registrado. */
   function kickAfter<A extends unknown[], R>(operation: (...args: A) => Promise<R>) {
     return async (...args: A): Promise<R> => {
@@ -341,7 +372,8 @@ export function createApi(config: ApiConfig, adapters: ApiAdapters = {}) {
     adminPanel,
     reports: {
       createReport: reportOps.createReport,
-      blockUser: reportOps.blockUser,
+      // El bloqueo cierra matches: sus avisos salen tras la petición
+      blockUser: kickAfter(reportOps.blockUser),
     },
     adminReports: {
       adminListReports: reportOps.adminListReports,
@@ -369,8 +401,10 @@ export function createApi(config: ApiConfig, adapters: ApiAdapters = {}) {
   return {
     app,
     outbox,
+    retention,
     close: async () => {
       await outbox.stop();
+      await retention.stop();
       await app.close();
       await chatChannel.close();
       await firebaseNotifier.close();

@@ -149,6 +149,8 @@ erDiagram
         text cycle_key UK "conjunto ordenado de viviendas"
         text chat_id "chat en Firestore"
         timestamptz created_at
+        timestamptz closed_at "primer cierre; de aquí cuenta la retención del chat"
+        timestamptz chat_purged_at "chat purgado por retención"
     }
     match_participants {
         uuid match_id PK,FK
@@ -208,10 +210,11 @@ erDiagram
     }
     audit_log {
         bigint id PK
-        uuid actor_id FK
+        uuid actor_id FK "nulo si lo hace el sistema"
         text action
         text entity
-        uuid entity_id
+        uuid entity_id "nulo si recae en un conjunto"
+        jsonb detail "recuentos; nunca datos personales"
         timestamptz at
     }
     waitlist {
@@ -282,9 +285,9 @@ confirmado. Identificadores: `uuid` v7 generado en la aplicación —
 | `value_min_cents`, `value_max_cents` | bigint | sí | Rango de valor declarado por el propietario (RF-12) |
 | `is_primary_residence` | boolean | sí | Vivienda habitual (simulador fiscal, RF-16) |
 | `mortgage_outstanding_cents` | bigint | no | Hipoteca pendiente aproximada (RF-15). ⚠️ El README menciona también la entidad y «otras cargas», sin columna: ver R-3 |
-| `exact_address` | bytea | sí | Dirección exacta **cifrada**; solo se revela a participantes de un match (RN-08) |
+| `exact_address` | bytea | no (migración `0016`) | Dirección exacta **cifrada**; solo se revela a participantes de un match `open` o `confirmed` (RN-08). Nula en las viviendas de una cuenta eliminada: la baja la sobrescribe |
 | `location_visibility` | enum | sí (def. `area`) | Lo que elige el propietario: `exact` (ubicación exacta pública en el mapa) o `area` (solo barrio o zona) |
-| `exact_location` | geography(Point, 4326) | sí | Punto exacto. Público solo si `location_visibility = exact`. Se guarda sin cifrar porque lo necesitan las consultas geográficas; ninguna respuesta lo expone con `area` (la dirección postal sí va cifrada) |
+| `exact_location` | geography(Point, 4326) | no (migración `0016`) | Punto exacto (nulo tras eliminar la cuenta). Público solo si `location_visibility = exact`. Se guarda sin cifrar porque lo necesitan las consultas geográficas; ninguna respuesta lo expone con `area` (la dirección postal sí va cifrada) |
 | `approx_location` | geography(Point, 4326) | sí | Centro del barrio o zona: lo único público si `location_visibility = area` (RF-13) |
 | `area_name` | text | sí | Nombre del barrio o zona (de Google Places); también es la «zona» de las métricas |
 | `moderation_note` | text | no | Motivo del último rechazo de moderación, visible para el propietario |

@@ -113,6 +113,20 @@
       "when": 1793448910215,
       "tag": "0015_user_suspension",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1793492734443,
+      "tag": "0016_erase_exact_location",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1793493982065,
+      "tag": "0017_retention_purge",
+      "breakpoints": true
     }
   ]
 }

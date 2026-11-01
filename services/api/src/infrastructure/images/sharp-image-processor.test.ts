@@ -2,7 +2,7 @@ import sharp from 'sharp';
 import { describe, expect, it } from 'vitest';
 
 import { InvalidImageError } from '../../domain/home/errors.js';
-import { SharpImageProcessor } from './sharp-image-processor.js';
+import { MAX_INPUT_PIXELS, SharpImageProcessor } from './sharp-image-processor.js';
 
 const MAX_SIDE = 2048;
 
@@ -122,6 +122,24 @@ describe('SharpImageProcessor', () => {
     await expect(processor.process(original.subarray(0, 200))).rejects.toBeInstanceOf(
       InvalidImageError,
     );
+  });
+
+  it('Scenario: Imagen con demasiados píxeles - el tope de entrada es de 40 megapíxeles', () => {
+    expect(MAX_INPUT_PIXELS).toBe(40_000_000);
+  });
+
+  it('Scenario: Imagen con demasiados píxeles - una foto de 10.000 × 10.000 se rechaza con InvalidImageError sin procesarse', async () => {
+    const huge = await blank(10_000, 10_000).png({ compressionLevel: 1 }).toBuffer();
+
+    await expect(processor.process(huge)).rejects.toBeInstanceOf(InvalidImageError);
+  });
+
+  it('una imagen justo por debajo del tope (6.000 × 6.000 = 36 MP) se procesa', async () => {
+    const large = await blank(6000, 6000).jpeg({ quality: 10 }).toBuffer();
+
+    const result = await processor.process(large);
+
+    expect(Math.max(result.width, result.height)).toBe(2048);
   });
 
   it('rechaza formatos que no son fotos admitidas, aunque sharp sepa leerlos (SVG, GIF)', async () => {

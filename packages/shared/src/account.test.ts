@@ -55,6 +55,13 @@ describe('validateMeInput', () => {
     expect(meErrors({ displayName: '   ' })).toEqual([{ field: 'displayName', code: 'required' }]);
   });
 
+  it('Scenario: Borrar el teléfono del perfil - acepta phone null para borrarlo', () => {
+    expect(validateMeInput({ displayName: 'Ana', phone: null })).toEqual({
+      success: true,
+      data: { displayName: 'Ana', phone: null },
+    });
+  });
+
   it('limita el nombre visible a 60 caracteres y el municipio a 120', () => {
     expect(meErrors({ displayName: 'x'.repeat(61) })).toEqual([
       { field: 'displayName', code: 'too_long' },

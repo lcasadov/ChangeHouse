@@ -20,6 +20,11 @@ export interface ApiConfig {
     /** `host:puerto` del emulador de Firestore (chat). Solo en local y en las pruebas. */
     firestoreEmulatorHost: string | undefined;
   };
+  /**
+   * Fecha de lanzamiento (`LAUNCH_DATE`, `AAAA-MM-DD` o ISO): la lista de espera se purga 12 meses
+   * después. Sin ella, la lista de espera no se purga nunca.
+   */
+  launchDate: Date | undefined;
   /** Reintento periódico de los hechos pendientes de la bandeja de salida (creación de chats). */
   outbox: { intervalSeconds: number };
   /** Clave AES-256 (base64, 32 bytes) con la que se cifra la dirección postal de las viviendas. */
@@ -72,6 +77,23 @@ function origin(env: Env, name: string, fallback: string): string {
   return raw;
 }
 
+/** Los orígenes de CORS son obligatorios en Cloud Run: sin ellos la API aceptaría los de desarrollo. */
+function requiredOrigin(env: Env, name: string, fallback: string): string {
+  if (env['K_SERVICE'] && !env[name]) throw new Error(`Falta la variable ${name} en Cloud Run`);
+  return origin(env, name, fallback);
+}
+
+/** Fecha opcional: `AAAA-MM-DD` (medianoche UTC) o ISO 8601 completa. */
+function optionalDate(env: Env, name: string): Date | undefined {
+  const raw = env[name];
+  if (!raw) return undefined;
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime()) || !/^\d{4}-\d{2}-\d{2}/.test(raw)) {
+    throw new Error(`La variable ${name} debe ser una fecha (AAAA-MM-DD)`);
+  }
+  return date;
+}
+
 /** URL http(s) sin barra final. Obligatoria en Cloud Run; en local, la de `expo start --web`. */
 function publicUrl(env: Env, name: string, fallback: string): string {
   const raw = env[name] ?? (env['K_SERVICE'] ? undefined : fallback);
@@ -84,6 +106,11 @@ function publicUrl(env: Env, name: string, fallback: string): string {
 function origins(env: Env, name: string, fallback: string): string[] {
   const list = (env[name] ?? fallback).split(',').map((item) => item.trim());
   return list.filter((item) => item !== '').map((item) => origin({ [name]: item }, name, item));
+}
+
+function requiredOrigins(env: Env, name: string, fallback: string): string[] {
+  if (env['K_SERVICE'] && !env[name]) throw new Error(`Falta la variable ${name} en Cloud Run`);
+  return origins(env, name, fallback);
 }
 
 /** Los buckets de las fotos: obligatorios en Cloud Run; en local, los de docker-compose. */
@@ -151,8 +178,8 @@ export function loadConfig(env: Env = process.env): ApiConfig {
   return {
     port: integer(env, 'PORT', DEFAULT_PORT, 0),
     databaseUrl,
-    landingOrigin: origin(env, 'LANDING_ORIGIN', DEFAULT_LANDING_ORIGIN),
-    appOrigins: origins(env, 'APP_ORIGIN', DEFAULT_APP_ORIGIN),
+    landingOrigin: requiredOrigin(env, 'LANDING_ORIGIN', DEFAULT_LANDING_ORIGIN),
+    appOrigins: requiredOrigins(env, 'APP_ORIGIN', DEFAULT_APP_ORIGIN),
     appPublicUrl: publicUrl(env, 'APP_PUBLIC_URL', DEFAULT_APP_ORIGIN),
     // Cloud Run añade la IP del cliente al final de X-Forwarded-For: se confía solo en ese salto
     trustProxyHops: integer(
@@ -166,6 +193,7 @@ export function loadConfig(env: Env = process.env): ApiConfig {
       windowSeconds: integer(env, 'WAITLIST_RATE_LIMIT_WINDOW', DEFAULT_WAITLIST_WINDOW_SECONDS, 1),
     },
     likesPerDay: integer(env, 'LIKES_PER_DAY', DEFAULT_LIKES_PER_DAY, 1),
+    launchDate: optionalDate(env, 'LAUNCH_DATE'),
     firebase: { projectId, authEmulatorHost, firestoreEmulatorHost },
     outbox: {
       intervalSeconds: integer(env, 'OUTBOX_INTERVAL_SECONDS', DEFAULT_OUTBOX_INTERVAL_SECONDS, 1),

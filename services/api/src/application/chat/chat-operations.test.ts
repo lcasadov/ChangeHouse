@@ -6,10 +6,12 @@ import {
   InMemoryChatSetup,
   InMemoryMatchReader,
   InMemoryOutbox,
+  slidingWindowLimiter,
   StubImageProcessor,
 } from '../../../test/fakes.js';
 import {
   ChatImageNotFoundError,
+  ChatImageRateLimitError,
   ChatNotReadyError,
   ImageNotUploadedError,
 } from '../../domain/chat/errors.js';
@@ -47,7 +49,10 @@ function match(overrides: Partial<MatchRecord> = {}): MatchRecord {
   };
 }
 
-function setup(record: MatchRecord = match()) {
+const HOUR_MS = 3_600_000;
+const UPLOADS_PER_HOUR = 30;
+
+function setup(record: MatchRecord = match(), now: () => Date = () => NOW) {
   const reader = new InMemoryMatchReader([record]);
   const chatSetup = new InMemoryChatSetup();
   chatSetup.rosters.set(MATCH_ID, {
@@ -90,7 +95,8 @@ function setup(record: MatchRecord = match()) {
     images,
     outbox,
     onEnqueueError: (error) => enqueueErrors.push(error),
-    clock: { now: () => NOW },
+    uploadLimiter: slidingWindowLimiter(UPLOADS_PER_HOUR, HOUR_MS),
+    clock: { now },
     ids: { next: () => `id-${String(++sequence)}` },
   });
   return { operations, reader, chatSetup, channel, storage, images, outbox, enqueueErrors };
@@ -511,5 +517,57 @@ describe('getChatImageUrl', () => {
     await expect(attempt).rejects.toBeInstanceOf(ChatImageNotFoundError);
     await expect(attempt).rejects.toMatchObject({ kind: 'not_found' });
     expect(storage.signed).toEqual([]);
+  });
+});
+
+describe('createChatImageUpload: límite por usuario y hora', () => {
+  it('Scenario: Demasiadas imágenes en una hora - la subida 31 responde ChatImageRateLimitError (429) con el tiempo de espera', async () => {
+    const { operations, storage } = setup();
+    for (let index = 0; index < UPLOADS_PER_HOUR; index += 1) {
+      await operations.createChatImageUpload(ANA, MATCH_ID, 'image/jpeg');
+    }
+
+    const attempt = operations.createChatImageUpload(ANA, MATCH_ID, 'image/jpeg');
+
+    await expect(attempt).rejects.toBeInstanceOf(ChatImageRateLimitError);
+    await expect(attempt).rejects.toMatchObject({
+      code: 'CHAT_IMAGE_RATE_LIMITED',
+      kind: 'rate_limited',
+      retryAfterSeconds: 3600,
+    });
+    expect(storage.uploadUrls).toHaveLength(UPLOADS_PER_HOUR);
+  });
+
+  it('el límite es por usuario: Beto no gasta el cupo de Ana', async () => {
+    const { operations } = setup();
+    for (let index = 0; index < UPLOADS_PER_HOUR; index += 1) {
+      await operations.createChatImageUpload(ANA, MATCH_ID, 'image/jpeg');
+    }
+
+    await expect(
+      operations.createChatImageUpload(BETO, MATCH_ID, 'image/jpeg'),
+    ).resolves.toMatchObject({ uploadId: expect.any(String) as string });
+  });
+
+  it('pasada la hora el cupo se recupera', async () => {
+    let now = NOW;
+    const { operations } = setup(match(), () => now);
+    for (let index = 0; index < UPLOADS_PER_HOUR; index += 1) {
+      await operations.createChatImageUpload(ANA, MATCH_ID, 'image/jpeg');
+    }
+    now = new Date(NOW.getTime() + HOUR_MS);
+
+    await expect(
+      operations.createChatImageUpload(ANA, MATCH_ID, 'image/jpeg'),
+    ).resolves.toBeDefined();
+  });
+
+  it('una petición rechazada por el match (ajeno o cerrado) no gasta cupo', async () => {
+    const { operations } = setup(match({ status: 'closed' }));
+    for (let index = 0; index < UPLOADS_PER_HOUR + 5; index += 1) {
+      await expect(
+        operations.createChatImageUpload(ANA, MATCH_ID, 'image/jpeg'),
+      ).rejects.toBeInstanceOf(MatchNotOpenError);
+    }
   });
 });

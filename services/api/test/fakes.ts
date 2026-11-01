@@ -27,7 +27,9 @@ import type {
   ParticipantAnonymization,
 } from '../src/application/chat/chat-channel.js';
 import type { ChatImageStorage } from '../src/application/chat/chat-image-storage.js';
+import { chatImagePrefix, chatUploadPrefix } from '../src/application/chat/chat-paths.js';
 import type { ChatRoster, ChatSetup } from '../src/application/chat/chat-setup.js';
+import type { UploadRateLimiter } from '../src/application/chat/upload-rate-limiter.js';
 import type {
   DecisionOrigin,
   DecisionStore,
@@ -62,7 +64,11 @@ import type {
   NewMatch,
 } from '../src/application/matching/matching-repository.js';
 import type { AuditEntry, AuditLog } from '../src/application/moderation/audit-log.js';
-import type { BlockRepository } from '../src/application/moderation/block-repository.js';
+import type {
+  BlockRepository,
+  BlockScope,
+  BlockUnitOfWork,
+} from '../src/application/moderation/block-repository.js';
 import type { ModerationCursor } from '../src/application/moderation/cursor.js';
 import type {
   ReportListing,
@@ -102,6 +108,11 @@ import type {
   ProcessSummary,
 } from '../src/application/outbox/outbox.js';
 import type {
+  Exclusive,
+  RetentionScope,
+  RetentionUnitOfWork,
+} from '../src/application/retention/retention-purge.js';
+import type {
   PreferencesScope,
   SearchPreferencesRepository,
 } from '../src/application/search-preferences/search-preferences-repository.js';
@@ -114,6 +125,7 @@ import type { CompensationTerms, CycleHome } from '../src/domain/matching/cycle.
 import type { MatchState } from '../src/domain/matching/match.js';
 import type { Report } from '../src/domain/moderation/report.js';
 import type { SearchPreferences } from '../src/domain/search-preferences/search-preferences.js';
+import { SlidingWindowRateLimiter } from '../src/infrastructure/rate-limit/sliding-window-rate-limiter.js';
 
 const DEFAULT_CREATED_AT = new Date('2026-10-01T09:00:00.000Z');
 
@@ -416,6 +428,14 @@ export class InMemoryPhotoRepository implements PhotoRepository {
 
   countReady(homeId: string): Promise<number> {
     return this.listReady(homeId).then((ready) => ready.length);
+  }
+
+  countPending(homeId: string): Promise<number> {
+    return Promise.resolve(
+      [...this.photos.values()].filter(
+        (photo) => photo.homeId === homeId && photo.status === 'pending',
+      ).length,
+    );
   }
 
   async markReady(homeId: string, photoId: string): Promise<HomePhoto | null> {
@@ -871,6 +891,11 @@ export class InMemoryMatchUnitOfWork implements MatchUnitOfWork, MatchDecisionSt
 
   saveState(id: string, state: MatchState): Promise<void> {
     this.saved.push({ id, state });
+    if (state.status === 'closed') {
+      for (const key of [...this.reader.sharing]) {
+        if (key.startsWith(`${id}|`)) this.reader.sharing.delete(key);
+      }
+    }
     const index = this.reader.records.findIndex((record) => record.id === id);
     const current = this.reader.records[index];
     if (!current) return Promise.reject(new Error(`Match inexistente: ${id}`));
@@ -985,6 +1010,19 @@ export class InMemoryChatChannel implements ChatChannel {
     return Promise.resolve();
   }
 
+  /** Purgas de mensajes que se rechazan antes de volver a funcionar. */
+  purgeFailures = 0;
+
+  purgeMessages(chatId: string): Promise<void> {
+    if (this.purgeFailures > 0) {
+      this.purgeFailures -= 1;
+      return Promise.reject(new Error('Firestore no disponible'));
+    }
+    const stored = this.chats.get(chatId);
+    if (stored) stored.messages = [];
+    return Promise.resolve();
+  }
+
   readonly anonymized: { chatId: string; anonymization: ParticipantAnonymization }[] = [];
 
   anonymizeParticipant(chatId: string, anonymization: ParticipantAnonymization): Promise<void> {
@@ -1054,6 +1092,16 @@ export class InMemoryChatImageStorage implements ChatImageStorage {
 
   exists(path: string): Promise<boolean> {
     return Promise.resolve(this.stored.has(path));
+  }
+
+  deleteMatchImages(matchId: string): Promise<void> {
+    for (const key of [...this.stored.keys()]) {
+      if (key.startsWith(chatImagePrefix(matchId))) this.stored.delete(key);
+    }
+    for (const key of [...this.originals.keys()]) {
+      if (key.startsWith(chatUploadPrefix(matchId))) this.originals.delete(key);
+    }
+    return Promise.resolve();
   }
 
   signedReadUrl(path: string, expiresAt: Date): Promise<string> {
@@ -1138,6 +1186,8 @@ export class InMemoryUserContactDirectory implements UserContactDirectory {
 export class InMemoryAccountDeletion implements AccountDeletionStore, AccountDeletionUnitOfWork {
   /** Usuarios cuyos datos derivados se han borrado. */
   erased: string[] = [];
+  /** Usuarios cuyas viviendas han perdido la dirección y la ubicación exactas. */
+  exactErased: string[] = [];
 
   constructor(
     readonly users: InMemoryUserRepository,
@@ -1155,6 +1205,7 @@ export class InMemoryAccountDeletion implements AccountDeletionStore, AccountDel
     const entries = [...this.audit.entries];
     const events = this.outbox.events.map((event) => ({ ...event }));
     const erased = [...this.erased];
+    const exactErased = [...this.exactErased];
     try {
       return await work({
         accounts: this,
@@ -1172,6 +1223,7 @@ export class InMemoryAccountDeletion implements AccountDeletionStore, AccountDel
       this.audit.entries = entries;
       this.outbox.events.splice(0, this.outbox.events.length, ...events);
       this.erased = erased;
+      this.exactErased = exactErased;
       throw error;
     }
   }
@@ -1197,6 +1249,11 @@ export class InMemoryAccountDeletion implements AccountDeletionStore, AccountDel
 
   eraseDerivedData(userId: string): Promise<void> {
     this.erased.push(userId);
+    return Promise.resolve();
+  }
+
+  eraseExactLocation(userId: string): Promise<void> {
+    this.exactErased.push(userId);
     return Promise.resolve();
   }
 }
@@ -1307,5 +1364,116 @@ export class InMemorySuspensionUnitOfWork implements SuspensionUnitOfWork {
       this.audit.entries = entries;
       throw error;
     }
+  }
+}
+
+/**
+ * Transacción de bloqueo en memoria: el bloqueo, el cierre de los matches, la auditoría y los avisos
+ * se confirman juntos o vuelven al estado anterior (como un `ROLLBACK`).
+ */
+export class InMemoryBlockUnitOfWork implements BlockUnitOfWork {
+  constructor(
+    private readonly blocks: InMemoryBlockRepository,
+    private readonly reader: InMemoryMatchReader,
+    private readonly audit: InMemoryAuditLog,
+    private readonly outbox: InMemoryOutbox,
+  ) {}
+
+  async run<T>(work: (scope: BlockScope) => Promise<T>): Promise<T> {
+    const blocks = new Set(this.blocks.blocks);
+    const records = [...this.reader.records];
+    const sharing = new Set(this.reader.sharing);
+    const entries = [...this.audit.entries];
+    const events = this.outbox.events.map((event) => ({ ...event }));
+    const matchUnit = new InMemoryMatchUnitOfWork(this.reader, this.audit, this.outbox);
+    try {
+      return await work({
+        blocks: this.blocks,
+        matches: {
+          findActiveForUpdate: (userId) =>
+            Promise.resolve(
+              this.reader.records.filter(
+                (record) =>
+                  (record.status === 'open' || record.status === 'confirmed') &&
+                  record.participants.some((participant) => participant.userId === userId),
+              ),
+            ),
+          saveState: (id, state) => matchUnit.saveState(id, state),
+        },
+        audit: this.audit,
+        outbox: this.outbox,
+      });
+    } catch (error) {
+      this.blocks.blocks.clear();
+      for (const key of blocks) this.blocks.blocks.add(key);
+      this.reader.records.splice(0, this.reader.records.length, ...records);
+      this.reader.sharing.clear();
+      for (const key of sharing) this.reader.sharing.add(key);
+      this.audit.entries = entries;
+      this.outbox.events.splice(0, this.outbox.events.length, ...events);
+      throw error;
+    }
+  }
+}
+
+/** Limitador de ventana deslizante en memoria (el mismo adaptador real: es puro y no usa red ni reloj propio). */
+export function slidingWindowLimiter(limit: number, windowMs: number): UploadRateLimiter {
+  return new SlidingWindowRateLimiter({ limit, windowMs });
+}
+
+/** Fila de un match tal como la purga de retención la ve. */
+export interface RetentionMatchRow {
+  matchId: string;
+  chatId: string | null;
+  status: 'open' | 'confirmed' | 'closed';
+  closedAt: Date | null;
+  chatPurgedAt: Date | null;
+}
+
+/** Transacción de retención en memoria; `locked` simula que otra instancia tiene el bloqueo consultivo. */
+export class InMemoryRetentionUnitOfWork implements RetentionUnitOfWork {
+  readonly matches: RetentionMatchRow[] = [];
+  waitlistRows = 0;
+  locked = false;
+
+  constructor(private readonly audit: InMemoryAuditLog) {}
+
+  async runExclusive<T>(work: (scope: RetentionScope) => Promise<T>): Promise<Exclusive<T>> {
+    if (this.locked) return { ran: false };
+    return { ran: true, value: await work(this.scope()) };
+  }
+
+  private scope(): RetentionScope {
+    return {
+      chats: {
+        findExpired: (cutoff, limit) =>
+          Promise.resolve(
+            this.matches
+              .filter(
+                (row) =>
+                  row.status === 'closed' &&
+                  row.chatPurgedAt === null &&
+                  row.closedAt !== null &&
+                  row.closedAt < cutoff,
+              )
+              .sort((a, b) => (a.closedAt?.getTime() ?? 0) - (b.closedAt?.getTime() ?? 0))
+              .slice(0, limit)
+              .map((row) => ({ matchId: row.matchId, chatId: row.chatId })),
+          ),
+        markPurged: (matchId, at) => {
+          const row = this.matches.find((candidate) => candidate.matchId === matchId);
+          if (row) row.chatPurgedAt = at;
+          return Promise.resolve();
+        },
+      },
+      waitlist: {
+        deleteAll: () => {
+          const deleted = this.waitlistRows;
+          this.waitlistRows = 0;
+          return Promise.resolve(deleted);
+        },
+      },
+      audit: this.audit,
+    };
   }
 }

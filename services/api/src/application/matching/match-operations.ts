@@ -3,6 +3,8 @@ import { MatchNotFoundError } from '../../domain/matching/errors.js';
 import {
   confirmInterest,
   ensureCanSharePhone,
+  ensureParticipant,
+  isContactVisibleTo,
   type MatchStatus,
   withdrawFromMatch,
 } from '../../domain/matching/match.js';
@@ -94,7 +96,8 @@ async function homesOf(deps: MatchDeps, match: MatchRecord): Promise<HomePublicV
 
 /**
  * Detalle del match para sus participantes (con la dirección exacta de la vivienda que entrega cada
- * uno y el teléfono de quien lo ha autorizado) y, sin ellos, para el `admin`. Para cualquier otro es
+ * uno y el teléfono de quien lo ha autorizado, solo mientras el match está `open` o `confirmed` y
+ * quien consulta no se ha retirado) y, sin ellos, para el `admin`. Para cualquier otro es
  * como si no existiera, y en ese caso no se lee ni se descifra nada de las viviendas (RN-08).
  */
 async function getMatch(
@@ -109,6 +112,19 @@ async function getMatch(
   const base = toMatchView(match);
   const homes = await homesOf(deps, match);
   if (!participates) return { ...base, homes };
+
+  // Cerrado, o retirado el solicitante: ni se descifran direcciones ni se leen teléfonos
+  if (!isContactVisibleTo(match, viewer.userId)) {
+    return {
+      ...base,
+      homes,
+      participants: match.participants.map((participant) => ({
+        ...toParticipantView(participant),
+        phone: null,
+        sharesPhone: false,
+      })),
+    };
+  }
 
   const [addresses, phones, sharing] = await Promise.all([
     deps.homes.exactAddresses(match.participants.map((participant) => participant.homeId)),
@@ -182,7 +198,9 @@ function setPhoneSharing(
   return deps.units.run(async ({ matches }) => {
     const match = await matches.findForUpdate(matchId);
     if (!match) throw new MatchNotFoundError();
-    ensureCanSharePhone(match, userId);
+    // Revocar se admite en cualquier estado; autorizar solo con el match vivo
+    if (share) ensureCanSharePhone(match, userId);
+    else ensureParticipant(match, userId);
     await matches.setPhoneSharing(matchId, userId, share);
   });
 }

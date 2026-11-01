@@ -231,6 +231,49 @@ describe('avisos por email', () => {
   });
 });
 
+describe('cierre con destinatarios filtrados (bloqueo)', () => {
+  it('Scenario: El bloqueo cierra el match - quien bloquea no recibe ni el push ni el email', async () => {
+    const { operations, push, email } = await withDevices();
+
+    await operations.notifyMatchClosed(MATCH_ID, [BETO]);
+
+    expect(push.sent).toHaveLength(1);
+    expect(push.sent[0]?.tokens).toEqual(['tok-beto']);
+    expect(email.sent.map((sent) => sent.to)).toEqual(['beto@example.com']);
+  });
+
+  it('el hecho match.closed lleva sus destinatarios en la carga y se respetan al despachar', async () => {
+    const env = await withDevices();
+    const outbox = new InMemoryOutbox();
+    const dispatcher = new OutboxDispatcher({
+      store: outbox,
+      handlers: notificationHandlers(env.operations),
+      clock: { now: () => NOW },
+      intervalMs: 30_000,
+      onError: () => undefined,
+    });
+    await outbox.enqueue({
+      id: 'e1',
+      type: 'match.closed',
+      aggregateId: MATCH_ID,
+      payload: { recipients: BETO },
+      at: NOW,
+    });
+
+    expect(await dispatcher.dispatch()).toEqual({ processed: 1, failed: 0 });
+
+    expect(env.push.sent[0]?.tokens).toEqual(['tok-beto']);
+  });
+
+  it('sin destinatarios en la carga se avisa a todos, como hasta ahora', async () => {
+    const { operations, push } = await withDevices();
+
+    await operations.notifyMatchClosed(MATCH_ID);
+
+    expect(push.sent[0]?.tokens).toHaveLength(3);
+  });
+});
+
 describe('contenido sin datos privados', () => {
   it('GIVEN un mensaje con una dirección WHEN se genera su aviso THEN ningún texto ni dato la contiene', async () => {
     const { operations, push } = await withDevices();
