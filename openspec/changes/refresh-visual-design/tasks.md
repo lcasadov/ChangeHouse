@@ -6,7 +6,7 @@
   - GIVEN la escena `salon` con la semilla 7 WHEN se genera dos veces THEN los dos JPEG son idénticos
 - [x] D1 Implementar `scripts/media/scenes.mjs` y `scripts/media/generate.mjs` (imágenes de la landing y de la app, vídeo del héroe grabado con el Chromium de Playwright), generar y versionar los recursos dentro del presupuesto de tamaño, y verificar que pasan las pruebas de T1. ref: Vídeo de fondo del héroe · est: 6h · disc: devops
   - GIVEN el generador WHEN se ejecuta THEN escribe `hero.webm`, `hero.mp4` y `hero-poster.jpg` de menos de 3 MB y 250 KB
-- [ ] D2 Sustituir los dibujos de `scripts/seed-demo.mjs` por cuatro escenas variadas por casa y documentar la regeneración en `docs/desarrollo-local.md`. ref: Estados vacíos con imagen · est: 2h · disc: devops
+- [x] D2 Sustituir los dibujos de `scripts/seed-demo.mjs` por cuatro escenas variadas por casa y documentar la regeneración en `docs/desarrollo-local.md`. ref: Estados vacíos con imagen · est: 2h · disc: devops
   - GIVEN una base vacía WHEN se ejecuta `pnpm seed:demo` THEN cada casa tiene cuatro fotos distintas de exterior, salón, cocina y dormitorio
 
 ## 2. Tokens

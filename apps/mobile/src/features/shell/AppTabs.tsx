@@ -30,16 +30,19 @@ export function AppTabs() {
         tabBarInactiveTintColor: colors.inactiveTint,
         tabBarActiveBackgroundColor: colors.activeBackground,
         tabBarInactiveBackgroundColor: colors.inactiveBackground,
+        // Solo la barra lateral redondea y separa sus elementos: abajo, el margen recortaría el texto
         tabBarItemStyle: sideNavigation
           ? { borderRadius: theme.radius.md, marginVertical: theme.space[1] }
-          : { borderRadius: theme.radius.md, margin: theme.space[1] },
+          : undefined,
         tabBarStyle: {
           backgroundColor: theme.color.surface,
           borderColor: theme.color.border,
           borderTopWidth: sideNavigation ? 0 : borderWidth.thin,
           borderRightWidth: sideNavigation ? borderWidth.thin : 0,
           paddingHorizontal: sideNavigation ? theme.space[2] : 0,
-          paddingTop: sideNavigation ? theme.space[4] : 0,
+          paddingTop: sideNavigation ? theme.space[4] : theme.space[1],
+          // Abajo, alto suficiente para el icono y su texto sin recortarlo
+          ...(sideNavigation ? {} : { height: theme.space[8], paddingBottom: theme.space[1] }),
         },
         tabBarLabelStyle: {
           fontFamily: theme.font.label.family,

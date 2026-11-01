@@ -19,7 +19,8 @@ const fail = (text) =>
 `);
 
 import postgres from 'postgres';
-import sharp from 'sharp';
+
+import { PALETTES, sceneJpeg, TIMES } from './media/scenes.mjs';
 
 const ROOT = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 const { PRIVACY_VERSION, TERMS_VERSION } = await import(
@@ -76,7 +77,6 @@ const PEOPLE = [
   {
     key: 'yo',
     name: 'Tú (cuenta de prueba)',
-    color: '#3f7cac',
     home: {
       type: 'piso',
       place: PLACES.malasana,
@@ -93,7 +93,6 @@ const PEOPLE = [
   {
     key: 'lucia',
     name: 'Lucía',
-    color: '#c0603a',
     likesYou: true,
     home: {
       type: 'atico',
@@ -117,7 +116,6 @@ const PEOPLE = [
   {
     key: 'marcos',
     name: 'Marcos',
-    color: '#5b8c51',
     likesYou: true,
     home: {
       type: 'adosado',
@@ -135,7 +133,6 @@ const PEOPLE = [
   {
     key: 'carmen',
     name: 'Carmen',
-    color: '#8a5a9c',
     likesYou: true,
     home: {
       type: 'duplex',
@@ -153,7 +150,6 @@ const PEOPLE = [
   {
     key: 'javier',
     name: 'Javier',
-    color: '#b58a2e',
     home: {
       type: 'estudio',
       place: PLACES.lavapies,
@@ -170,7 +166,6 @@ const PEOPLE = [
   {
     key: 'elena',
     name: 'Elena',
-    color: '#2f8f8f',
     home: {
       type: 'chalet',
       place: PLACES.getafe,
@@ -194,7 +189,6 @@ const PEOPLE = [
   {
     key: 'pablo',
     name: 'Pablo',
-    color: '#9c4a5e',
     home: {
       type: 'bajo',
       place: PLACES.malasana,
@@ -299,25 +293,35 @@ async function register(key, displayName) {
   return person;
 }
 
-/** Foto de muestra: una ilustración sencilla de una casa con el color de la persona y la estancia. */
-function photo(color, room, owner, index) {
-  const sky = ['#cfe6f5', '#f5e3cf', '#e0f0d8', '#ece0f5'][index % 4];
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1200">
-    <rect width="1600" height="1200" fill="${sky}"/>
-    <rect y="900" width="1600" height="300" fill="#9cc59a"/>
-    <polygon points="400,520 800,220 1200,520" fill="#7a3b2e"/>
-    <rect x="460" y="520" width="680" height="420" fill="${color}"/>
-    <rect x="740" y="720" width="120" height="220" fill="#4a2f22"/>
-    <rect x="530" y="600" width="140" height="120" fill="#fdf6d8"/>
-    <rect x="930" y="600" width="140" height="120" fill="#fdf6d8"/>
-    <text x="800" y="1080" font-family="Arial, sans-serif" font-size="80" text-anchor="middle" fill="#1f2a30">${room}</text>
-    <text x="800" y="140" font-family="Arial, sans-serif" font-size="56" text-anchor="middle" fill="#1f2a30">Casa de ${owner}</text>
-  </svg>`;
-  return sharp(Buffer.from(svg)).jpeg({ quality: 85 }).toBuffer();
+/** Escena exterior según el tipo de vivienda; dentro, siempre salón, cocina y dormitorio. */
+const EXTERIOR = {
+  piso: 'clasico',
+  estudio: 'clasico',
+  bajo: 'clasico',
+  atico: 'atico',
+  duplex: 'moderna',
+  adosado: 'mediterranea',
+  chalet: 'mediterranea',
+};
+const ROOM_SCENES = ['salon', 'cocina', 'dormitorio'];
+const PALETTE_NAMES = Object.keys(PALETTES);
+
+/** Foto de muestra: una escena generada con la paleta y la hora del día propias de cada persona. */
+function photo(config, index) {
+  const order = PEOPLE.indexOf(config);
+  const scene = index === 0 ? (EXTERIOR[config.home.type] ?? 'clasico') : ROOM_SCENES[index - 1];
+  return sceneJpeg(scene, {
+    seed: order * 10 + index + 1,
+    palette: PALETTE_NAMES[order % PALETTE_NAMES.length],
+    time: index === 0 ? TIMES[order % TIMES.length] : TIMES[(order + index) % 2],
+    width: 1600,
+    height: 1200,
+    quality: 82,
+  });
 }
 
 async function uploadPhotos(person, homeId, config) {
-  for (const [index, room] of ROOMS.entries()) {
+  for (const index of ROOMS.keys()) {
     const upload = await api(person, 'POST', `/homes/${homeId}/photos`, {
       contentType: 'image/jpeg',
     });
@@ -325,7 +329,7 @@ async function uploadPhotos(person, homeId, config) {
       method: 'PUT',
       // El rango de tamaño va firmado en la URL: sin esta cabecera Cloud Storage rechaza la subida
       headers: { 'content-type': 'image/jpeg', 'x-goog-content-length-range': '0,26214400' },
-      body: await photo(config.color, room, config.name.split(' ')[0], index),
+      body: await photo(config, index),
     });
     if (!response.ok)
       throw new Error(`La subida de la foto falló: ${response.status} ${await response.text()}`);
