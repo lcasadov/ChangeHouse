@@ -89,10 +89,21 @@ puede hacer match.
 
 ### Requirement: Tarjetas a pantalla completa
 
-«Explorar» SHALL presentar las viviendas como tarjetas a pantalla completa con
-carrusel de fotos, la píldora de compensación, superficie, dormitorios, baños y
-zona sobre un degradado legible, y SHALL abrir el detalle al tocarla; si hay
-varias viviendas propias publicadas, SHALL permitir elegir desde cuál se busca.
+«Explorar» SHALL presentar las viviendas como tarjetas con carrusel de fotos y,
+sobre un degradado legible, la compensación, la superficie, los dormitorios, los
+baños y la zona. La tarjeta SHALL caber entera en el área visible junto a la
+búsqueda y a los filtros, que van en una fila desplazable. SHALL abrir el
+detalle al tocarla y permitir elegir desde qué vivienda propia se busca.
+
+#### Scenario: Tarjeta entera en pantalla
+- **GIVEN** una ventana de 390 × 844 o de 1280 × 720 con tarjetas disponibles
+- **WHEN** se abre «Explorar»
+- **THEN** la tarjeta completa, con sus datos y los botones de decisión, queda visible sin desplazar la página
+
+#### Scenario: Filtros en una fila
+- **GIVEN** la barra de filtros de «Explorar» en una pantalla estrecha
+- **WHEN** los filtros no caben en el ancho
+- **THEN** se mantienen en una sola fila que se desplaza en horizontal y todos siguen alcanzables con teclado
 
 #### Scenario: Ver el detalle
 - **GIVEN** una tarjeta en pantalla
@@ -107,7 +118,7 @@ varias viviendas propias publicadas, SHALL permitir elegir desde cuál se busca.
 #### Scenario: Sin más viviendas
 - **GIVEN** que no quedan viviendas compatibles
 - **WHEN** el usuario llega al final
-- **THEN** ve un estado vacío que sugiere ampliar la zona o la compensación, con acceso directo a los filtros
+- **THEN** ve un estado vacío con imagen que sugiere ampliar la zona o la compensación, con acceso directo a los filtros
 
 ### Requirement: Me gusta desde una vivienda propia
 

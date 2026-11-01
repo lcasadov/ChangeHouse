@@ -5,7 +5,7 @@ Capacidades implementadas. Cada una se crea o amplía al archivar un change
 
 | Capacidad | Qué cubre | Change que la creó |
 |---|---|---|
-| [`landing`](landing/spec.md) | Web pública: propuesta de valor, páginas legales, consentimiento de cookies, accesibilidad, SEO y guías con feed RSS | `2026-10-19-add-landing` (ampliado por `add-landing-blog`) |
+| [`landing`](landing/spec.md) | Web pública: propuesta de valor, páginas legales, consentimiento de cookies, accesibilidad, SEO y guías con feed RSS; héroe con vídeo de fondo y secciones con fotografía | `2026-10-19-add-landing` (ampliado por `add-landing-blog` y `refresh-visual-design`) |
 | [`waitlist`](waitlist/spec.md) | Alta en la lista de espera con consentimiento, sin revelar inscripciones previas y con límite de peticiones | `2026-10-19-add-waitlist` |
 | [`api-errors`](api-errors/spec.md) | Formato único de error de la API (`Problem`) con identificador de correlación | `2026-10-19-add-waitlist` |
 | [`accounts`](accounts/spec.md) | Registro, acceso, verificación del email, recuperación de la contraseña, alta con consentimiento, eliminación de la cuenta con anonimización y exportación de los datos propios | `2026-10-19-add-authentication` (ampliado por `add-account-deletion-and-export`) |
@@ -20,3 +20,4 @@ Capacidades implementadas. Cada una se crea o amplía al archivar un change
 | [`notifications`](notifications/spec.md) | Permiso de avisos tras el primer me gusta y registro del dispositivo, avisos push de match nuevo, mensaje, confirmación y cierre que abren el match o su chat, email de match nuevo y cerrado a usuarios verificados, y ningún dato privado en los avisos | `2026-10-31-add-notifications` |
 | [`admin`](admin/spec.md) | Herramientas exclusivas del rol `admin`: métricas por periodo (altas, viviendas por zona, me gusta, matches directos y en cadena, operaciones), búsqueda de usuarios con suspensión, consulta de solo lectura de la auditoría y lista de espera filtrable y exportable en CSV | `2026-10-31-add-admin-panel` |
 | [`platform-security`](platform-security/spec.md) | Protecciones transversales: cabeceras de seguridad de la web (CSP y `X-Frame-Options`), reglas y buckets iguales en todos los entornos, configuración obligatoria en la nube, registros sin datos personales y despliegue sin inyección | `2026-11-01-harden-security-before-launch` |
+| [`app-experience`](app-experience/spec.md) | Experiencia visual de la app: fotografía de ambiente en la bienvenida y el acceso, navegación principal legible, aviso de verificación compacto y estados vacíos con imagen | `2026-11-01-refresh-visual-design` |
