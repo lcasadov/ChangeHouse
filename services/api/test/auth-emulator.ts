@@ -21,20 +21,36 @@ export function uniqueEmail(prefix = 'user'): string {
   return `${prefix}-${String(Date.now())}-${String(sequence)}@example.com`;
 }
 
-/** Crea una cuenta real en el emulador de Auth y devuelve su ID token. */
-export async function signUp(email = uniqueEmail()): Promise<EmulatorUser> {
+const PASSWORD = 'contraseña-de-prueba';
+
+async function identityToolkit(operation: string, body: object): Promise<Response> {
   const host = inject('authEmulatorHost');
-  const response = await fetch(
-    `http://${host}/identitytoolkit.googleapis.com/v1/accounts:signUp?key=fake-api-key`,
+  return fetch(
+    `http://${host}/identitytoolkit.googleapis.com/v1/accounts:${operation}?key=fake-api-key`,
     {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ email, password: 'contraseña-de-prueba', returnSecureToken: true }),
+      body: JSON.stringify({ ...body, returnSecureToken: true }),
     },
   );
-  if (!response.ok)
-    throw new Error(`El emulador de Auth rechazó el alta: ${String(response.status)}`);
-  const body = (await response.json()) as { localId: string; idToken: string };
+}
+
+/**
+ * Crea una cuenta real en el emulador de Auth y devuelve su ID token.
+ *
+ * El token del alta no se usa: el emulador fija su `auth_time` con la hora de entrada y `validSince`
+ * después de calcular el hash de la contraseña. Si entre ambas cambia el segundo, `firebase-admin`
+ * (que con el emulador siempre comprueba la revocación) lo da por revocado y la API responde 401
+ * (#386). El inicio de sesión posterior emite un token con `auth_time` ≥ `validSince`.
+ */
+export async function signUp(email = uniqueEmail()): Promise<EmulatorUser> {
+  const created = await identityToolkit('signUp', { email, password: PASSWORD });
+  if (!created.ok)
+    throw new Error(`El emulador de Auth rechazó el alta: ${String(created.status)}`);
+  const signedIn = await identityToolkit('signInWithPassword', { email, password: PASSWORD });
+  if (!signedIn.ok)
+    throw new Error(`El emulador de Auth rechazó el inicio de sesión: ${String(signedIn.status)}`);
+  const body = (await signedIn.json()) as { localId: string; idToken: string };
   return { uid: body.localId, email, idToken: body.idToken };
 }
 
