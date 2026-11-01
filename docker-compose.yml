@@ -23,6 +23,8 @@ services:
   # misma Wi-Fi: `FAKE_GCS_PUBLIC_HOST=<IP del PC>:4443`, que escribe `pnpm lan:env` en `.env`.
   # Cada carpeta de `infra/fake-gcs` es un bucket: `changehouse-photos-private` (originales) y
   # `changehouse-photos-public` (procesadas).
+  # `-cors-headers` permite la cabecera firmada `x-goog-content-length-range` en la petición previa
+  # CORS: sin ella el navegador no puede subir fotos desde la app web (#423).
   storage:
     image: fsouza/fake-gcs-server:1.56.1
     container_name: changehouse-storage
@@ -38,6 +40,8 @@ services:
         '${FAKE_GCS_PUBLIC_HOST:-localhost:4443}',
         '-data',
         '/data',
+        '-cors-headers',
+        'x-goog-content-length-range',
       ]
     ports:
       - '4443:4443'
