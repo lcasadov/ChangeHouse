@@ -65,13 +65,19 @@ export const call = <T = unknown>(
   body?: unknown,
 ) => send<T>(`${API}${path}`, method, person.idToken, body);
 
-/** Crea la cuenta en el emulador de Auth (sin pasar por la app) y devuelve su ID token. */
+/**
+ * Crea la cuenta en el emulador de Auth (sin pasar por la app) y devuelve su ID token.
+ * El token es el del inicio de sesión posterior, no el del alta: el del alta puede salir con un
+ * `auth_time` anterior a `validSince` y la API lo rechaza como revocado (#386).
+ */
 async function createAuthAccount(email: string) {
+  const credentials = { email, password: PASSWORD, returnSecureToken: true };
+  await send(`${AUTH}/accounts:signUp?key=fake-api-key`, 'POST', undefined, credentials);
   const result = await send<{ localId: string; idToken: string }>(
-    `${AUTH}/accounts:signUp?key=fake-api-key`,
+    `${AUTH}/accounts:signInWithPassword?key=fake-api-key`,
     'POST',
     undefined,
-    { email, password: PASSWORD, returnSecureToken: true },
+    credentials,
   );
   return { uid: result.localId, idToken: result.idToken };
 }
