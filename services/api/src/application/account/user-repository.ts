@@ -6,7 +6,8 @@ export interface ProfileChanges {
   displayName?: string;
   /** `null` borra el municipio. */
   municipality?: string | null;
-  phone?: string;
+  /** `null` borra el teléfono. */
+  phone?: string | null;
   meetsVppRequirements?: boolean;
   isOver65?: boolean;
 }

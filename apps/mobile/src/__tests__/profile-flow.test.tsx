@@ -107,7 +107,7 @@ describe('Edición del perfil', () => {
     });
   });
 
-  it('un municipio en blanco se envía en blanco para borrarlo y un teléfono en blanco se omite', async () => {
+  it('un municipio y un teléfono en blanco se envían para borrarlos (el teléfono como null)', async () => {
     const { backend } = await openProfile({
       backend: new FakeBackend({ registered: true, profile: me({ displayName: 'Ana' }) }),
     });
@@ -121,9 +121,23 @@ describe('Edición del perfil', () => {
     expect(backend.requestsTo('PUT', '/me')[0]?.body).toEqual({
       displayName: 'Ana',
       municipality: '',
+      phone: null,
       meetsVppRequirements: false,
       isOver65: true,
     });
+  });
+
+  it('Scenario: Borrar el teléfono del perfil - vaciar el campo y guardar deja la cuenta sin teléfono', async () => {
+    const { backend } = await openProfile();
+    expect(field(profile.form.phone).props.value).toBe('+34600111222');
+
+    await fireEvent.changeText(field(profile.form.phone), '');
+    await fireEvent.press(button(profile.form.submit));
+
+    await screen.findByText(profile.saved);
+    expect(backend.requestsTo('PUT', '/me')[0]?.body).toMatchObject({ phone: null });
+    expect(backend.profile.phone).toBeNull();
+    expect(field(profile.form.phone).props.value).toBe('');
   });
 
   it('la confirmación desaparece en cuanto se vuelve a editar', async () => {

@@ -526,9 +526,11 @@
       "failures": {
         "unsupported": "Este formato no es válido. Usa fotos JPEG, PNG, HEIC o WebP.",
         "upload": "No hemos podido subir esta foto. Comprueba tu conexión y vuelve a intentarlo.",
-        "invalidImage": "Este fichero no es una imagen válida. Quítalo y elige otra foto.",
+        "invalidImage": "Este fichero no es una imagen válida o es demasiado grande (máximo 40 megapíxeles). Quítalo y elige otra foto.",
         "notUploaded": "La foto no llegó completa. Vuelve a intentarlo.",
         "limit": "Ya tienes 20 fotos. Elimina alguna para añadir otra.",
+        "tooManyPending": "Hay demasiadas fotos pendientes de confirmar en esta casa. Quita esta foto e inténtalo de nuevo más tarde.",
+        "busy": "Estamos procesando muchas imágenes. Espera unos segundos y vuelve a intentarlo.",
         "notEditable": "Esta casa ya no admite cambios en sus fotos.",
         "network": "No hemos podido conectar. Comprueba tu conexión y vuelve a intentarlo.",
         "unknown": "No hemos podido guardar esta foto. Inténtalo de nuevo en unos minutos."
@@ -943,6 +945,7 @@
     "audit": {
       "title": "Auditoría",
       "intro": "Las acciones del equipo, de la más reciente a la más antigua. Solo lectura.",
+      "systemActor": "Sistema",
       "columns": {
         "actor": "Autor",
         "action": "Acción",
@@ -1119,7 +1122,9 @@
       "server": "Ha habido un problema. Inténtalo de nuevo.",
       "notReady": "El chat se está preparando. Reintenta en unos segundos.",
       "tooLong": "Supera el límite de {{max}} caracteres. Descártalo y escribe uno más corto.",
-      "invalidImage": "La imagen no es válida. Elige otra foto.",
+      "invalidImage": "La imagen no es válida o es demasiado grande (máximo 40 megapíxeles). Elige otra foto.",
+      "rateLimited": "Has enviado demasiadas imágenes en la última hora. Inténtalo de nuevo más tarde.",
+      "busy": "Estamos procesando muchas imágenes. Espera unos segundos y reintenta.",
       "closed": "El match está cerrado."
     },
     "composer": {

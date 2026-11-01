@@ -607,6 +607,72 @@ describe.skipIf(!emulatorAvailable())('match directo con tokens reales y Postgre
       expect(participant(after.json<DetailBody>(), other.home)?.sharesPhone).toBe(false);
     });
 
+    it('Scenario: Match cerrado sin datos de contacto - ninguno de los dos participantes recibe dirección exacta ni teléfono', async () => {
+      const { mine, other, matchId } = await pair();
+      await call(other.person, 'PUT', `/v1/matches/${matchId}/phone-sharing`, { share: true });
+      await call(mine.person, 'POST', `/v1/matches/${matchId}/withdraw`);
+
+      for (const viewer of [mine.person, other.person]) {
+        const response = await detail(viewer, matchId);
+
+        expect(response.statusCode, response.body).toBe(200);
+        const body = response.json<DetailBody>();
+        expect(body.status).toBe('closed');
+        expect(body.homes).toHaveLength(2);
+        expect(response.body).not.toContain(BETO_PHONE);
+        expect(response.body).not.toContain('Calle Mayor');
+        for (const p of body.participants) {
+          expect(p).not.toHaveProperty('exactAddress');
+          expect(p.phone).toBeNull();
+        }
+      }
+    });
+
+    it('Scenario: El cierre retira la autorización - todos quedan sin autorizar y no se ve el teléfono al reabrir la consulta', async () => {
+      const { mine, other, matchId } = await pair();
+      await call(other.person, 'PUT', `/v1/matches/${matchId}/phone-sharing`, { share: true });
+      await call(mine.person, 'PUT', `/v1/matches/${matchId}/phone-sharing`, { share: true });
+
+      await call(mine.person, 'POST', `/v1/matches/${matchId}/withdraw`);
+
+      expect(await sql`SELECT 1 FROM match_participants WHERE shares_phone`).toHaveLength(0);
+    });
+
+    it('Scenario: Revocar en un match cerrado - la API responde 204 y la autorización queda retirada', async () => {
+      const { mine, other, matchId } = await pair();
+      await call(other.person, 'PUT', `/v1/matches/${matchId}/phone-sharing`, { share: true });
+      await call(mine.person, 'POST', `/v1/matches/${matchId}/withdraw`);
+      await sql`UPDATE match_participants SET shares_phone = true WHERE match_id = ${matchId}`;
+
+      const revoked = await call(other.person, 'PUT', `/v1/matches/${matchId}/phone-sharing`, {
+        share: false,
+      });
+      const authorize = await call(other.person, 'PUT', `/v1/matches/${matchId}/phone-sharing`, {
+        share: true,
+      });
+
+      expect([revoked.statusCode, authorize.statusCode]).toEqual([204, 409]);
+      const rows = await sql<{ user_id: string; shares_phone: boolean }[]>`
+        SELECT user_id, shares_phone FROM match_participants WHERE match_id = ${matchId}`;
+      expect(rows.find((row) => row.user_id === other.person.id)?.shares_phone).toBe(false);
+    });
+
+    it('Scenario: Borrar el teléfono del perfil - el otro participante deja de verlo en el match', async () => {
+      const { mine, other, matchId } = await pair();
+      await call(other.person, 'PUT', `/v1/matches/${matchId}/phone-sharing`, { share: true });
+      const before = await detail(mine.person, matchId);
+
+      const cleared = await call(other.person, 'PUT', '/v1/me', {
+        displayName: 'Beto',
+        phone: null,
+      });
+      const after = await detail(mine.person, matchId);
+
+      expect(before.body).toContain(BETO_PHONE);
+      expect(cleared.statusCode, cleared.body).toBe(200);
+      expect(after.body).not.toContain(BETO_PHONE);
+    });
+
     it('compartir el teléfono: un cuerpo inválido es 400, un ajeno 404 y un match cerrado 409', async () => {
       const { mine, other, matchId } = await pair();
       const stranger = await ana();

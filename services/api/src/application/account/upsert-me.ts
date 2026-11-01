@@ -25,7 +25,8 @@ export interface UpsertMeDeps {
 export interface UpsertMeInput {
   displayName: string;
   municipality?: string | undefined;
-  phone?: string | undefined;
+  /** `null` borra el teléfono; ausente, no se toca. */
+  phone?: string | null | undefined;
   meetsVppRequirements?: boolean | undefined;
   isOver65?: boolean | undefined;
   acceptedTermsVersion?: string | undefined;

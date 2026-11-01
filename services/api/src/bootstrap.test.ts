@@ -13,6 +13,7 @@ const config: ApiConfig = {
   trustProxyHops: 0,
   waitlistRateLimit: { max: 5, windowSeconds: 600 },
   likesPerDay: 10,
+  launchDate: undefined,
   firebase: {
     projectId: 'demo-changehouse',
     authEmulatorHost: undefined,

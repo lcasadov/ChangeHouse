@@ -285,7 +285,7 @@
   { "operationId": "deleteMe", "actor": "owner", "expected": 204 },
   { "operationId": "deleteMe", "actor": "agency", "expected": 403 },
   { "operationId": "deleteMe", "actor": "admin", "expected": 403 },
-  { "operationId": "deleteMe", "actor": "suspended", "expected": 403 },
+  { "operationId": "deleteMe", "actor": "suspended", "expected": 204 },
   { "operationId": "exportMyData", "actor": "anon", "expected": 401 },
   { "operationId": "exportMyData", "actor": "unregistered", "expected": 403 },
   { "operationId": "exportMyData", "actor": "seeker", "expected": 200 },

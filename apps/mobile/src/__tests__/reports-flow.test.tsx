@@ -307,7 +307,7 @@ async function openChat() {
     url: `/match/${match.id}/chat`,
   });
   await screen.findByText('Eres un impresentable');
-  return { backend, offensive };
+  return { backend, offensive, match };
 }
 
 const BETO_MESSAGE = messageSubject('Beto', '10:05');
@@ -348,6 +348,19 @@ describe('Denunciar un mensaje del chat', () => {
 });
 
 describe('Bloquear desde el chat', () => {
+  it('Scenario: El bloqueo cierra el match y su chat - tras bloquear, el chat queda en solo lectura y sin errores', async () => {
+    const { backend, match } = await openChat();
+    backend.matches.blockClosesMatch(OTHER_ID, match.id);
+
+    await chooseOption(BETO_MESSAGE, m.more.block);
+    await fireEvent.press(button(m.block.confirm));
+
+    expect(await screen.findByText(fill(m.block.done, { name: 'Beto' }))).toBeTruthy();
+    expect(await screen.findByText(es.chat.readOnly.closed)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: es.chat.composer.send })).toBeNull();
+    expect(screen.queryByText(m.block.errors.unknown)).toBeNull();
+  });
+
   it('Scenario: Bloquear - la confirmación explica que dejaréis de veros y no bloquea hasta confirmar', async () => {
     const { backend } = await openChat();
 

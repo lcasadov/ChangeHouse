@@ -2,6 +2,7 @@ import type { PhotoContentType, SendMessageInput } from '@changehouse/shared';
 
 import {
   ChatImageNotFoundError,
+  ChatImageRateLimitError,
   ChatNotReadyError,
   ImageNotUploadedError,
 } from '../../domain/chat/errors.js';
@@ -18,6 +19,7 @@ import type { ChatChannel, ChatMessageRecord } from './chat-channel.js';
 import type { ChatImageStorage } from './chat-image-storage.js';
 import { chatImagePath, chatUploadPath } from './chat-paths.js';
 import type { ChatSetup } from './chat-setup.js';
+import type { UploadRateLimiter } from './upload-rate-limiter.js';
 
 /** Vigencia de la URL firmada de subida y de la de lectura de una imagen del chat. */
 const IMAGE_URL_MINUTES = 15;
@@ -33,6 +35,8 @@ export interface ChatDeps {
   onEnqueueError: (error: unknown) => void;
   storage: ChatImageStorage;
   images: ImageProcessor;
+  /** Límite de subidas de imágenes por usuario y hora (30). */
+  uploadLimiter: UploadRateLimiter;
   clock: Clock;
   ids: IdGenerator;
 }
@@ -117,6 +121,9 @@ async function createChatImageUpload(
   contentType: PhotoContentType,
 ): Promise<ChatImageUploadView> {
   await writableMatch(deps, userId, matchId);
+  // Tras validar el match: una petición rechazada por su estado no gasta cupo
+  const decision = deps.uploadLimiter.hit(userId, deps.clock.now());
+  if (!decision.allowed) throw new ChatImageRateLimitError(decision.retryAfterSeconds);
   const uploadId = deps.ids.next();
   const expiresAt = new Date(deps.clock.now().getTime() + IMAGE_URL_MINUTES * MS_PER_MINUTE);
   const uploadUrl = await deps.storage.createUploadUrl(

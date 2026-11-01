@@ -63,6 +63,14 @@ export class DrizzlePhotoRepository implements PhotoRepository {
     return row?.total ?? 0;
   }
 
+  async countPending(homeId: string): Promise<number> {
+    const [row] = await this.db
+      .select({ total: count() })
+      .from(homePhotos)
+      .where(and(eq(homePhotos.homeId, homeId), eq(homePhotos.status, 'pending')));
+    return row?.total ?? 0;
+  }
+
   /** Bloquea la fila de la vivienda para que las confirmaciones simultáneas se turnen. */
   markReady(homeId: string, photoId: string): Promise<HomePhoto | null> {
     return this.db.transaction(async (tx) => {

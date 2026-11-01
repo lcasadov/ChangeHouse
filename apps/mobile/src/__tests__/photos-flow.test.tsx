@@ -183,6 +183,32 @@ describe('Paso de fotos', () => {
     expect(screen.getByText(counter(19))).toBeTruthy();
   });
 
+  it('Scenario: Demasiadas fotos pendientes - si la API responde 409 lo explica y solo ofrece quitar la foto', async () => {
+    const { backend, picker } = await openPhotosStep({ homes: [draftHome()] });
+    backend.homes.seedPending(backend.homes.all()[0]?.id ?? '', 25);
+    picker.choose(pickedPhoto('extra.jpg'));
+
+    await fireEvent.press(button(p.add));
+
+    expect(await screen.findByText(p.failures.tooManyPending)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: retryLabel(1) })).toBeNull();
+    expect(button(discardLabel(1))).toBeTruthy();
+  });
+
+  it('con el procesado de imágenes saturado (503) lo explica y reintentar sube la foto', async () => {
+    const { backend, picker } = await openPhotosStep({ homes: [draftHome()] });
+    backend.homes.busyCompletions = 1;
+    picker.choose(pickedPhoto('a.jpg'));
+
+    await fireEvent.press(button(p.add));
+
+    expect(await screen.findByText(p.failures.busy)).toBeTruthy();
+    await fireEvent.press(button(retryLabel(1)));
+    await waitFor(() => {
+      expect(backend.homes.all()[0]?.photos).toHaveLength(1);
+    });
+  });
+
   it('GIVEN una subida que falla WHEN se muestra THEN la foto ofrece «Reintentar» sin perder las demás', async () => {
     const { picker, uploader, backend } = await openPhotosStep({ homes: [draftHome()] });
     picker.choose(pickedPhoto('a.jpg'), pickedPhoto('b.jpg'));

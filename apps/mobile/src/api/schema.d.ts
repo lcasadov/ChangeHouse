@@ -29,7 +29,10 @@ export interface paths {
     /**
      * Elimina la cuenta (RF-05)
      * @description Borrado lógico y anonimización de datos personales. Las viviendas pasan
-     *     a `closed` y los matches abiertos se cierran para todos (RN-10).
+     *     a `closed` y pierden su dirección y su ubicación exactas; los matches abiertos
+     *     se cierran para todos (RN-10) y se retiran las autorizaciones del teléfono. También
+     *     la puede invocar una cuenta suspendida (`docs/rbac-matrix.md` §3): sus denuncias y
+     *     la auditoría se conservan.
      */
     delete: operations['deleteMe'];
     options?: never;
@@ -278,6 +281,11 @@ export interface paths {
      *     `Content-Type` indicado). La foto nace `pending` y no aparece en la vivienda hasta
      *     que se confirma la subida con `completeHomePhotoUpload`, momento en que la API la
      *     comprime y elimina los metadatos EXIF de ubicación antes de publicarla.
+     *
+     *     La URL firma el tamaño máximo del fichero (25 MB): el cliente **debe** enviar en el
+     *     `PUT` la cabecera `x-goog-content-length-range: 0,26214400`, además del `Content-Type`
+     *     indicado; sin ella el almacenamiento rechaza la subida, y con un fichero mayor también.
+     *     Una vivienda no puede tener más de 25 fotos pendientes de confirmar a la vez.
      */
     post: operations['createHomePhotoUpload'];
     delete?: never;
@@ -307,7 +315,10 @@ export interface paths {
      *     `code: INVALID_IMAGE`, el fichero se elimina y la foto se descarta. Si la subida aún no se
      *     ha hecho: 422 con `code: PHOTO_NOT_UPLOADED` y la foto sigue `pending`. Una foto nueva en
      *     una vivienda `published` o `paused` es un cambio relevante: la vivienda vuelve a
-     *     `in_review` (RF-18).
+     *     `in_review` (RF-18). Una imagen de más de 40 megapíxeles se rechaza igual que un
+     *     fichero inválido (422 `INVALID_IMAGE`) sin llegar a procesarse. Si el procesado de
+     *     imágenes está saturado y no queda hueco en 30 segundos: 503 con `Retry-After`
+     *     (`code: IMAGE_PROCESSING_BUSY`); la foto sigue `pending` y se puede reintentar.
      */
     post: operations['completeHomePhotoUpload'];
     delete?: never;
@@ -559,8 +570,11 @@ export interface paths {
      * @description Los participantes ven las viviendas del ciclo con todas sus fotos y, en cada
      *     participante, la dirección exacta de la vivienda que entrega (`exactAddress`,
      *     RN-08) y su teléfono (`phone`) solo si ese participante lo ha autorizado en
-     *     este match y tiene uno en su perfil; si no, `phone` es `null`. El `admin`
-     *     ve el detalle sin `phone` ni `exactAddress`. Quien no participa (y no es
+     *     este match y tiene uno en su perfil; si no, `phone` es `null`. Los datos de
+     *     contacto (`exactAddress` y `phone`) solo se entregan mientras el match está `open`
+     *     o `confirmed` y a quien no se ha retirado: en un match `closed` (o para quien se
+     *     retiró) `exactAddress` no figura, `phone` es `null` y `sharesPhone` es `false`.
+     *     El `admin` ve el detalle sin `phone` ni `exactAddress`. Quien no participa (y no es
      *     `admin`) recibe 404, igual que ante un match inexistente.
      */
     get: operations['getMatch'];
@@ -634,9 +648,11 @@ export interface paths {
     get?: never;
     /**
      * Autoriza o revoca mostrar el teléfono a los participantes (RF-53)
-     * @description Cambia solo la preferencia del propio participante en este match. Vale
-     *     mientras el match está `open` o `confirmed`; en otro estado, 409 con
-     *     `code: MATCH_NOT_OPEN`.
+     * @description Cambia solo la preferencia del propio participante en este match. Autorizar
+     *     (`share: true`) solo vale mientras el match está `open` o `confirmed`; en otro estado,
+     *     409 con `code: MATCH_NOT_OPEN`. Revocar (`share: false`) se acepta en cualquier estado.
+     *     Al cerrarse el match (retirada, suspensión, bloqueo o cuenta eliminada) la autorización de
+     *     todos sus participantes queda revocada.
      */
     put: operations['setPhoneSharing'];
     post?: never;
@@ -664,6 +680,12 @@ export interface paths {
      *     imagen no llega al chat hasta ese envío. Solo vale mientras el match está `open` o
      *     `confirmed`; en otro estado, 409 con `code: MATCH_NOT_OPEN`. Quien no participa
      *     recibe 404, igual que ante un match inexistente.
+     *
+     *     La URL firma el tamaño máximo del fichero (25 MB): el cliente **debe** enviar en el
+     *     `PUT` la cabecera `x-goog-content-length-range: 0,26214400`, además del `Content-Type`
+     *     indicado. Cada usuario puede pedir hasta 30 subidas por hora; la siguiente responde 429
+     *     con `code: CHAT_IMAGE_RATE_LIMITED` y `Retry-After` en segundos. Una imagen de más de
+     *     40 megapíxeles se rechaza al enviar el mensaje (422 `INVALID_IMAGE`).
      */
     post: operations['createChatImageUpload'];
     delete?: never;
@@ -699,6 +721,9 @@ export interface paths {
      *     Match no `open` ni `confirmed` (por ejemplo, `closed`: el chat queda en solo lectura):
      *     409 con `code: MATCH_NOT_OPEN`. Chat aún sin crear: 409 con `code: CHAT_NOT_READY`
      *     (se reintenta). Quien no participa recibe 404, igual que ante un match inexistente.
+     *     Un match cerrado por un bloqueo, una retirada, una suspensión o una cuenta eliminada
+     *     también rechaza el mensaje con 409 `MATCH_NOT_OPEN`. Si el procesado de imágenes está
+     *     saturado: 503 con `Retry-After` (`code: IMAGE_PROCESSING_BUSY`); el envío se puede reintentar.
      */
     post: operations['sendMatchMessage'];
     delete?: never;
@@ -765,7 +790,7 @@ export interface paths {
     put?: never;
     /**
      * Bloquea a un usuario (RF-63)
-     * @description Idempotente. Desde ese momento ninguno de los dos ve las viviendas del otro en el descubrimiento ni forma matches nuevos con él; los matches existentes no se cierran. Bloquearse a uno mismo es un 400.
+     * @description Idempotente. Desde ese momento ninguno de los dos ve las viviendas del otro en el descubrimiento ni forma matches nuevos con él. Los matches `open` o `confirmed` en los que participan los dos se cierran para todos sus participantes (el chat queda en solo lectura, un mensaje nuevo recibe 409 `MATCH_NOT_OPEN`) y las autorizaciones del teléfono se retiran. Quien bloquea no recibe aviso de ese cierre. Bloquearse a uno mismo es un 400.
      */
     post: operations['blockUser'];
     delete?: never;
@@ -1110,8 +1135,11 @@ export interface components {
     MeInput: {
       displayName: string;
       municipality?: string;
-      /** @description Formato E.164 */
-      phone?: string;
+      /**
+       * @description Formato E.164. `null` borra el teléfono de la cuenta (y, con él, lo retira de todos los
+       *     matches donde se había autorizado); omitir el campo no lo toca.
+       */
+      phone?: string | null;
       meetsVppRequirements?: boolean;
       isOver65?: boolean;
       /** @description Obligatorio en el primer acceso */
@@ -1367,8 +1395,9 @@ export interface components {
        */
       sharesPhone?: boolean;
       /**
-       * @description Dirección exacta de la vivienda que entrega (RN-08). Solo en `getMatch` y solo
-       *     para participantes; ausente en la lista y para el `admin`.
+       * @description Dirección exacta de la vivienda que entrega (RN-08). Solo en `getMatch`, solo
+       *     para participantes y solo mientras el match está `open` o `confirmed` (a quien no se
+       *     ha retirado); ausente en la lista, en un match `closed` y para el `admin`.
        */
       exactAddress?: string;
       /** Format: uuid */
@@ -1435,8 +1464,11 @@ export interface components {
     };
     AuditEntry: {
       id: number;
-      /** Format: uuid */
-      actorId: string;
+      /**
+       * Format: uuid
+       * @description `null` en las acciones del sistema (la purga de retención, `action: retention.purge`)
+       */
+      actorId: string | null;
       action: string;
       entity: string;
       entityId?: string | null;
@@ -1520,8 +1552,18 @@ export interface components {
         'application/problem+json': components['schemas']['Problem'];
       };
     };
-    /** @description Límite de peticiones o límite diario de likes superado (10 por usuario y día natural de Madrid, configurable por entorno; RF-45, RNF-06). `Retry-After` indica los segundos de espera; en el límite diario, hasta la medianoche de Madrid (`code: DAILY_LIKE_LIMIT`) */
+    /** @description Límite de peticiones o límite diario de likes superado (10 por usuario y día natural de Madrid, configurable por entorno; RF-45, RNF-06). `Retry-After` indica los segundos de espera; en el límite diario, hasta la medianoche de Madrid (`code: DAILY_LIKE_LIMIT`); en las subidas de imágenes del chat (30 por usuario y hora), hasta que salga de la ventana la más antigua (`code: CHAT_IMAGE_RATE_LIMITED`) */
     TooManyRequests: {
+      headers: {
+        'Retry-After'?: number;
+        [name: string]: unknown;
+      };
+      content: {
+        'application/problem+json': components['schemas']['Problem'];
+      };
+    };
+    /** @description Capacidad momentáneamente agotada (el procesado de imágenes está saturado, `code: IMAGE_PROCESSING_BUSY`). `Retry-After` indica los segundos tras los que reintentar */
+    ServiceUnavailable: {
       headers: {
         'Retry-After'?: number;
         [name: string]: unknown;
@@ -1946,7 +1988,7 @@ export interface operations {
       };
       401: components['responses']['Unauthorized'];
       404: components['responses']['NotFound'];
-      /** @description Ya hay 20 fotos */
+      /** @description Ya hay 20 fotos (`code: PHOTO_LIMIT_REACHED`) o 25 fotos pendientes de confirmar (`code: TOO_MANY_PENDING_PHOTOS`); en el segundo caso no se crea la foto */
       409: {
         headers: {
           [name: string]: unknown;
@@ -1990,6 +2032,7 @@ export interface operations {
         };
       };
       422: components['responses']['Unprocessable'];
+      503: components['responses']['ServiceUnavailable'];
     };
   };
   deleteHomePhoto: {
@@ -2525,6 +2568,7 @@ export interface operations {
       403: components['responses']['Forbidden'];
       404: components['responses']['NotFound'];
       409: components['responses']['Conflict'];
+      429: components['responses']['TooManyRequests'];
     };
   };
   sendMatchMessage: {
@@ -2561,6 +2605,7 @@ export interface operations {
       404: components['responses']['NotFound'];
       409: components['responses']['Conflict'];
       422: components['responses']['Unprocessable'];
+      503: components['responses']['ServiceUnavailable'];
     };
   };
   getChatImageUrl: {

@@ -13,6 +13,15 @@ export interface CloudStorageConfig {
 }
 
 const NOT_FOUND = 404;
+/** Tamaño máximo de un original subido por URL firmada: 25 MB. */
+const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
+/**
+ * Cabecera firmada en la URL de subida: Cloud Storage rechaza el PUT si el cuerpo queda fuera del
+ * rango. El cliente debe enviarla con exactamente este valor. fake-gcs-server no la valida.
+ */
+export const UPLOAD_SIZE_RANGE_HEADERS = {
+  'x-goog-content-length-range': `0,${String(MAX_UPLOAD_BYTES)}`,
+} as const;
 const RSA_KEY_BITS = 2048;
 /** Las fotos publicadas no cambian nunca (cada una tiene su propio identificador): caché de un año. */
 const PUBLIC_CACHE_CONTROL = 'public, max-age=31536000, immutable';
@@ -42,6 +51,27 @@ export function isNotFound(error: unknown): boolean {
 }
 
 /**
+ * Lee un original midiendo antes su tamaño y descargando después exactamente la generación medida:
+ * si alguien lo sustituye por otro mayor entre la medición y la descarga, la descarga falla (404)
+ * en lugar de traer el objeto nuevo. La biblioteca no admite `ifGenerationMatch` en la descarga.
+ */
+export async function readPinnedOriginal(
+  bucket: Bucket,
+  path: string,
+  maxBytes: number,
+): Promise<OriginalFile> {
+  try {
+    const [metadata] = await bucket.file(path).getMetadata();
+    if (Number(metadata.size) > maxBytes) return { status: 'too_large' };
+    const [data] = await bucket.file(path, { generation: Number(metadata.generation) }).download();
+    return { status: 'found', data };
+  } catch (error) {
+    if (isNotFound(error)) return { status: 'missing' };
+    throw error;
+  }
+}
+
+/**
  * Adaptador de `PhotoStorage` sobre Cloud Storage: URL firmadas V4 para subir los originales a un
  * bucket privado, y las fotos procesadas en uno público. En producción firma con la cuenta de servicio
  * del entorno (Cloud Run); en local y en pruebas, contra fake-gcs-server.
@@ -51,31 +81,28 @@ export class CloudPhotoStorage implements PhotoStorage {
   private readonly publicBucket: Bucket;
   private readonly publicBaseUrl: string;
 
-  constructor(config: CloudStorageConfig) {
-    const client = config.emulatorHost ? emulatorClient(config.emulatorHost) : new Storage();
+  constructor(
+    config: CloudStorageConfig,
+    client: Storage = config.emulatorHost ? emulatorClient(config.emulatorHost) : new Storage(),
+  ) {
     this.privateBucket = client.bucket(config.privateBucket);
     this.publicBucket = client.bucket(config.publicBucket);
     this.publicBaseUrl = config.publicBaseUrl;
   }
 
   async createUploadUrl(path: string, contentType: string, expiresAt: Date): Promise<string> {
-    const [url] = await this.privateBucket
-      .file(path)
-      .getSignedUrl({ version: 'v4', action: 'write', expires: expiresAt, contentType });
+    const [url] = await this.privateBucket.file(path).getSignedUrl({
+      version: 'v4',
+      action: 'write',
+      expires: expiresAt,
+      contentType,
+      extensionHeaders: UPLOAD_SIZE_RANGE_HEADERS,
+    });
     return url;
   }
 
-  async readOriginal(path: string, maxBytes: number): Promise<OriginalFile> {
-    const file = this.privateBucket.file(path);
-    try {
-      const [metadata] = await file.getMetadata();
-      if (Number(metadata.size) > maxBytes) return { status: 'too_large' };
-      const [data] = await file.download();
-      return { status: 'found', data };
-    } catch (error) {
-      if (isNotFound(error)) return { status: 'missing' };
-      throw error;
-    }
+  readOriginal(path: string, maxBytes: number): Promise<OriginalFile> {
+    return readPinnedOriginal(this.privateBucket, path, maxBytes);
   }
 
   async publish(path: string, data: Buffer, contentType: string): Promise<void> {

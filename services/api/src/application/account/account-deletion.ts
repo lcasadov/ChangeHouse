@@ -19,6 +19,11 @@ export interface AccountDeletionStore {
   liveMatchIds(userId: string): Promise<string[]>;
   /** Borra sus preferencias, dispositivos, me gusta y descartes (datos derivados sin valor legal). */
   eraseDerivedData(userId: string): Promise<void>;
+  /**
+   * Sobrescribe con nulos la dirección y la ubicación exactas de todas sus viviendas (RGPD art. 17):
+   * ya cerradas, no se vuelven a leer ni a descifrar.
+   */
+  eraseExactLocation(userId: string): Promise<void>;
 }
 
 /** Todo lo que la eliminación escribe, en una misma transacción. */
@@ -70,7 +75,7 @@ async function withdrawFromLiveMatches(
 }
 
 /**
- * Elimina la cuenta (RF-05): borrado lógico con anonimización, viviendas cerradas, matches vivos
+ * Elimina la cuenta (RF-05): borrado lógico con anonimización, viviendas cerradas y sin dirección ni ubicación exactas, matches vivos
  * cerrados para todos y datos derivados borrados, todo en una transacción. La baja en el proveedor
  * de identidad y la limpieza de fotos y chats no ocurren aquí: se encolan (`user.deleted`) para
  * hacerse tras confirmar y poder reintentarse. Repetirla sobre una cuenta eliminada no hace nada.
@@ -85,6 +90,8 @@ export async function deleteAccount(deps: AccountDeletionDeps, userId: string): 
 
     await withdrawFromLiveMatches(deps, scope, userId);
     for (const home of closedHomes) await scope.homes.save(home);
+    // Tras guardar las viviendas cerradas: de lo contrario el guardado reescribiría la dirección
+    await scope.accounts.eraseExactLocation(userId);
     await scope.accounts.eraseDerivedData(userId);
     const at = deps.clock.now();
     await scope.accounts.saveAnonymized(anonymizeUser(user, at));

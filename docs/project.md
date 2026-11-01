@@ -61,7 +61,7 @@ diagrama de modelo de negocio no falla, **sigue adelante sin el dato**.
 | Organización | `⚠️ SUPUESTO: cuenta personal lcasadov; ChangeHouse aún sin organización propia` |
 | `$PROJECT_DESCRIPTION` | Plataforma móvil y web de permuta de viviendas entre particulares: monorepo TypeScript con app Expo (Android, iOS y web), landing Astro y API Fastify |
 | Versión de esta plantilla | `harness v1.2.0` |
-| Última actualización | `2026-10-18` |
+| Última actualización | `2026-11-01` |
 
 ### Comandos transversales
 
@@ -391,7 +391,8 @@ separando código nuevo de código existente.
 | `$RBAC_MATRIX_DOC` | `docs/rbac-matrix.md` | Ruta a la matriz de roles y permisos |
 | `$NORMATIVA` | RGPD, LOPDGDD, LSSI-CE, OWASP ASVS nivel 2 (API y web), OWASP MASVS (móvil), WCAG 2.2 AA, directrices de App Store y Google Play | Marcos normativos aplicables, o `ninguno` |
 | `$DATOS_CATEGORIA_ESPECIAL` | **Ninguna** categoría del art. 9 RGPD en el MVP (confirmado el 2026-10-18). El KYC de fase 2 puede tratar biometría: se reevaluará entonces como categoría especial. Datos personales sensibles no especiales: dirección exacta, teléfono, cargas hipotecarias, situación VPP, edad ≥ 65 | ¿Se tratan datos sensibles? Cuáles |
-| `$LOG_RETENTION` | Auditoría (`audit_log`): 2 años · Lista de espera: hasta el lanzamiento + 12 meses, o hasta la baja · Chat: mientras exista el match + 12 meses · Logs de aplicación: retención por defecto de Cloud Logging | Retención de registros de auditoría |
+| `$LOG_RETENTION` | Auditoría (`audit_log`): 2 años · Lista de espera: hasta el lanzamiento (`$LAUNCH_DATE`) + 12 meses, o hasta la baja · Chat: 12 meses desde el cierre del match (`matches.closed_at`) · Logs de aplicación: retención por defecto de Cloud Logging. Los plazos de la lista de espera y del chat los aplica una purga programada de la API (cada 24 h, con bloqueo consultivo de PostgreSQL) que deja una entrada `retention.purge` en la auditoría con el recuento | Retención de registros de auditoría |
+| `$LAUNCH_DATE` | Variable de entorno `LAUNCH_DATE` de la API (`AAAA-MM-DD`, medianoche UTC). Opcional: **sin ella la purga no borra la lista de espera**. Debe fijarse en PROD al decidir la fecha de lanzamiento | Fecha de lanzamiento: de ella cuenta la retención de la lista de espera |
 | `$EXPOSES_WEB_UI` | sí (app web de Expo, landing Astro y panel de administración) | `sí` / `no` — activa las comprobaciones de seguridad web |
 | `$DAST_TOOL` | Análisis DAST asistido por IA: el agente `security` de Claude Code prueba la aplicación en ejecución en `DES`. Sin herramienta comercial | Herramienta de análisis dinámico, o `ninguna` |
 

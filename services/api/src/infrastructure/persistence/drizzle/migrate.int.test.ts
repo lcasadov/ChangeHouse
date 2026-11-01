@@ -110,8 +110,9 @@ describe('migraciones', () => {
     expect(columns).toEqual([
       { column_name: 'approx_location', udt_name: 'geography', is_nullable: 'NO' },
       { column_name: 'area_name', udt_name: 'text', is_nullable: 'NO' },
-      { column_name: 'exact_address', udt_name: 'bytea', is_nullable: 'NO' },
-      { column_name: 'exact_location', udt_name: 'geography', is_nullable: 'NO' },
+      // Nulos solo tras eliminar la cuenta (0016): se sobrescriben con la baja
+      { column_name: 'exact_address', udt_name: 'bytea', is_nullable: 'YES' },
+      { column_name: 'exact_location', udt_name: 'geography', is_nullable: 'YES' },
       { column_name: 'features', udt_name: 'jsonb', is_nullable: 'NO' },
       { column_name: 'id', udt_name: 'uuid', is_nullable: 'NO' },
       { column_name: 'location_visibility', udt_name: 'location_visibility', is_nullable: 'NO' },
@@ -182,10 +183,12 @@ describe('migraciones', () => {
     expect(submitted).toEqual([{ udt_name: 'timestamptz', is_nullable: 'YES' }]);
     expect(columns).toEqual([
       { column_name: 'action', udt_name: 'text', is_nullable: 'NO', is_identity: 'NO' },
-      { column_name: 'actor_id', udt_name: 'uuid', is_nullable: 'NO', is_identity: 'NO' },
+      // Sin actor ni entidad concreta en las entradas del sistema, y con detalle (0017)
+      { column_name: 'actor_id', udt_name: 'uuid', is_nullable: 'YES', is_identity: 'NO' },
       { column_name: 'at', udt_name: 'timestamptz', is_nullable: 'NO', is_identity: 'NO' },
+      { column_name: 'detail', udt_name: 'jsonb', is_nullable: 'YES', is_identity: 'NO' },
       { column_name: 'entity', udt_name: 'text', is_nullable: 'NO', is_identity: 'NO' },
-      { column_name: 'entity_id', udt_name: 'uuid', is_nullable: 'NO', is_identity: 'NO' },
+      { column_name: 'entity_id', udt_name: 'uuid', is_nullable: 'YES', is_identity: 'NO' },
       { column_name: 'id', udt_name: 'int8', is_nullable: 'NO', is_identity: 'YES' },
     ]);
     expect(references).toEqual([{ delete_rule: 'RESTRICT' }]);
@@ -556,6 +559,9 @@ describe('migraciones', () => {
       { table_name: 'match_participants', column_name: 'status', udt_name: 'participant_status' },
       { table_name: 'match_participants', column_name: 'user_id', udt_name: 'uuid' },
       { table_name: 'matches', column_name: 'chat_id', udt_name: 'text' },
+      // Retención del chat (0017)
+      { table_name: 'matches', column_name: 'chat_purged_at', udt_name: 'timestamptz' },
+      { table_name: 'matches', column_name: 'closed_at', udt_name: 'timestamptz' },
       { table_name: 'matches', column_name: 'created_at', udt_name: 'timestamptz' },
       { table_name: 'matches', column_name: 'cycle_key', udt_name: 'text' },
       { table_name: 'matches', column_name: 'id', udt_name: 'uuid' },
@@ -581,6 +587,7 @@ describe('migraciones', () => {
       'match_participants_gives_receives_idx',
       'match_participants_match_id_home_id_pk',
       'match_participants_user_idx',
+      'matches_chat_purge_idx',
       'matches_cycle_key_unique',
       'matches_pkey',
     ]);

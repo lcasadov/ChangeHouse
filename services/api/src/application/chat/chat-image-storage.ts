@@ -15,4 +15,6 @@ export interface ChatImageStorage {
   exists(path: string): Promise<boolean>;
   /** URL firmada de lectura, válida hasta `expiresAt`. */
   signedReadUrl(path: string, expiresAt: Date): Promise<string>;
+  /** Borra todas las imágenes del match, procesadas y pendientes (retención); idempotente. */
+  deleteMatchImages(matchId: string): Promise<void>;
 }

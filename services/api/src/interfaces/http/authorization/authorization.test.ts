@@ -105,13 +105,13 @@ describe('decide con una cuenta suspendida', () => {
     expect(decide({ kind: 'public' }, 'seeker', true)).toEqual({ allowed: true });
   });
 
-  it('en la política real solo getMe y exportMyData admiten cuentas suspendidas', () => {
+  it('en la política real solo getMe, deleteMe y exportMyData admiten cuentas suspendidas', () => {
     const allowing = Object.entries(realPolicy)
       .filter(([, access]) => decide(access, 'seeker', true).allowed)
       .map(([operationId]) => operationId)
       .filter((operationId) => realPolicy[operationId]?.kind !== 'public');
 
-    expect(allowing).toEqual(['getMe', 'exportMyData']);
+    expect(allowing).toEqual(['getMe', 'deleteMe', 'exportMyData']);
   });
 });
 
@@ -127,8 +127,9 @@ describe('política de autorización', () => {
       listMyConsents: { kind: 'roles', roles: everyone, denyStatus: 404 },
       acceptConsent: { kind: 'roles', roles: everyone, denyStatus: 404 },
       registerDevice: { kind: 'roles', roles: everyone, denyStatus: 404 },
-      // Eliminar la cuenta y exportar los datos (RF-05): la propia; agency solo puede exportar
-      deleteMe: { kind: 'roles', roles: ['seeker', 'owner'] },
+      // Eliminar la cuenta y exportar los datos (RF-05): la propia; agency solo puede exportar. Un
+      // suspendido conserva ambos derechos
+      deleteMe: { kind: 'roles', roles: ['seeker', 'owner'], allowSuspended: true },
       exportMyData: { kind: 'roles', roles: ['seeker', 'owner', 'agency'], allowSuspended: true },
       // RC-19: agency y admin no publican ni gestionan viviendas; getHome añade al admin (forma pública)
       listMyHomes: { kind: 'roles', roles: ['seeker', 'owner'] },

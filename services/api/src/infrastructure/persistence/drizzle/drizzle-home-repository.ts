@@ -132,7 +132,8 @@ export class DrizzleHomeRepository implements HomeRepository {
       status: row.status,
       type: row.type,
       regime: row.regime,
-      address: this.cipher.decrypt(row.exactAddress),
+      // Sin dirección solo en la vivienda cerrada de una cuenta eliminada
+      address: row.exactAddress === null ? '' : this.cipher.decrypt(row.exactAddress),
       location: locationOf(row),
       locationVisibility: row.locationVisibility,
       usefulM2: row.usefulM2,
@@ -165,7 +166,8 @@ export class DrizzleHomeRepository implements HomeRepository {
 /** La ubicación de la fila; el municipio solo si lo hay, como lo devolvió el servicio de direcciones. */
 function locationOf(row: HomeRow): HomeLocation {
   return {
-    exact: row.exactLocation,
+    // Sin ubicación exacta (cuenta eliminada) rige la zona, que ya es pública
+    exact: row.exactLocation ?? row.approxLocation,
     areaName: row.areaName,
     areaCenter: row.approxLocation,
     ...(row.municipality === null ? {} : { municipality: row.municipality }),

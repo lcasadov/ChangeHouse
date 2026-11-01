@@ -17,6 +17,7 @@ const UNAUTHORIZED = 401;
 const NOT_FOUND = 404;
 const CONFLICT = 409;
 const UNPROCESSABLE = 422;
+const SERVICE_UNAVAILABLE = 503;
 
 const BUSINESS_KINDS: Record<
   string,
@@ -38,8 +39,11 @@ const BUSINESS_KINDS: Record<
 /** Una vivienda protegida sin fecha de calificación: 400, pero es un dato que falta por rellenar. */
 const VPP_QUALIFICATION_DATE_REQUIRED = 'VPP_QUALIFICATION_DATE_REQUIRED';
 
-const CONFLICT_KINDS: Record<string, 'photo-limit' | 'min-photos'> = {
+const IMAGE_PROCESSING_BUSY = 'IMAGE_PROCESSING_BUSY';
+
+const CONFLICT_KINDS: Record<string, 'photo-limit' | 'min-photos' | 'too-many-pending'> = {
   PHOTO_LIMIT_REACHED: 'photo-limit',
+  TOO_MANY_PENDING_PHOTOS: 'too-many-pending',
   HOME_MIN_PHOTOS: 'min-photos',
 };
 
@@ -57,6 +61,9 @@ function failureOf(status: number, problem: Problem | undefined): HomesApiError 
   if (status === UNPROCESSABLE) {
     const kind = BUSINESS_KINDS[problem?.code ?? ''];
     return new HomesApiError(kind ?? 'invalid', fieldsOf(problem));
+  }
+  if (status === SERVICE_UNAVAILABLE && problem?.code === IMAGE_PROCESSING_BUSY) {
+    return new HomesApiError('busy');
   }
   return new HomesApiError(status === BAD_REQUEST ? 'invalid' : 'server');
 }

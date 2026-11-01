@@ -121,6 +121,23 @@ describe('deleteAccount', () => {
     });
   });
 
+  it('Scenario: Datos tras la eliminación - borra la dirección y la ubicación exactas de sus viviendas', async () => {
+    const { run, units } = setup([], [homeOf('h-pub', ME)]);
+
+    await run();
+
+    expect(units.exactErased).toEqual([ME]);
+  });
+
+  it('si la eliminación falla no queda borrada ninguna dirección', async () => {
+    const { run, units, audit } = setup([], [homeOf('h-pub', ME)]);
+    audit.failWith = new Error('auditoría caída');
+
+    await expect(run()).rejects.toThrow();
+
+    expect(units.exactErased).toEqual([]);
+  });
+
   it('Scenario: Eliminación completa - cierra todas sus viviendas, también las no publicadas', async () => {
     const { run, homes } = setup(
       [],

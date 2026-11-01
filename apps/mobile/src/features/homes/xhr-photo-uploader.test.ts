@@ -61,7 +61,11 @@ describe('createXhrPhotoUploader', () => {
     await promise;
 
     expect(xhr).toMatchObject({ method: 'PUT', url: target.url, body: blob });
-    expect(xhr.headers).toEqual({ 'Content-Type': 'image/jpeg' });
+    // La firma de la URL incluye el rango de tamaño: sin esta cabecera Cloud Storage rechaza la subida
+    expect(xhr.headers).toEqual({
+      'Content-Type': 'image/jpeg',
+      'x-goog-content-length-range': '0,26214400',
+    });
     expect(globalThis.fetch).toHaveBeenCalledWith(target.uri);
     expect(onProgress.mock.calls).toEqual([[0.25], [1]]);
   });

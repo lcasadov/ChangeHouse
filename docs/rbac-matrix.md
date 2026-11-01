@@ -119,7 +119,10 @@ Celda vacía = **denegado**. C consultar · A crear · M modificar · E eliminar
 - Usuarios bloqueados: no se muestran mutuamente en descubrimiento ni pueden
   formar match entre sí. Confirmado el 2026-10-18.
 - Usuario suspendido o borrado: toda petición autenticada devuelve 403, salvo
-  la exportación de datos. Confirmado el 2026-10-18.
+  la consulta de su cuenta, la exportación de datos y la eliminación de su
+  cuenta (`deleteMe`, añadida con `harden-security-before-launch`: conserva
+  el derecho de supresión y sus denuncias y la auditoría se conservan).
+  Confirmado el 2026-10-18.
 
 **Segregación de funciones**
 
@@ -183,14 +186,14 @@ operación de la API sin filas en ese fichero hace fallar la prueba.
 |---|---|---|---|---|---|
 | `getMe` | 401 | ✅ | ✅ | ✅ | `self` |
 | `upsertMe` | 401 | ✅ | ✅ | ✅ | `self`; cualquier usuario autenticado, también sin alta previa |
-| `deleteMe` | 401 | ✅ | ✅ | 403 | `self` |
+| `deleteMe` | 401 | ✅ | ✅ | 403 | `self`; también una cuenta suspendida (204): conserva el derecho de supresión; sus denuncias y la auditoría se conservan |
 | `exportMyData` | 401 | ✅ | ✅ | 403 | `self` |
 | `listMyConsents` | 401 | ✅ | ✅ | ✅ | `self` |
 | `acceptConsent` | 401 | ✅ | ✅ | ✅ | `self` |
 | `registerDevice` | 401 | ✅ | ✅ | ✅ | `self` |
 | `listMyHomes` | 401 | ✅ | ✅ | 403 | `self` |
 | `createHome` | 401 | ✅ | ✅ | 403 | varias por usuario |
-| `getHome` | 401 | ✅ pública / 404 | ✅ pública / 404 | ✅ completa | completa si `resourceOwner`; pública si `published`; si no, 404 |
+| `getHome` | 401 | ✅ pública / 404 | ✅ pública / 404 | ✅ pública / 404 | completa si `resourceOwner`; pública si `published`; si no, 404. El `admin` nunca recibe la ficha completa: ve la forma pública de las `published` (para moderar usa `adminListHomes`) |
 | `updateHome` | 401 | `resourceOwner` | `resourceOwner` | 403 | ajena → 404; estado → 409 |
 | `submitHome` | 401 | `resourceOwner` | `resourceOwner` | 403 | ídem |
 | `pauseHome` | 401 | `resourceOwner` | `resourceOwner` | 403 | ídem (un `seeker` solo tiene viviendas sin publicar: 409) |
@@ -238,7 +241,7 @@ matriz como datos, que no crea matches, los actores `seeker` y `owner` obtienen
 
 **Cuenta suspendida** (actor `suspended` en la matriz como datos: un `owner` suspendido). Toda
 operación autenticada le devuelve **403** con `code: ACCOUNT_SUSPENDED`, sea cual sea su rol, salvo
-`getMe` (200, con `suspended: true`) y `exportMyData`. Las operaciones
+`getMe` (200, con `suspended: true`), `exportMyData` y `deleteMe` (204). Las operaciones
 públicas (`joinWaitlist`) no cambian. La regla vive en la política central (`allowSuspended` en
 `policy.ts`), no en cada caso de uso.
 
@@ -270,8 +273,8 @@ y en `services/api/test/authorization/rbac-matrix.json`:
 - La autorización corre en `onRequest`, antes de leer el cuerpo: sin token siempre es 401, aunque el
   cuerpo sea inválido.
 - **Usuario suspendido** (403 `ACCOUNT_SUSPENDED`): implementado con `add-user-suspension`
-  (2026-10-23). `getMe` y `exportMyData` son las únicas operaciones que lo admiten; el resto, incluidas
-  `deleteMe`, las denuncias, los bloqueos y el chat, lo deniegan.
+  (2026-10-23). `getMe`, `exportMyData` y, desde `harden-security-before-launch`, `deleteMe` son las únicas
+  operaciones que lo admiten; el resto, incluidas las denuncias, los bloqueos y el chat, lo deniegan.
 - **Cuenta eliminada** (`add-account-deletion-and-export`): su token se trata como no válido (401) desde
   que se confirma la eliminación, aunque Firebase Auth tarde en darla de baja. `deleteMe` y
   `exportMyData` niegan con 403 a quien no tiene el rol (incluido `unregistered`); `deleteMe` no admite

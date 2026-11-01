@@ -66,6 +66,19 @@ export function isLiveMatch(match: MatchState): boolean {
   return match.status === 'open' || match.status === 'confirmed';
 }
 
+/**
+ * Los datos de contacto (dirección exacta y teléfono) se entregan solo mientras el match está vivo y
+ * a quien no se ha retirado; quien no participa nunca los recibe.
+ */
+export function isContactVisibleTo(match: MatchState, userId: string): boolean {
+  const own = match.participants.filter((participant) => participant.userId === userId);
+  return (
+    own.length > 0 &&
+    isLiveMatch(match) &&
+    own.every((participant) => participant.status !== 'withdrawn')
+  );
+}
+
 /** El participante se retira: queda `withdrawn` y el match se cierra para todos (RN-10). */
 export function withdrawFromMatch<T extends MatchState>(match: T, userId: string): T {
   participantsOf(match, userId);

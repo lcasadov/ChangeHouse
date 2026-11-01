@@ -1,7 +1,13 @@
 import cors, { type FastifyCorsOptionsDelegate } from '@fastify/cors';
-import Fastify, { type FastifyInstance, type FastifyServerOptions, LogController } from 'fastify';
+import Fastify, {
+  type FastifyError,
+  type FastifyInstance,
+  type FastifyServerOptions,
+  LogController,
+} from 'fastify';
 
 import { registerSecurity, type SecurityOptions } from './authorization/security.js';
+import { serializeError, serializeRequest } from './log-serializers.js';
 import { generateCorrelationId, registerProblemHandling } from './problem.js';
 import { type AccountDataRouteOptions, accountDataRoutes } from './routes/account-data.js';
 import { type AccountRouteOptions, accountRoutes } from './routes/accounts.js';
@@ -54,6 +60,25 @@ function trustProxyFor(hops: number): FastifyServerOptions['trustProxy'] {
   return hops > 0 ? (_address, hop) => hop < hops : false;
 }
 
+/**
+ * Opciones del registro: el token no se escribe y los serializadores quitan la query string de las
+ * URL y los valores de filas de los errores de la base de datos. `false` desactiva el registro.
+ */
+function loggerFor(logger: AppOptions['logger']): FastifyServerOptions['logger'] {
+  if (logger === false || logger === undefined) return false;
+  const base = logger === true ? {} : logger;
+  return {
+    ...base,
+    // Defensa en profundidad: aunque se registrasen las cabeceras, el token no se escribe
+    redact: ['req.headers.authorization'],
+    serializers: {
+      req: serializeRequest,
+      err: (error: FastifyError) =>
+        serializeError(error) as { type: string; message: string; stack: string },
+    },
+  };
+}
+
 /** Prefijo de versión de la API; coincide con el de `servers` en `docs/api/openapi.yaml`. */
 const API_PREFIX = '/v1';
 
@@ -93,8 +118,7 @@ function registerCors(
 export function buildApp(options: AppOptions = {}): FastifyInstance {
   const logger = options.logger ?? process.env['NODE_ENV'] !== 'test';
   const app = Fastify({
-    // Defensa en profundidad: aunque se registrasen las cabeceras, el token no se escribe
-    logger: logger === true ? { redact: ['req.headers.authorization'] } : logger,
+    logger: loggerFor(logger),
     genReqId: generateCorrelationId,
     // El identificador de la petición es el de correlación: aparece así en cada línea de log
     logController: new LogController({ requestIdLogLabel: 'correlationId' }),

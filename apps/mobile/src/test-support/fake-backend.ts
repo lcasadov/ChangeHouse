@@ -65,7 +65,8 @@ function profileChangesOf(body: UpsertBody): Partial<Me> {
   if (typeof body['municipality'] === 'string') {
     changes.municipality = body['municipality'] === '' ? null : body['municipality'];
   }
-  if (typeof body['phone'] === 'string') changes.phone = body['phone'];
+  // Como la API: `null` borra el teléfono y omitirlo no lo toca
+  if (typeof body['phone'] === 'string' || body['phone'] === null) changes.phone = body['phone'];
   if (typeof body['meetsVppRequirements'] === 'boolean') {
     changes.meetsVppRequirements = body['meetsVppRequirements'];
   }
@@ -81,6 +82,8 @@ export const DEFAULT_SEARCH_PREFERENCES: SearchPreferences = {
   minToReceiveCents: 0,
   valueReferencePct: 50,
 };
+
+const SUSPENDED_ALLOWED: ReadonlySet<string> = new Set(['GET /me', 'GET /me/export', 'DELETE /me']);
 
 export type Failure = 'network' | 'server' | 'legal-outdated' | 'unauthorized' | 'invalid';
 
@@ -225,8 +228,8 @@ export class FakeBackend {
       this.failNext = null;
       return this.fail(failure);
     }
-    // Como la API: una cuenta suspendida solo consulta su cuenta
-    if (this.profile.suspended && !(method === 'GET' && path === '/me')) {
+    // Como la API: una cuenta suspendida solo consulta su cuenta, exporta sus datos y la elimina
+    if (this.profile.suspended && !SUSPENDED_ALLOWED.has(`${method} ${path}`)) {
       return problem(403, { code: 'ACCOUNT_SUSPENDED' });
     }
     if (path.startsWith('/admin/')) {
@@ -255,7 +258,13 @@ export class FakeBackend {
     body: unknown,
   ): Response {
     const report = this.reports.respond(method, path, body);
-    if (report) return report;
+    if (report) {
+      // Como la API: bloquear a alguien cierra los matches abiertos con esa persona
+      if (path === '/me/blocked-users' && report.ok) {
+        this.matches.closeOnBlock((body as { userId: string }).userId);
+      }
+      return report;
+    }
     const decision = this.decisions.respond(method, path, search, body);
     if (decision) return decision;
     if (path === '/discover') return this.discovery.respond(search);

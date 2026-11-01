@@ -42,6 +42,7 @@ const HOME_PATH =
   /^\/homes\/([^/]+)(?:\/(submit|pause|resume|photos)(?:\/([^/]+?)(\/complete)?)?)?$/;
 
 const MAX_PHOTOS = 20;
+const MAX_PENDING = 25;
 const MIN_PHOTOS = 3;
 const PHOTO_BASE_URL = 'https://cdn.changehouse.test/photos';
 const UPLOAD_BASE_URL = 'https://storage.changehouse.test/upload';
@@ -132,6 +133,8 @@ export class FakeHomes {
   private readonly homes: Home[];
   private readonly pending: PendingPhoto[] = [];
   private photoSequence = 0;
+  /** Cuántas confirmaciones de subida responden 503 (procesado saturado) antes de volver a funcionar. */
+  busyCompletions = 0;
   private listFailure: { status: number; remaining: number } | null = null;
 
   constructor(seed: readonly Home[]) {
@@ -186,9 +189,22 @@ export class FakeHomes {
     return complete ? this.completeUpload(home, photoId) : problem(404);
   }
 
+  /** La vivienda ya tiene tantas fotos pendientes de confirmar (por ejemplo, de subidas abandonadas). */
+  seedPending(homeId: string, count: number): void {
+    for (let index = 0; index < count; index += 1) {
+      this.photoSequence += 1;
+      const photoId = `0198f3a0-3333-7000-8000-${String(this.photoSequence).padStart(12, '0')}`;
+      this.pending.push({ homeId, photoId, uploaded: null });
+    }
+  }
+
   private createUpload(home: Home): Response {
     if ((home.photos?.length ?? 0) >= MAX_PHOTOS) {
       return problem(409, { code: 'PHOTO_LIMIT_REACHED' });
+    }
+    // Como la API: a partir de 25 fotos pendientes no se crea otra
+    if (this.pending.filter((candidate) => candidate.homeId === home.id).length >= MAX_PENDING) {
+      return problem(409, { code: 'TOO_MANY_PENDING_PHOTOS' });
     }
     this.photoSequence += 1;
     const photoId = `0198f3a0-2222-7000-8000-${String(this.photoSequence).padStart(12, '0')}`;
@@ -201,6 +217,10 @@ export class FakeHomes {
   }
 
   private completeUpload(home: Home, photoId: string): Response {
+    if (this.busyCompletions > 0) {
+      this.busyCompletions -= 1;
+      return problem(503, { code: 'IMAGE_PROCESSING_BUSY' }, { 'retry-after': '5' });
+    }
     const ready = home.photos?.find((photo) => photo.id === photoId);
     if (ready) return json(200, ready);
     const pending = this.pending.find(

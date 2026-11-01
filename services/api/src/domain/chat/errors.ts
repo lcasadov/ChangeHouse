@@ -31,3 +31,14 @@ export class ChatImageNotFoundError extends DomainError {
     this.name = 'ChatImageNotFoundError';
   }
 }
+
+/** Se superó el límite de subidas de imágenes del chat por usuario y hora (429 con `Retry-After`). */
+export class ChatImageRateLimitError extends DomainError {
+  readonly code = 'CHAT_IMAGE_RATE_LIMITED';
+  override readonly kind: DomainErrorKind = 'rate_limited';
+
+  constructor(override readonly retryAfterSeconds: number) {
+    super('Has pedido demasiadas subidas de imágenes en la última hora');
+    this.name = 'ChatImageRateLimitError';
+  }
+}

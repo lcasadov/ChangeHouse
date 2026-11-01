@@ -36,6 +36,8 @@ describe('failureOf', () => {
     [new HomesApiError('photo-limit'), 'limit'],
     [new HomesApiError('invalid-image'), 'invalidImage'],
     [new HomesApiError('photo-not-uploaded'), 'notUploaded'],
+    [new HomesApiError('too-many-pending'), 'tooManyPending'],
+    [new HomesApiError('busy'), 'busy'],
     [new HomesApiError('conflict'), 'notEditable'],
     [new HomesApiError('server'), 'unknown'],
     [new Error('otro'), 'unknown'],
@@ -50,6 +52,8 @@ describe('canRetry', () => {
     expect(canRetry('network')).toBe(true);
     expect(canRetry('invalidImage')).toBe(false);
     expect(canRetry('limit')).toBe(false);
+    expect(canRetry('tooManyPending')).toBe(false);
+    expect(canRetry('busy')).toBe(true);
     expect(canRetry(undefined)).toBe(false);
   });
 });

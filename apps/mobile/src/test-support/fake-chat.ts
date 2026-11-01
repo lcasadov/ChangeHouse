@@ -108,6 +108,7 @@ export class FakeChatApi implements ChatApi {
   /** El tiempo de vida de cada URL de imagen que se entrega. */
   imageUrlTtlMs = 15 * 60_000;
   private readonly failures: ChatApiErrorKind[] = [];
+  private readonly uploadFailures: ChatApiErrorKind[] = [];
   private readonly imageFailures: ChatApiErrorKind[] = [];
   private gate: Promise<void> | null = null;
 
@@ -116,6 +117,11 @@ export class FakeChatApi implements ChatApi {
   /** Los siguientes envíos fallan con estos errores, en orden, antes de volver a funcionar. */
   failNext(...kinds: ChatApiErrorKind[]): void {
     this.failures.push(...kinds);
+  }
+
+  /** Las siguientes peticiones de URL de subida de imagen fallan con estos errores, en orden. */
+  failNextUpload(...kinds: ChatApiErrorKind[]): void {
+    this.uploadFailures.push(...kinds);
   }
 
   /** La siguiente petición de URL de imagen falla con este error. */
@@ -154,6 +160,8 @@ export class FakeChatApi implements ChatApi {
   }
 
   createImageUpload(matchId: string, contentType: PhotoContentType): Promise<ChatImageUpload> {
+    const failure = this.uploadFailures.shift();
+    if (failure) return Promise.reject(new ChatApiError(failure));
     this.uploads.push({ matchId, contentType });
     return Promise.resolve({
       uploadId: nextId(),

@@ -39,13 +39,14 @@ export const policy: Policy = {
   upsertMe: { kind: 'authenticated' },
   // `self`: sin cuenta no hay nada que consultar, y no se distingue de un recurso inexistente. Es
   // una de las dos operaciones que admite una cuenta suspendida (la app la usa para mostrar la
-  // suspensión; la otra es `exportMyData`)
+  // suspensión; las otras son `exportMyData` y `deleteMe`)
   getMe: { kind: 'roles', roles: ALL_ACCOUNT_ROLES, denyStatus: 404, allowSuspended: true },
   listMyConsents: { kind: 'roles', roles: ALL_ACCOUNT_ROLES, denyStatus: 404 },
   acceptConsent: { kind: 'roles', roles: ALL_ACCOUNT_ROLES, denyStatus: 404 },
   // Eliminar la cuenta (RF-05): solo owner y seeker, como el resto de la gestión de viviendas; la
-  // exportación también la hace `agency`. Siempre sobre la cuenta propia (`self`)
-  deleteMe: { kind: 'roles', roles: HOME_OWNER_ROLES },
+  // exportación también la hace `agency`. Siempre sobre la cuenta propia (`self`). Admite una cuenta
+  // suspendida: la persona conserva su derecho de supresión (las denuncias y la auditoría se conservan)
+  deleteMe: { kind: 'roles', roles: HOME_OWNER_ROLES, allowSuspended: true },
   // Admite una cuenta suspendida: la persona conserva el derecho a llevarse sus datos
   exportMyData: { kind: 'roles', roles: [...HOME_OWNER_ROLES, 'agency'], allowSuspended: true },
   registerDevice: { kind: 'roles', roles: ALL_ACCOUNT_ROLES, denyStatus: 404 },

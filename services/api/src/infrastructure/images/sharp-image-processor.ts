@@ -8,8 +8,11 @@ export const MAX_PHOTO_SIDE = 2048;
 const WEBP_QUALITY = 80;
 /** Formatos de foto admitidos; `heif` cubre HEIC y AVIF. Otros (SVG, GIF, TIFF…) no son fotos de vivienda. */
 const ACCEPTED_FORMATS: readonly string[] = ['jpeg', 'png', 'webp', 'heif'];
-/** Tope de píxeles de entrada: protege la memoria del servidor frente a imágenes diseñadas para agotarla. */
-const MAX_INPUT_PIXELS = 100_000_000;
+/**
+ * Tope de píxeles de entrada (40 megapíxeles): protege la memoria del servidor frente a imágenes
+ * diseñadas para agotarla. Una imagen mayor se rechaza como inválida sin llegar a decodificarse.
+ */
+export const MAX_INPUT_PIXELS = 40_000_000;
 
 /**
  * `sharp` no copia los metadatos a la salida salvo que se le pida (`withMetadata`): ni EXIF, ni XMP,

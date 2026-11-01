@@ -15,6 +15,8 @@ BILLING_ACCOUNT="${BILLING_ACCOUNT:?define BILLING_ACCOUNT (gcloud billing accou
 BUDGET_EUR="${BUDGET_EUR:-50}"
 SQL_INSTANCE="changehouse-${ENV}-pg"
 SQL_TIER="${SQL_TIER:-db-f1-micro}"
+PRIVATE_BUCKET="${PROJECT}-photos-private"   # originales y subidas del chat (temporales)
+PUBLIC_BUCKET="${PROJECT}-photos-public"     # fotos publicadas
 
 echo "== Proyecto ${PROJECT}"
 gcloud projects describe "$PROJECT" >/dev/null 2>&1 || gcloud projects create "$PROJECT" --name="ChangeHouse ${ENV^^}"
@@ -60,12 +62,53 @@ for SA in api deployer; do
 done
 API_SA="api@${PROJECT}.iam.gserviceaccount.com"
 DEPLOY_SA="deployer@${PROJECT}.iam.gserviceaccount.com"
-for ROLE in roles/cloudsql.client roles/secretmanager.secretAccessor roles/datastore.user roles/firebaseauth.viewer roles/storage.objectAdmin roles/firebasecloudmessaging.admin; do
+for ROLE in roles/cloudsql.client roles/secretmanager.secretAccessor roles/datastore.user roles/firebaseauth.viewer roles/firebasecloudmessaging.admin; do
   gcloud projects add-iam-policy-binding "$PROJECT" --member="serviceAccount:${API_SA}" --role="$ROLE" --condition=None >/dev/null
 done
 for ROLE in roles/run.admin roles/artifactregistry.writer roles/iam.serviceAccountUser roles/firebasehosting.admin roles/cloudsql.client roles/secretmanager.secretAccessor; do
   gcloud projects add-iam-policy-binding "$PROJECT" --member="serviceAccount:${DEPLOY_SA}" --role="$ROLE" --condition=None >/dev/null
 done
+
+echo "== Buckets de fotos"
+# Acceso uniforme a nivel de bucket en ambos. El privado impide cualquier acceso público.
+gcloud storage buckets describe "gs://${PRIVATE_BUCKET}" >/dev/null 2>&1 || \
+  gcloud storage buckets create "gs://${PRIVATE_BUCKET}" --location="$REGION" \
+    --uniform-bucket-level-access --public-access-prevention
+gcloud storage buckets describe "gs://${PUBLIC_BUCKET}" >/dev/null 2>&1 || \
+  gcloud storage buckets create "gs://${PUBLIC_BUCKET}" --location="$REGION" --uniform-bucket-level-access
+# Los originales y las subidas del chat se borran al día (si el procesado no los ha movido ya)
+LIFECYCLE="$(mktemp)"
+trap 'rm -f "$LIFECYCLE"' EXIT
+cat >"$LIFECYCLE" <<'JSON'
+{"rule": [{"action": {"type": "Delete"}, "condition": {"age": 1, "matchesPrefix": ["originals/", "chat-uploads/"]}}]}
+JSON
+gcloud storage buckets update "gs://${PRIVATE_BUCKET}" --lifecycle-file="$LIFECYCLE"
+# Lectura pública de cada objeto SIN listado: legacyObjectReader solo da storage.objects.get.
+# NO usar roles/storage.objectViewer: incluye storage.objects.list y expondría el contenido del bucket.
+gcloud storage buckets add-iam-policy-binding "gs://${PUBLIC_BUCKET}" \
+  --member=allUsers --role=roles/storage.legacyObjectReader >/dev/null
+# La API administra objetos solo en estos dos buckets, no en todo el proyecto
+for BUCKET in "$PRIVATE_BUCKET" "$PUBLIC_BUCKET"; do
+  gcloud storage buckets add-iam-policy-binding "gs://${BUCKET}" \
+    --member="serviceAccount:${API_SA}" --role=roles/storage.objectAdmin >/dev/null
+done
+# La app web sube con PUT directamente a la URL firmada: el bucket privado debe aceptar su origen y las
+# cabeceras firmadas (Content-Type y x-goog-content-length-range). APP_ORIGIN, p. ej. https://app.changehouse.es
+if [ -n "${APP_ORIGIN:-}" ]; then
+  CORS_FILE="$(mktemp)"
+  cat > "$CORS_FILE" <<JSON
+[{"origin": ["${APP_ORIGIN}"], "method": ["PUT"],
+  "responseHeader": ["Content-Type", "x-goog-content-length-range"], "maxAgeSeconds": 3600}]
+JSON
+  gcloud storage buckets update "gs://${PRIVATE_BUCKET}" --cors-file="$CORS_FILE" >/dev/null
+  rm -f "$CORS_FILE"
+else
+  echo "AVISO: sin APP_ORIGIN no se configura el CORS del bucket privado; la app web no podrá subir fotos." >&2
+fi
+# Las URL firmadas de subida se firman con la IAM Credentials API (signBlob) en nombre de la propia SA:
+# en Cloud Run no hay clave privada. Se concede sobre la SA de la API, no sobre el proyecto.
+gcloud iam service-accounts add-iam-policy-binding "$API_SA" \
+  --member="serviceAccount:${API_SA}" --role=roles/iam.serviceAccountTokenCreator >/dev/null
 
 echo "== Workload Identity Federation para GitHub Actions"
 PROJECT_NUMBER="$(gcloud projects describe "$PROJECT" --format='value(projectNumber)')"
@@ -94,4 +137,6 @@ Entorno ${ENV^^} listo. Configura en GitHub (Settings → Environments → ${ENV
   GCP_DEPLOY_SERVICE_ACCOUNT  = ${DEPLOY_SA}
   GCP_API_SERVICE_ACCOUNT     = ${API_SA}
   CLOUD_SQL_INSTANCE          = ${PROJECT}:${REGION}:${SQL_INSTANCE}
+  STORAGE_PRIVATE_BUCKET      = ${PRIVATE_BUCKET}   (entorno de la API en Cloud Run)
+  STORAGE_PUBLIC_BUCKET       = ${PUBLIC_BUCKET}   (entorno de la API en Cloud Run)
 OUT

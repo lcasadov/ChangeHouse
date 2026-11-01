@@ -148,3 +148,24 @@ export class HomeNotResumableError extends DomainError {
     this.name = 'HomeNotResumableError';
   }
 }
+
+/** Demasiadas URL de subida sin confirmar en la vivienda (409). */
+export class TooManyPendingPhotosError extends DomainError {
+  readonly code = 'TOO_MANY_PENDING_PHOTOS';
+  override readonly kind: DomainErrorKind = 'conflict';
+  constructor() {
+    super('La vivienda tiene demasiadas fotos pendientes de confirmar');
+    this.name = 'TooManyPendingPhotosError';
+  }
+}
+
+/** El procesado de imágenes está saturado: reintentar más tarde (503 con `Retry-After`). */
+export class ImageProcessingBusyError extends DomainError {
+  readonly code = 'IMAGE_PROCESSING_BUSY';
+  override readonly kind: DomainErrorKind = 'unavailable';
+
+  constructor(override readonly retryAfterSeconds: number) {
+    super('El procesado de imágenes está ocupado');
+    this.name = 'ImageProcessingBusyError';
+  }
+}

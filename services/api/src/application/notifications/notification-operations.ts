@@ -73,15 +73,23 @@ async function emailAll(
   }
 }
 
-/** Avisa a todos los participantes; un match que ya no existe no es un error. */
+/**
+ * Avisa a los participantes (o solo a `only`, si se indica); un match que ya no existe no es un
+ * error.
+ */
 async function notifyAll(
   deps: NotificationDeps,
   matchId: string,
   build: (matchId: string) => PushNotification,
   email?: EmailBuilder,
+  only?: readonly string[],
 ): Promise<void> {
-  const roster = await deps.roster.findRoster(matchId);
-  if (!roster) return;
+  const found = await deps.roster.findRoster(matchId);
+  if (!found) return;
+  const roster: ChatRoster = {
+    ...found,
+    members: found.members.filter((member) => only === undefined || only.includes(member.userId)),
+  };
   await pushTo(
     deps,
     roster.members.map((member) => member.userId),
@@ -116,8 +124,9 @@ export function notificationOperations(deps: NotificationDeps) {
     notifyMatchCreated: (matchId: string) =>
       notifyAll(deps, matchId, matchCreatedPush, matchCreatedEmail),
     notifyMatchConfirmed: (matchId: string) => notifyAll(deps, matchId, matchConfirmedPush),
-    notifyMatchClosed: (matchId: string) =>
-      notifyAll(deps, matchId, matchClosedPush, matchClosedEmail),
+    /** `recipients`: solo esos usuarios; sin ellos, todos los participantes. */
+    notifyMatchClosed: (matchId: string, recipients?: readonly string[]) =>
+      notifyAll(deps, matchId, matchClosedPush, matchClosedEmail, recipients),
     notifyMessageSent: (payload: MessageSentPayload) => notifyMessageSent(deps, payload),
   };
 }
@@ -133,12 +142,19 @@ function messagePayload(payload: OutboxPayload | null): MessageSentPayload {
   return { matchId, senderId };
 }
 
+/** Los destinatarios del cierre, si el hecho los restringe (`recipients`: ids separados por coma). */
+function recipientsOf(payload: OutboxPayload | null): string[] | undefined {
+  const recipients = payload?.['recipients'];
+  return recipients === undefined ? undefined : recipients.split(',').filter((id) => id !== '');
+}
+
 /** Manejadores de la bandeja de salida: un tipo de hecho, un aviso. */
 export function notificationHandlers(operations: NotificationOperations) {
   return {
     [MATCH_CREATED]: (matchId: string) => operations.notifyMatchCreated(matchId),
     [MATCH_CONFIRMED]: (matchId: string) => operations.notifyMatchConfirmed(matchId),
-    [MATCH_CLOSED]: (matchId: string) => operations.notifyMatchClosed(matchId),
+    [MATCH_CLOSED]: (matchId: string, payload: OutboxPayload | null) =>
+      operations.notifyMatchClosed(matchId, recipientsOf(payload)),
     [MESSAGE_SENT]: (_messageId: string, payload: OutboxPayload | null) =>
       operations.notifyMessageSent(messagePayload(payload)),
   } as const;

@@ -381,3 +381,69 @@ describe('setPhoneSharing', () => {
     expect(reader.sharing.size).toBe(0);
   });
 });
+
+describe('datos de contacto según el estado del match', () => {
+  it('Scenario: Match cerrado sin datos de contacto - ni dirección exacta ni teléfono, aunque hubiera autorización', async () => {
+    const { operations, matchHomes, reader } = setup(pairMatch('closed', 'withdrawn', 'pending'));
+    reader.sharing.add(`${MATCH_ID}|${OTHER}`);
+
+    const detail = await operations.getMatch(AS_ANA, MATCH_ID);
+
+    expect(detail.homes).toHaveLength(2);
+    for (const participant of detail.participants) {
+      expect(participant).not.toHaveProperty('exactAddress');
+      expect(participant).toMatchObject({ phone: null, sharesPhone: false });
+    }
+    expect(JSON.stringify(detail)).not.toContain('Calle');
+    expect(JSON.stringify(detail)).not.toContain(BETO_PHONE);
+    expect(matchHomes.decrypted).toEqual([]);
+  });
+
+  it('el participante que se retiró no recibe contacto aunque el match siga vivo', async () => {
+    const { operations, matchHomes, reader } = setup(pairMatch('open', 'withdrawn', 'pending'));
+    reader.sharing.add(`${MATCH_ID}|${OTHER}`);
+
+    const detail = await operations.getMatch(AS_ANA, MATCH_ID);
+
+    expect(JSON.stringify(detail)).not.toContain(BETO_PHONE);
+    expect(JSON.stringify(detail)).not.toContain('Calle');
+    expect(matchHomes.decrypted).toEqual([]);
+  });
+
+  it('el admin tampoco recibe contacto en un match cerrado', async () => {
+    const { operations, matchHomes } = setup(pairMatch('closed'));
+
+    const detail = await operations.getMatch({ userId: 'admin-1', role: 'admin' }, MATCH_ID);
+
+    expect(detail.participants).toHaveLength(2);
+    expect(JSON.stringify(detail)).not.toContain('Calle');
+    expect(matchHomes.decrypted).toEqual([]);
+  });
+
+  it('Scenario: Revocar en un match cerrado - se acepta y la autorización queda retirada', async () => {
+    const { operations, reader } = setup(pairMatch('closed'));
+    reader.sharing.add(`${MATCH_ID}|${ME}`);
+
+    await expect(operations.setPhoneSharing(ME, MATCH_ID, false)).resolves.toBeUndefined();
+
+    expect(reader.sharing.size).toBe(0);
+  });
+
+  it('revocar sigue exigiendo ser participante', async () => {
+    const { operations } = setup(pairMatch('closed'));
+
+    await expect(operations.setPhoneSharing('user-stranger', MATCH_ID, false)).rejects.toThrow(
+      MatchNotFoundError,
+    );
+  });
+
+  it('Scenario: El cierre retira la autorización - retirarse deja a todos sin autorizar', async () => {
+    const { operations, reader } = setup();
+    reader.sharing.add(`${MATCH_ID}|${ME}`);
+    reader.sharing.add(`${MATCH_ID}|${OTHER}`);
+
+    await operations.withdrawFromMatch(OTHER, MATCH_ID);
+
+    expect(reader.sharing.size).toBe(0);
+  });
+});

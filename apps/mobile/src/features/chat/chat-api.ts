@@ -21,6 +21,10 @@ export type ChatApiErrorKind =
   | 'invalid-image'
   /** La imagen no llegó al almacenamiento (422 `IMAGE_NOT_UPLOADED`). */
   | 'image-not-uploaded'
+  /** Se superó el límite de 30 subidas de imágenes por hora (429 `CHAT_IMAGE_RATE_LIMITED`). */
+  | 'rate-limited'
+  /** El procesado de imágenes está saturado; se puede reintentar (503 `IMAGE_PROCESSING_BUSY`). */
+  | 'busy'
   | 'server';
 
 export class ChatApiError extends Error {

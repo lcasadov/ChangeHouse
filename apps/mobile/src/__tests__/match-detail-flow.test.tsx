@@ -295,6 +295,30 @@ describe('Detalle del match', () => {
     expect(screen.queryByText(notShared)).toBeNull();
   });
 
+  it('Scenario: Match cerrado sin datos de contacto - tras compartir el teléfono, al cerrarse ya no hay dirección, teléfono ni interruptor', async () => {
+    const { backend, match } = await openDetail({
+      match: { status: 'closed', theirStatus: 'withdrawn' },
+    });
+    backend.matches.setSharing(match.id, match.participants[1]?.homeId ?? '', true);
+    backend.matches.setPhone(match.participants[1]?.homeId ?? '', THEIR_PHONE);
+
+    expect(await screen.findByText(d.hint.closed)).toBeTruthy();
+    expect(screen.queryByText(d.home.address.replace('{{address}}', THEIR_ADDRESS))).toBeNull();
+    expect(screen.queryByText(/Calle de Prueba/)).toBeNull();
+    expect(screen.queryByRole('link', { name: theirPhoneLabel })).toBeNull();
+    expect(screen.queryByText(THEIR_PHONE, { exact: false })).toBeNull();
+    expect(screen.queryByRole('switch')).toBeNull();
+    expect(screen.queryByText(d.contact.title)).toBeNull();
+  });
+
+  it('Scenario: Match cerrado sin datos de contacto - quien se retiró no ve contacto ni puede compartir su teléfono', async () => {
+    await openDetail({ match: { status: 'open', mineStatus: 'withdrawn' } });
+
+    await title();
+    expect(screen.queryByText(d.home.address.replace('{{address}}', THEIR_ADDRESS))).toBeNull();
+    expect(screen.queryByRole('switch')).toBeNull();
+  });
+
   it('si el match se cierra mientras tanto, confirmar lo explica y deja la pantalla al día', async () => {
     const { backend, match } = await openDetail();
     await title();

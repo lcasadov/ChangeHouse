@@ -247,6 +247,20 @@ describe.skipIf(!emulatorAvailable())('cuenta y consentimientos con tokens reale
       expect((await get(user, '/v1/me')).json()).toMatchObject(profile);
     });
 
+    it('Scenario: Borrar el teléfono del perfil - phone null lo borra de la cuenta y omitirlo no lo toca', async () => {
+      const user = await registered('Ana');
+      await put(user, profile);
+
+      await put(user, { displayName: 'Ana García' });
+      const untouched = await storedProfile();
+      const response = await put(user, { displayName: 'Ana García', phone: null });
+
+      expect(untouched?.phone).toBe('+34612345678');
+      expect(response.statusCode, response.body).toBe(200);
+      expect(response.json()).toMatchObject({ phone: null });
+      expect((await storedProfile())?.phone).toBeNull();
+    });
+
     it('Scenario: Guardar cambios del perfil - un campo omitido no se toca', async () => {
       const user = await registered('Ana');
       await put(user, profile);

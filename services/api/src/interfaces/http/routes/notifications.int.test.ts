@@ -292,6 +292,23 @@ describe.skipIf(!emulatorAvailable() || !firestoreAvailable())(
       expect(push.sent[0]?.notification.title).toBe('Tu match se ha cerrado');
     });
 
+    it('Scenario: El bloqueo cierra el match - el bloqueado recibe el aviso de cierre y quien bloquea no', async () => {
+      const { ana, beto, matchId } = await pair();
+      push.sent.length = 0;
+      email.sent.length = 0;
+
+      const response = await call(ana, 'POST', '/v1/me/blocked-users', { userId: beto.id });
+      await settleOutbox();
+
+      expect(response.statusCode, response.body).toBe(204);
+      expect(push.sent).toHaveLength(1);
+      expect(push.sent[0]?.tokens).toEqual([`tok-beto-${beto.id}`]);
+      expect(push.sent[0]?.notification).toMatchObject({
+        title: 'Tu match se ha cerrado',
+        data: { type: 'match.closed', matchId },
+      });
+    });
+
     it('Scenario: Match confirmado - cuando confirman todos, los participantes reciben el aviso', async () => {
       const { ana, beto, matchId } = await pair();
       push.sent.length = 0;

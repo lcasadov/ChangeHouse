@@ -42,6 +42,10 @@ export type HomesApiErrorKind =
   | 'invalid-image'
   /** Se confirmó la subida sin que el fichero hubiera llegado (422 `PHOTO_NOT_UPLOADED`). */
   | 'photo-not-uploaded'
+  /** La vivienda ya tiene 25 fotos pendientes de confirmar (409 `TOO_MANY_PENDING_PHOTOS`). */
+  | 'too-many-pending'
+  /** El procesado de imágenes está saturado; se puede reintentar (503 `IMAGE_PROCESSING_BUSY`). */
+  | 'busy'
   | 'server';
 
 export class HomesApiError extends Error {

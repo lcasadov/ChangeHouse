@@ -12,6 +12,7 @@ import {
   InvalidImageError,
   PhotoLimitReachedError,
   PhotoNotUploadedError,
+  TooManyPendingPhotosError,
 } from '../../domain/home/errors.js';
 import { type Home, newDraft } from '../../domain/home/home.js';
 import type { HomePhoto } from '../../domain/home/photo.js';
@@ -90,6 +91,68 @@ async function uploaded(env: Setup, content: string | Buffer, homeId = HOME): Pr
   env.storage.originals.set(`originals/${homeId}/${photoId}`, Buffer.from(content));
   return photoId;
 }
+
+describe('createPhotoUpload: fotos pendientes', () => {
+  /** Fotos pending (URL emitida y sin confirmar) de esa vivienda. */
+  function seedPending(env: Setup, count: number, homeId = HOME): void {
+    for (let index = 0; index < count; index += 1) {
+      const id = `pending-${homeId}-${String(index)}`;
+      env.photos.photos.set(id, {
+        id,
+        homeId,
+        status: 'pending',
+        storagePath: `homes/${homeId}/${id}.webp`,
+        position: null,
+        createdAt: NOW,
+      });
+    }
+  }
+
+  it('Scenario: Demasiadas fotos pendientes - con 25 pendientes responde TooManyPendingPhotosError (409) y no crea la foto ni la URL', async () => {
+    const env = setup();
+    seedPending(env, 25);
+
+    const attempt = env.createPhotoUpload(OWNER, HOME, 'image/jpeg');
+
+    await expect(attempt).rejects.toBeInstanceOf(TooManyPendingPhotosError);
+    await expect(attempt).rejects.toMatchObject({
+      code: 'TOO_MANY_PENDING_PHOTOS',
+      kind: 'conflict',
+    });
+    expect(env.photos.photos.size).toBe(25);
+    expect(env.storage.uploadUrls).toEqual([]);
+  });
+
+  it('con 24 pendientes todavía admite una más', async () => {
+    const env = setup();
+    seedPending(env, 24);
+
+    await expect(env.createPhotoUpload(OWNER, HOME, 'image/jpeg')).resolves.toMatchObject({
+      photoId: 'photo-1',
+    });
+  });
+
+  it('solo cuentan las pendientes de esa vivienda: ni las ya procesadas ni las de otra', async () => {
+    const env = setup();
+    seedPending(env, 25, OTHER_HOME);
+    seedMany(env, 10);
+
+    await expect(env.createPhotoUpload(OWNER, HOME, 'image/jpeg')).resolves.toBeDefined();
+  });
+
+  it('confirmar una pendiente libera cupo', async () => {
+    const env = setup();
+    seedPending(env, 24);
+    const photoId = await uploaded(env, 'IMG:foto');
+    await expect(env.createPhotoUpload(OWNER, HOME, 'image/jpeg')).rejects.toBeInstanceOf(
+      TooManyPendingPhotosError,
+    );
+
+    await env.completePhotoUpload(OWNER, HOME, photoId);
+
+    await expect(env.createPhotoUpload(OWNER, HOME, 'image/jpeg')).resolves.toBeDefined();
+  });
+});
 
 describe('createPhotoUpload', () => {
   it('Scenario: Subir una foto - emite una URL firmada de 15 minutos con el tipo de contenido fijado y crea la foto pending', async () => {

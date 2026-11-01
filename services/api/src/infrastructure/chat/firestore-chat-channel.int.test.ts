@@ -114,6 +114,31 @@ describe.skipIf(!firestoreAvailable())(
       expect([foreign, system, noChats]).toEqual([null, null, null]);
     });
 
+    it('purgeMessages borra todos los mensajes del chat, conserva el chat y no toca los de otro', async () => {
+      const id = crypto.randomUUID();
+      const other = crypto.randomUUID();
+      await created.channel.createChat(chat(id));
+      await created.channel.createChat(chat(other));
+      for (let index = 0; index < 3; index += 1) {
+        await created.channel.appendMessage(id, {
+          id: `texto-${String(index)}`,
+          kind: 'text',
+          senderId: 'user-ana',
+          senderName: 'Ana',
+          text: 'Hola',
+          createdAt: AT,
+        });
+      }
+
+      await created.channel.purgeMessages(id);
+      await expect(created.channel.purgeMessages(id)).resolves.toBeUndefined();
+      await expect(created.channel.purgeMessages(crypto.randomUUID())).resolves.toBeUndefined();
+
+      expect(await messages(id)).toHaveLength(0);
+      expect((await firestore.collection('chats').doc(id).get()).exists).toBe(true);
+      expect(await messages(other)).toHaveLength(1);
+    });
+
     it('crearlo otra vez no hace nada: un solo chat, un solo mensaje de bienvenida y los mensajes se conservan', async () => {
       const id = crypto.randomUUID();
       await created.channel.createChat(chat(id));

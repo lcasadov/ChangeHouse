@@ -107,6 +107,18 @@ describe('upsertMe', () => {
     expect(repository.consents).toHaveLength(2);
   });
 
+  it('Scenario: Borrar el teléfono del perfil - phone null lo borra y omitirlo no lo toca', async () => {
+    const { repository, run } = setup();
+    await run({ ...signUpInput, phone: '+34600111222' });
+
+    const untouched = await run({ displayName: 'Ana' });
+    const cleared = await run({ displayName: 'Ana', phone: null });
+
+    expect(untouched.me.phone).toBe('+34600111222');
+    expect(cleared.me.phone).toBeNull();
+    expect(repository.users.get('id-1')?.phone).toBeNull();
+  });
+
   it('Scenario: Guardar cambios del perfil - un municipio en blanco lo borra y un alta sin municipio lo deja vacío', async () => {
     const { run } = setup();
     const created = await run({ ...signUpInput, municipality: '' });

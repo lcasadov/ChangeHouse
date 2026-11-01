@@ -101,7 +101,22 @@ export class DrizzleMatchRepository
   }
 
   async saveState(id: string, state: MatchState): Promise<void> {
-    await this.db.update(matches).set({ status: state.status }).where(eq(matches.id, id));
+    // El primer cierre fija `closed_at`: de ahí cuenta la retención del chat
+    await this.db
+      .update(matches)
+      .set(
+        state.status === 'closed'
+          ? { status: state.status, closedAt: sql`COALESCE(${matches.closedAt}, now())` }
+          : { status: state.status },
+      )
+      .where(eq(matches.id, id));
+    // Todo cierre retira la autorización del teléfono de todos, sea cual sea el camino que lo cierre
+    if (state.status === 'closed') {
+      await this.db
+        .update(matchParticipants)
+        .set({ sharesPhone: false })
+        .where(eq(matchParticipants.matchId, id));
+    }
     for (const participant of state.participants) {
       await this.db
         .update(matchParticipants)

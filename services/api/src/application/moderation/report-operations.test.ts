@@ -3,8 +3,11 @@ import { describe, expect, it } from 'vitest';
 import {
   InMemoryAuditLog,
   InMemoryBlockRepository,
+  InMemoryBlockUnitOfWork,
   InMemoryChatMessages,
   InMemoryHomeRepository,
+  InMemoryMatchReader,
+  InMemoryOutbox,
   InMemoryReportRepository,
   InMemoryUnitOfWork,
   InMemoryUserRepository,
@@ -13,6 +16,7 @@ import {
 import { type Home, newDraft } from '../../domain/home/home.js';
 import { ReportNotOpenError } from '../../domain/moderation/errors.js';
 import { openReport } from '../../domain/moderation/report.js';
+import type { MatchRecord } from '../matching/matching-repository.js';
 import { decodeCursor } from './cursor.js';
 import {
   CannotBlockSelfError,
@@ -44,19 +48,21 @@ function setup() {
   const blocks = new InMemoryBlockRepository();
   const chat = new InMemoryChatMessages();
   const audit = new InMemoryAuditLog();
+  const matches = new InMemoryMatchReader();
+  const outbox = new InMemoryOutbox();
   let sequence = 0;
   const operations = reportOperations({
     reports,
     units: new InMemoryUnitOfWork(homes, audit, reports),
     homes,
     users,
-    blocks,
+    blockUnits: new InMemoryBlockUnitOfWork(blocks, matches, audit, outbox),
     memberships: chat,
     messages: chat,
     clock: { now: () => NOW },
     ids: { next: () => `report-${String(++sequence)}` },
   });
-  return { homes, users, reports, blocks, chat, audit, ...operations };
+  return { homes, users, reports, blocks, chat, audit, matches, outbox, ...operations };
 }
 
 type Fixture = ReturnType<typeof setup>;
@@ -303,6 +309,110 @@ describe('blockUser', () => {
       await expect(fixture.blockUser(ANA, userId)).rejects.toBeInstanceOf(UserToBlockNotFoundError);
     }
     expect(fixture.blocks.blocks.size).toBe(0);
+  });
+});
+
+function matchOf(
+  id: string,
+  status: 'open' | 'confirmed' | 'closed',
+  users: readonly string[],
+): MatchRecord {
+  return {
+    id,
+    type: users.length === 3 ? 3 : 2,
+    status,
+    createdAt: NOW,
+    participants: users.map((userId, index) => ({
+      homeId: `${id}-home-${String(index)}`,
+      userId,
+      displayName: userId,
+      givesHomeId: `${id}-home-${String(index)}`,
+      receivesHomeId: `${id}-home-${String((index + 1) % users.length)}`,
+      compensationCents: 0,
+      status: 'pending' as const,
+    })),
+  };
+}
+
+describe('blockUser: cierre de los matches activos entre ambos', () => {
+  it('Scenario: El bloqueo cierra el match y su chat - los matches open y confirmed entre los dos pasan a closed', async () => {
+    const fixture = setup();
+    fixture.matches.records.push(
+      matchOf('m-open', 'open', [ANA, BETO]),
+      matchOf('m-confirmed', 'confirmed', [BETO, ANA]),
+    );
+
+    await fixture.blockUser(ANA, BETO);
+
+    expect(fixture.matches.records.map((record) => record.status)).toEqual(['closed', 'closed']);
+    expect(fixture.matches.records[0]?.participants.map((p) => p.status)).toEqual([
+      'withdrawn',
+      'pending',
+    ]);
+  });
+
+  it('no toca los matches ya cerrados ni los de quien bloquea con terceros', async () => {
+    const fixture = setup();
+    fixture.matches.records.push(
+      matchOf('m-closed', 'closed', [ANA, BETO]),
+      matchOf('m-tercero', 'open', [ANA, 'user-carla']),
+    );
+
+    await fixture.blockUser(ANA, BETO);
+
+    expect(fixture.matches.records.map((record) => record.status)).toEqual(['closed', 'open']);
+    expect(fixture.outbox.events).toEqual([]);
+    expect(fixture.audit.entries).toEqual([]);
+  });
+
+  it('Scenario: El bloqueo cierra el match - quien bloquea no recibe aviso: el hecho solo nombra a los demás', async () => {
+    const fixture = setup();
+    fixture.matches.records.push(matchOf('m-chain', 'open', [ANA, BETO, 'user-carla']));
+
+    await fixture.blockUser(ANA, BETO);
+
+    expect(fixture.outbox.events).toHaveLength(1);
+    expect(fixture.outbox.events[0]).toMatchObject({
+      type: 'match.closed',
+      aggregateId: 'm-chain',
+      payload: { recipients: `${BETO},user-carla` },
+    });
+  });
+
+  it('el cierre queda auditado a nombre de quien bloquea y retira las autorizaciones del teléfono', async () => {
+    const fixture = setup();
+    fixture.matches.records.push(matchOf('m-open', 'open', [ANA, BETO]));
+    fixture.matches.sharing.add(`m-open|${BETO}`);
+
+    await fixture.blockUser(ANA, BETO);
+
+    expect(fixture.audit.entries).toEqual([
+      { actorId: ANA, action: 'match.block_close', entity: 'match', entityId: 'm-open', at: NOW },
+    ]);
+    expect(fixture.matches.sharing.size).toBe(0);
+  });
+
+  it('si el cierre falla el bloqueo tampoco queda registrado', async () => {
+    const fixture = setup();
+    fixture.matches.records.push(matchOf('m-open', 'open', [ANA, BETO]));
+    fixture.audit.failWith = new Error('auditoría caída');
+
+    await expect(fixture.blockUser(ANA, BETO)).rejects.toThrow('auditoría caída');
+
+    expect(fixture.blocks.blocks.size).toBe(0);
+    expect(fixture.matches.records[0]?.status).toBe('open');
+    expect(fixture.outbox.events).toEqual([]);
+  });
+
+  it('bloquear de nuevo no repite el aviso ni la auditoría', async () => {
+    const fixture = setup();
+    fixture.matches.records.push(matchOf('m-open', 'open', [ANA, BETO]));
+
+    await fixture.blockUser(ANA, BETO);
+    await fixture.blockUser(ANA, BETO);
+
+    expect(fixture.outbox.events).toHaveLength(1);
+    expect(fixture.audit.entries).toHaveLength(1);
   });
 });
 

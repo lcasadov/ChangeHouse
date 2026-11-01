@@ -1,5 +1,5 @@
 import { themes } from '@changehouse/ui';
-import { act, fireEvent, screen } from '@testing-library/react-native';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { Linking } from 'react-native';
 
 import es from '../i18n/locales/es-ES.json';
@@ -46,8 +46,9 @@ describe('Pantalla de cuenta suspendida', () => {
     expect(screen.getByRole('button', { name: es.auth.signOut })).toBeTruthy();
     expect(screen.queryByRole('button', { name: es.tabs.explore })).toBeNull();
     expect(screen.queryByText(REASON)).toBeNull();
-    // Sin exportación de datos implementada en la API, la pantalla no la ofrece
-    expect(screen.queryByRole('button', { name: /descargar/i })).toBeNull();
+    // Lo único que puede hacer además de cerrar sesión: exportar sus datos y eliminar su cuenta
+    expect(screen.getByRole('button', { name: es.profile.export.action })).toBeTruthy();
+    expect(screen.getByRole('button', { name: es.profile.deleteAccount.action })).toBeTruthy();
     expect(backend.requests.map((request) => `${request.method} ${request.path}`)).toEqual([
       'GET /me',
     ]);
@@ -60,6 +61,39 @@ describe('Pantalla de cuenta suspendida', () => {
 
     expect(await screen.findByText(es.auth.welcome.title)).toBeTruthy();
     expect(auth.signOutCalls).toBe(1);
+  });
+
+  it('Scenario: Usuario suspendido elimina su cuenta - con la doble confirmación elimina la cuenta y cierra la sesión', async () => {
+    const { auth, backend } = await openApp();
+    const { deleteAccount } = es.profile;
+
+    await fireEvent.press(await screen.findByRole('button', { name: deleteAccount.action }));
+    expect(await screen.findByText(deleteAccount.explainTitle)).toBeTruthy();
+    expect(backend.requestsTo('DELETE', '/me')).toEqual([]);
+    await fireEvent.press(screen.getByRole('button', { name: deleteAccount.continue }));
+    await fireEvent.changeText(
+      await screen.findByLabelText(deleteAccount.confirmField),
+      deleteAccount.confirmWord,
+    );
+    await fireEvent.press(screen.getByRole('button', { name: deleteAccount.confirm }));
+
+    await waitFor(() => {
+      expect(backend.requestsTo('DELETE', '/me')).toHaveLength(1);
+    });
+    expect(backend.deleted).toBe(true);
+    expect(await screen.findByText(es.auth.welcome.title)).toBeTruthy();
+    expect(auth.signOutCalls).toBe(1);
+  });
+
+  it('Scenario: Usuario suspendido elimina su cuenta - si cancela en la confirmación no se elimina nada', async () => {
+    const { backend } = await openApp();
+    const { deleteAccount } = es.profile;
+
+    await fireEvent.press(await screen.findByRole('button', { name: deleteAccount.action }));
+    await fireEvent.press(await screen.findByRole('button', { name: deleteAccount.cancel }));
+
+    expect(backend.requestsTo('DELETE', '/me')).toEqual([]);
+    expect(screen.getByRole('header', { name: s.title })).toBeTruthy();
   });
 
   it('el enlace de contacto abre la política de privacidad, donde están los datos de contacto', async () => {

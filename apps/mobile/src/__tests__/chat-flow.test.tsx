@@ -542,6 +542,31 @@ describe('Imágenes', () => {
   });
 });
 
+describe('Límites de las imágenes del chat', () => {
+  it('Scenario: Demasiadas imágenes en una hora - la app explica que lo intente más tarde y deja reintentar', async () => {
+    const { chatApi, photoPicker } = await openChat();
+    photoPicker.choose(pickedPhoto('foto.jpg'));
+    chatApi.failNextUpload('rate-limited');
+
+    await fireEvent.press(await screen.findByRole('button', { name: c.composer.attach }));
+
+    expect(await screen.findByText(failedText(c.failure.rateLimited))).toBeTruthy();
+    expect(c.failure.rateLimited).toMatch(/más tarde/);
+    expect(button(c.status.retry)).toBeTruthy();
+  });
+
+  it('con el procesado de imágenes saturado (503) lo explica y deja reintentar', async () => {
+    const { chatApi, photoPicker } = await openChat();
+    photoPicker.choose(pickedPhoto('foto.jpg'));
+    chatApi.failNext('busy');
+
+    await fireEvent.press(await screen.findByRole('button', { name: c.composer.attach }));
+
+    expect(await screen.findByText(failedText(c.failure.busy))).toBeTruthy();
+    expect(button(c.status.retry)).toBeTruthy();
+  });
+});
+
 describe('Chat de un match cerrado', () => {
   const closedByBeto = { status: 'closed', theirStatus: 'withdrawn' } as const;
 

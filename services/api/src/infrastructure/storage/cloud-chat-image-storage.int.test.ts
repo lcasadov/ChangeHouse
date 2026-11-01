@@ -73,4 +73,21 @@ describe('CloudChatImageStorage contra fake-gcs-server', () => {
     const gone = await fetch(await storage.signedReadUrl(path, inMinutes(1)));
     expect(gone.ok).toBe(false);
   });
+
+  it('deleteMatchImages borra las imágenes procesadas y los originales de ese match y no las de otro', async () => {
+    const match = randomUUID();
+    const other = randomUUID();
+    await storage.store(`chat/${match}/a.webp`, Buffer.from('a'), 'image/webp');
+    await storage.store(`chat/${match}/b.webp`, Buffer.from('b'), 'image/webp');
+    await storage.store(`chat-uploads/${match}/user/up`, Buffer.from('u'), 'image/jpeg');
+    await storage.store(`chat/${other}/a.webp`, Buffer.from('o'), 'image/webp');
+
+    await storage.deleteMatchImages(match);
+    await expect(storage.deleteMatchImages(match)).resolves.toBeUndefined();
+
+    await expect(storage.exists(`chat/${match}/a.webp`)).resolves.toBe(false);
+    await expect(storage.exists(`chat/${match}/b.webp`)).resolves.toBe(false);
+    await expect(storage.exists(`chat-uploads/${match}/user/up`)).resolves.toBe(false);
+    await expect(storage.exists(`chat/${other}/a.webp`)).resolves.toBe(true);
+  });
 });

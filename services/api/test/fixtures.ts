@@ -26,6 +26,7 @@ export function testConfig(overrides: Partial<ApiConfig> = {}): ApiConfig {
     trustProxyHops: 0,
     waitlistRateLimit: { max: 1000, windowSeconds: 600 },
     likesPerDay: 10,
+    launchDate: undefined,
     firebase: {
       projectId: PROJECT_ID,
       authEmulatorHost: inject('authEmulatorHost') || undefined,

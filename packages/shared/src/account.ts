@@ -29,7 +29,8 @@ const phoneSchema = z.string().regex(E164);
 export const profileSchema = z.strictObject({
   displayName: displayNameSchema,
   municipality: municipalitySchema.optional(),
-  phone: phoneSchema.optional(),
+  // `null` borra el teléfono; omitirlo no lo toca
+  phone: phoneSchema.nullable().optional(),
   meetsVppRequirements: z.boolean().optional(),
   isOver65: z.boolean().optional(),
 });
@@ -49,7 +50,7 @@ const PHONE_SEPARATORS = /[\s-]/g;
 
 /**
  * Lo que escribe la persona en el formulario del perfil: cada texto llega como cadena (vacía si no
- * lo rellena) y se valida con las mismas reglas que la API. Un teléfono vacío es «no indicado».
+ * lo rellena) y se valida con las mismas reglas que la API. Un teléfono vacío es `null`, que borra el teléfono guardado.
  */
 export const profileFormSchema = z.object({
   displayName: displayNameSchema,
@@ -57,7 +58,7 @@ export const profileFormSchema = z.object({
   phone: z
     .string()
     .transform((value) => value.replace(PHONE_SEPARATORS, ''))
-    .pipe(z.union([z.literal('').transform(() => undefined), phoneSchema])),
+    .pipe(z.union([z.literal('').transform(() => null), phoneSchema])),
   meetsVppRequirements: z.boolean(),
   isOver65: z.boolean(),
 });

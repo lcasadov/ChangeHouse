@@ -304,6 +304,17 @@ describe('Consulta de la auditoría', () => {
     expect(screen.queryByRole('button', { name: /editar|eliminar|borrar|modificar/i })).toBeNull();
   });
 
+  it('una acción del sistema (sin autor, como la purga de retención) se muestra como «Sistema»', async () => {
+    await openPanel({
+      section: 'audit',
+      audit: [auditEntry({ actorId: null, action: 'retention.purge', entity: 'chat' })],
+    });
+
+    const [row] = await screen.findAllByTestId('data-row');
+    expect(within(row as never).getByText(au.systemActor)).toBeTruthy();
+    expect(within(row as never).getByText('retention.purge')).toBeTruthy();
+  });
+
   it('sin entradas lo dice', async () => {
     await openPanel({ section: 'audit' });
 

@@ -37,7 +37,8 @@ export function detailViewOf(
 ): MatchDetailView {
   const mine = detail.participants.find((participant) => ownHomeIds.has(participant.homeId));
   const active = ACTIVE.has(detail.status);
-  const decides = mine !== undefined && active;
+  // Quien se ha retirado no recibe datos de contacto ni puede compartir su teléfono
+  const decides = mine !== undefined && active && mine.status !== 'withdrawn';
   const others = detail.participants.filter((participant) => participant !== mine);
   const isChain = detail.type === 3 && detail.participants.length === 3;
   const cycle = isChain ? cycleOf(detail.participants, ownHomeIds) : [];
@@ -56,7 +57,7 @@ export function detailViewOf(
     hasConfirmed: mine?.status === 'confirmed',
     canWithdraw: decides,
     canSharePhone: decides,
-    showContact: active,
+    showContact: active && mine?.status !== 'withdrawn',
     homeOf: (homeId) => detail.homes.find((home) => home.id === homeId),
   };
 }

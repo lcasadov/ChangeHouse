@@ -48,7 +48,7 @@ export class DrizzleMatchHomes implements MatchHomeReader {
     return rows.map(({ exactLocation, approxLocation, areaName, municipality, ...home }) => ({
       ...home,
       location: {
-        exact: exactLocation,
+        exact: exactLocation ?? approxLocation,
         areaName,
         areaCenter: approxLocation,
         ...(municipality === null ? {} : { municipality }),
@@ -61,6 +61,10 @@ export class DrizzleMatchHomes implements MatchHomeReader {
       .select({ id: homes.id, exactAddress: homes.exactAddress })
       .from(homes)
       .where(inArray(homes.id, [...homeIds]));
-    return new Map(rows.map((row) => [row.id, this.cipher.decrypt(row.exactAddress)]));
+    return new Map(
+      rows.flatMap((row) =>
+        row.exactAddress === null ? [] : [[row.id, this.cipher.decrypt(row.exactAddress)] as const],
+      ),
+    );
   }
 }
