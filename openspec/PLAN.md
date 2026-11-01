@@ -37,13 +37,13 @@ personas; la zona generada la reescribe `plan-sync` en cada operación.
 
 | change | estado | % | completadas/total | fase |
 |---|---|---|---|---|
-| harden-security-before-launch | 🔄 EN PROGRESO | 76 % | 13/17 | 🔄 EN PROGRESO |
+| harden-security-before-launch | 🟢 COMPLETO — sin archivar | 100 % | 17/17 | 🟢 COMPLETO — sin archivar |
 
-**Progreso global de los changes activos**: 13/17 (76 %)
+**Progreso global de los changes activos**: 17/17 (100 %)
 
 | estado | changes |
 |---|---|
-| 🔄 EN PROGRESO | 1 |
+| 🟢 COMPLETO — sin archivar | 1 |
 | ✅ ARCHIVADO | 22 |
 
 ### Changes archivados
