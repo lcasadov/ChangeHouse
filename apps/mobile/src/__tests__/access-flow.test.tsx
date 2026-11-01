@@ -1,5 +1,5 @@
 import { themes } from '@changehouse/ui';
-import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react-native';
 
 import es from '../i18n/locales/es-ES.json';
 import { authUser, FakeAuthService, fakeSocialSignIn } from '../test-support/fake-auth-service';
@@ -465,7 +465,7 @@ describe.each(THEME_NAMES)('tema %s', (name) => {
     const auth = new FakeAuthService();
     await renderSessionApp({ auth, backend: new FakeBackend(), theme: name });
 
-    expect(styleOf(await screen.findByText(welcome.title)).color).toBe(color.text);
+    expect(styleOf(await screen.findByText(welcome.title)).color).toBe(color.textOnPhoto);
     expect(styleOf(button(welcome.signUp)).backgroundColor).toBe(color.primary);
 
     await openAccess(welcome.signUp);
@@ -475,5 +475,53 @@ describe.each(THEME_NAMES)('tema %s', (name) => {
     await fillCredentials('1234567@example.com', 'corta');
     await fireEvent.press(button(access.signUpSubmit));
     expect(styleOf(await screen.findByText(errors.passwordTooShort)).color).toBe(color.danger);
+  });
+});
+
+describe('Fotografía de ambiente en la bienvenida y el acceso', () => {
+  it.each(THEME_NAMES)(
+    'Scenario: Bienvenida con fotografía - foto a pantalla completa, titular y acciones en el tema %s',
+    async (theme) => {
+      await renderSessionApp({ auth: new FakeAuthService(), backend: new FakeBackend(), theme });
+
+      expect(await screen.findByRole('header', { name: welcome.title })).toBeTruthy();
+      expect(screen.getByTestId('ambient-backdrop', { includeHiddenElements: true })).toBeTruthy();
+      expect(styleOf(screen.getByText(welcome.title)).color).toBe(themes[theme].color.textOnPhoto);
+      expect(button(welcome.signUp)).toBeTruthy();
+      expect(button(welcome.signIn)).toBeTruthy();
+    },
+  );
+
+  it('el acceso y la recuperación de la contraseña muestran la fotografía de ambiente', async () => {
+    await renderSessionApp({ auth: new FakeAuthService(), backend: new FakeBackend() });
+
+    const photos = () => screen.getAllByTestId('auth-photo', { includeHiddenElements: true });
+    await openAccess(welcome.signIn);
+    expect(photos()).toHaveLength(1);
+
+    // El acceso sigue montado debajo en la pila: la recuperación añade su propia foto
+    await fireEvent.press(screen.getByRole('link', { name: access.forgotPassword }));
+    expect(await screen.findByRole('header', { name: forgot.title })).toBeTruthy();
+    expect(photos()).toHaveLength(2);
+  });
+});
+
+describe('Aviso de verificación compacto', () => {
+  it('Scenario: Aviso con las dos acciones - una franja con el mensaje y las dos acciones en fila', async () => {
+    const auth = new FakeAuthService({
+      initialUser: authUser({ emailVerified: false, hasPassword: true }),
+    });
+    await renderSessionApp({ auth, backend: new FakeBackend({ registered: true }) });
+
+    const banner = within(await screen.findByTestId('verify-email-banner'));
+    expect(banner.getByText(verify.banner)).toBeTruthy();
+    expect(banner.getByRole('button', { name: verify.resend })).toBeTruthy();
+    expect(banner.getByRole('button', { name: verify.refresh })).toBeTruthy();
+    expect(styleOf(screen.getByTestId('verify-email-actions')).flexDirection).toBe('row');
+
+    // El resultado se muestra en el mismo aviso, sin perder el mensaje
+    await fireEvent.press(banner.getByRole('button', { name: verify.resend }));
+    expect(await banner.findByText(verify.resent)).toBeTruthy();
+    expect(banner.getByText(verify.banner)).toBeTruthy();
   });
 });

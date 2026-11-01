@@ -87,6 +87,7 @@ ilustraciones y elementos no textuales grandes.
 | `color.compensationEven` | Píldora «Cambio justo» | `#1D4ED8` | `#3B82F6` | 6,7:1 · 4,8:1 |
 | `color.matchGradientStart` / `matchGradientEnd` | Degradado de los momentos de match (no textual) | `#E8505B` → `#F472B6` | `#E8505B` → `#F472B6` | no textual |
 | `color.photoScrimStart` / `photoScrimEnd` | Degradado inferior sobre fotos para texto blanco | `rgba(0,0,0,0)` → `rgba(0,0,0,0.72)` | ídem | texto blanco ≥ 4,5:1 sobre el tramo final |
+| `color.photoVeil` | Velo uniforme sobre fotografía o vídeo de fondo (héroe de la landing, bienvenida de la app) | `rgba(12,16,28,0.58)` | ídem | texto blanco ≥ 4,5:1 aun sobre un píxel blanco (4,6:1) |
 | `color.overlay` | Velo de diálogos | `rgba(18,24,38,0.5)` | `rgba(0,0,0,0.6)` | — |
 
 Contrastes calculados con la fórmula de WCAG 2.2 sobre `color.bg` del tema

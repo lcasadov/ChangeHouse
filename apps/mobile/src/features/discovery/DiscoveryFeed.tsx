@@ -1,7 +1,7 @@
 import { contentMaxWidth, useTheme } from '@changehouse/ui';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { Notice } from '../../ui';
 import { useAuth } from '../auth/AuthProvider';
@@ -9,6 +9,7 @@ import { useMyHomes } from '../homes/use-homes';
 import { CardDeck } from './CardDeck';
 import { useDecidedIds } from './decided-cards';
 import { DiscoveryApiError } from './discovery-api';
+import { feedMinHeight } from './feed-height';
 import { uniqueCards, withoutDecided } from './feed-model';
 import { FeedPlaceholder } from './FeedPlaceholder';
 import { HomeSelector } from './HomeSelector';
@@ -39,6 +40,7 @@ export function DiscoveryFeed({
 }: Readonly<DiscoveryFeedProps>) {
   const { t } = useTranslation();
   const theme = useTheme();
+  const { height } = useWindowDimensions();
   const homes = useMyHomes();
   const { user } = useAuth();
   const published = useMemo(
@@ -130,7 +132,7 @@ export function DiscoveryFeed({
     <View
       style={[
         styles.root,
-        { gap: theme.space[3], minHeight: theme.space[8] * 6, maxWidth: contentMaxWidth.card },
+        { gap: theme.space[3], minHeight: feedMinHeight(height), maxWidth: contentMaxWidth.card },
       ]}
     >
       {homes.isSuccess && published.length === 0 ? <SeekerNotice /> : null}

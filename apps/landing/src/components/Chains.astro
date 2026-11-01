@@ -5,7 +5,16 @@ import SwapIllustration from './SwapIllustration.astro';
 const { chains } = es;
 ---
 
-<section id="cadenas" class="section" aria-labelledby="chains-title">
+<section id="cadenas" class="section photo-section" aria-labelledby="chains-title">
+  <img
+    class="section-photo"
+    src="/media/cadenas.jpg"
+    alt=""
+    width="1920"
+    height="1080"
+    loading="lazy"
+    decoding="async"
+  />
   <div class="container">
     <div class="card">
       <div class="copy">
@@ -32,8 +41,13 @@ const { chains } = es;
     align-items: center;
     padding: var(--space-6) var(--space-5);
     border-radius: calc(var(--radius-lg) * 2);
-    background: var(--color-surface-muted);
     overflow: hidden;
+  }
+
+  .card h2,
+  .lead,
+  .text {
+    color: var(--color-text-on-photo);
   }
 
   /* Momento destacado: franja del degradado de marca sobre la tarjeta */
@@ -55,17 +69,15 @@ const { chains } = es;
   }
 
   .lead {
-    color: var(--color-text);
     font-size: var(--font-title-size);
     font-weight: var(--font-title-weight);
     line-height: var(--font-title-line-height);
   }
 
-  .text {
-    color: var(--color-text-muted);
-  }
-
   .art {
+    padding: var(--space-5);
+    border-radius: calc(var(--radius-lg) * 1.5);
+    background: var(--color-surface);
     max-width: var(--content-max-card);
     margin-inline: auto;
     width: 100%;

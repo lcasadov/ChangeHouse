@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
 
-import { EmptyState, Notice, Screen, Text } from '../../ui';
+import { AMBIENT, EmptyState, Notice, Screen, Text } from '../../ui';
 import { useMyHomes } from '../homes/use-homes';
 import { LoadingView } from '../session/LoadingView';
 import { matchRoutes } from './match-routes';
@@ -73,6 +73,7 @@ export function MatchesScreen() {
         <View testID="matches-empty" style={styles.fill}>
           <EmptyState
             icon="heart-outline"
+            image={AMBIENT.emptyMatches}
             title={t('matches.empty.title')}
             description={t('matches.empty.description')}
             action={{

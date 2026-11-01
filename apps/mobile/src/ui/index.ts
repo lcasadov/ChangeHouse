@@ -1,3 +1,6 @@
+export { AMBIENT } from './ambient';
+export type { AmbientBackdropProps } from './AmbientBackdrop';
+export { AmbientBackdrop } from './AmbientBackdrop';
 export type { BackButtonProps } from './BackButton';
 export { BackButton } from './BackButton';
 export type { BadgeProps, BadgeTone } from './Badge';
@@ -20,7 +23,7 @@ export { FieldError } from './FieldError';
 export { FormScreen } from './FormScreen';
 export type { LinkProps } from './Link';
 export { Link } from './Link';
-export type { NoticeProps, NoticeTone } from './Notice';
+export type { NoticeAction, NoticeProps, NoticeTone } from './Notice';
 export { Notice } from './Notice';
 export type { ProgressBarProps } from './ProgressBar';
 export { ProgressBar } from './ProgressBar';

@@ -9,7 +9,14 @@ import { Screen } from './Screen';
  * contenido no cabe (texto grande, pantallas pequeñas). El toque fuera de un campo no pierde el foco
  * de los botones (`keyboardShouldPersistTaps`).
  */
-export function FormScreen({ children }: Readonly<{ children: ReactNode }>) {
+export function FormScreen({
+  children,
+  header,
+}: Readonly<{
+  children: ReactNode;
+  /** Contenido decorativo antes del formulario (la foto del acceso), dentro del desplazamiento. */
+  header?: ReactNode;
+}>) {
   const theme = useTheme();
   return (
     <Screen>
@@ -21,6 +28,7 @@ export function FormScreen({ children }: Readonly<{ children: ReactNode }>) {
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={{ gap: theme.space[4], paddingVertical: theme.space[5] }}
         >
+          {header}
           {children}
         </ScrollView>
       </KeyboardAvoidingView>

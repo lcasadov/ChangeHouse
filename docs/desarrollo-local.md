@@ -43,8 +43,14 @@ pnpm seed:demo
 ```
 
 Crea, a través de la API real, siete personas con su vivienda publicada. Cada
-vivienda lleva 4 fotos que pasan por la subida y el procesado reales. Se puede
-repetir sin duplicar nada. La contraseña de todas las cuentas es `demo-1234`.
+vivienda lleva 4 fotos que pasan por la subida y el procesado reales: la fachada
+(según el tipo de vivienda), el salón, la cocina y el dormitorio, con la paleta y
+la hora del día propias de cada persona. Se puede repetir sin duplicar nada. La
+contraseña de todas las cuentas es `demo-1234`.
+
+Si tus casas de prueba se crearon antes del 1 de noviembre de 2026, tienen los
+dibujos antiguos. Para ver las fotos nuevas, vuelve al estado inicial (al final
+de «Pruebas manuales») y repite la semilla.
 
 | Cuenta | Vivienda | Valor | ¿Te ha dado «me gusta»? |
 |---|---|---|---|
@@ -120,6 +126,21 @@ Para volver al estado inicial:
 2. Ejecuta `docker compose down -v` y borra `.emulator-data/`.
 3. Ejecuta `pnpm infra:up` y `pnpm db:migrate`.
 4. Arranca los emuladores y ejecuta `pnpm seed:demo`.
+
+### Imágenes y vídeo de prueba
+
+Las fotos de las casas de prueba, las imágenes de ambiente de la app
+(`apps/mobile/assets/ambient/`) y las de la landing, con el vídeo de fondo del
+héroe (`apps/landing/public/media/`), salen de un mismo generador
+(`scripts/media/`). Son escenas dibujadas por código: deterministas y sin
+licencias de terceros.
+
+Están versionadas; solo hace falta regenerarlas al cambiar una escena:
+
+```bash
+pnpm media:generate             # imágenes y vídeo (graba el vídeo con el Chromium de Playwright)
+pnpm media:generate --sin-video # solo las imágenes
+```
 
 ### Hacerte admin
 

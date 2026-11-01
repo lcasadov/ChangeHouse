@@ -10,7 +10,8 @@ import { es } from '../i18n/es';
 import BaseLayout from '../layouts/BaseLayout.astro';
 ---
 
-<BaseLayout title={es.hero.title}>
+<BaseLayout title={es.hero.title} overlayHeader>
+  <link slot="head" rel="preload" as="image" href="/media/hero-poster.jpg" />
   <main id="contenido">
     <Hero />
     <HowItWorks />

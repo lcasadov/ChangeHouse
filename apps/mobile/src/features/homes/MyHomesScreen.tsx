@@ -1,9 +1,9 @@
 import { useTheme } from '@changehouse/ui';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { FlatList, View } from 'react-native';
+import { FlatList, StyleSheet, View } from 'react-native';
 
-import { Button, EmptyState, Notice, Screen, Text } from '../../ui';
+import { AMBIENT, Button, EmptyState, Notice, Screen, Text } from '../../ui';
 import { LoadingView } from '../session/LoadingView';
 import { homeRoutes } from './home-routes';
 import { primaryActionOf } from './home-status';
@@ -45,17 +45,20 @@ export function MyHomesScreen() {
   if (homes.data.length === 0) {
     return (
       <Screen>
-        <EmptyState
-          icon="home-outline"
-          title={t('homes.empty.title')}
-          description={t('homes.empty.description')}
-          action={{
-            label: t('homes.empty.action'),
-            onPress: () => {
-              router.push(homeRoutes.create);
-            },
-          }}
-        />
+        <View testID="homes-empty" style={styles.fill}>
+          <EmptyState
+            icon="home-outline"
+            image={AMBIENT.emptyHomes}
+            title={t('homes.empty.title')}
+            description={t('homes.empty.description')}
+            action={{
+              label: t('homes.empty.action'),
+              onPress: () => {
+                router.push(homeRoutes.create);
+              },
+            }}
+          />
+        </View>
       </Screen>
     );
   }
@@ -100,3 +103,5 @@ export function MyHomesScreen() {
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({ fill: { flex: 1 } });

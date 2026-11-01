@@ -495,3 +495,14 @@ describe('Match en cadena', () => {
     expect(screen.getByText(mt.kind.chain)).toBeTruthy();
   });
 });
+
+describe('Estados vacíos con imagen', () => {
+  it('Scenario: Sin matches - la imagen de ambiente, el motivo y la acción para seguir explorando', async () => {
+    await setup({ url: '/matches' });
+
+    expect(await screen.findByRole('header', { name: mt.empty.title })).toBeTruthy();
+    const empty = within(screen.getByTestId('matches-empty'));
+    expect(empty.getByTestId('empty-state-image', { includeHiddenElements: true })).toBeTruthy();
+    expect(empty.getByRole('button', { name: mt.empty.action })).toBeTruthy();
+  });
+});

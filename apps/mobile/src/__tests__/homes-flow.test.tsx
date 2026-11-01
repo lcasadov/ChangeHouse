@@ -1,6 +1,6 @@
 import { FIXTURE_PLACES } from '@changehouse/shared';
 import { themes } from '@changehouse/ui';
-import { fireEvent, screen } from '@testing-library/react-native';
+import { fireEvent, screen, within } from '@testing-library/react-native';
 
 import type { AddressSuggestions } from '../features/homes/address-suggestions';
 import type { Home } from '../features/homes/homes-api';
@@ -958,5 +958,15 @@ describe.each(THEME_NAMES)('tema %s', (name) => {
       color.text,
     );
     expect(styleOf(screen.getByTestId('progress-fill')).backgroundColor).toBe(color.primary);
+  });
+});
+
+describe('Estados vacíos con imagen', () => {
+  it('sin viviendas, el estado vacío lleva su imagen de ambiente', async () => {
+    await openHomes();
+
+    expect(await screen.findByRole('header', { name: h.empty.title })).toBeTruthy();
+    const empty = within(screen.getByTestId('homes-empty'));
+    expect(empty.getByTestId('empty-state-image', { includeHiddenElements: true })).toBeTruthy();
   });
 });

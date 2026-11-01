@@ -2,6 +2,7 @@ import { themes } from '@changehouse/ui';
 import { fireEvent, screen } from '@testing-library/react-native';
 
 import { renderThemed, styleOf, THEME_NAMES } from '../test-utils';
+import { AMBIENT } from './ambient';
 import { EmptyState } from './EmptyState';
 
 describe('EmptyState', () => {
@@ -61,4 +62,25 @@ describe('EmptyState', () => {
     expect(styleOf(screen.getByText('Título')).color).toBe(themes[name].color.text);
     expect(styleOf(screen.getByText('Descripción')).color).toBe(themes[name].color.textMuted);
   });
+});
+
+describe('EmptyState con imagen', () => {
+  it.each(THEME_NAMES)(
+    'muestra la imagen de ambiente decorativa en lugar del icono en el tema %s',
+    async (theme) => {
+      await renderThemed(
+        <EmptyState
+          icon="home-outline"
+          image={AMBIENT.emptyHomes}
+          title="Sin casas"
+          description="Publica la primera"
+        />,
+        theme,
+      );
+
+      const image = screen.getByTestId('empty-state-image', { includeHiddenElements: true });
+      expect(image.props.accessibilityElementsHidden).toBe(true);
+      expect(screen.getByRole('header', { name: 'Sin casas' })).toBeTruthy();
+    },
+  );
 });

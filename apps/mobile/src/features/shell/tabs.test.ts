@@ -1,4 +1,6 @@
-import { hiddenTabRoute, navigationLayoutFor, TABS, tabsFor } from './tabs';
+import { themes } from '@changehouse/ui';
+
+import { hiddenTabRoute, navigationLayoutFor, tabBarColors, TABS, tabsFor } from './tabs';
 
 describe('TABS', () => {
   it('define las cuatro secciones en el orden de la guía', () => {
@@ -38,4 +40,19 @@ describe('tabsFor', () => {
     ]);
     expect(hiddenTabRoute(true)).toBe('homes');
   });
+});
+
+describe('tabBarColors', () => {
+  it.each(['light', 'dark'] as const)(
+    'Scenario: Sección activa en la barra lateral - fondo suave y texto de acción en %s',
+    (name) => {
+      const { color } = themes[name];
+      expect(tabBarColors(themes[name])).toEqual({
+        activeTint: color.primary,
+        inactiveTint: color.textMuted,
+        activeBackground: color.surfaceMuted,
+        inactiveBackground: 'transparent',
+      });
+    },
+  );
 });

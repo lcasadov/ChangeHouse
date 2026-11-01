@@ -87,3 +87,18 @@ describe('Button', () => {
     });
   });
 });
+
+describe('Button sobre fotografía', () => {
+  it.each(THEME_NAMES)(
+    'la variante onPhoto es blanca y transparente sobre el velo en el tema %s',
+    async (theme) => {
+      await renderThemed(<Button variant="onPhoto" label="Entrar" onPress={jest.fn()} />, theme);
+      const { color } = themes[theme];
+
+      const button = styleOf(screen.getByRole('button', { name: 'Entrar' }));
+      expect(button.backgroundColor).toBe('transparent');
+      expect(button.borderColor).toBe(color.textOnPhoto);
+      expect(styleOf(screen.getByText('Entrar')).color).toBe(color.textOnPhoto);
+    },
+  );
+});

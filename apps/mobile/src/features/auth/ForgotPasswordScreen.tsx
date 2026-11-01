@@ -2,10 +2,11 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Button, FormScreen, Notice, Text, TextField } from '../../ui';
+import { Button, Notice, Text, TextField } from '../../ui';
 import { useServices } from '../session/services';
 import { type EmailProblem, validateEmail } from './access-validation';
 import { AuthError } from './auth-service';
+import { AuthLayout } from './AuthLayout';
 
 /**
  * Recuperación de la contraseña. La confirmación es siempre la misma, exista o no la cuenta: la
@@ -41,7 +42,7 @@ export function ForgotPasswordScreen() {
   };
 
   return (
-    <FormScreen>
+    <AuthLayout>
       <Text variant="title" accessibilityRole="header">
         {t('auth.forgot.title')}
       </Text>
@@ -78,6 +79,6 @@ export function ForgotPasswordScreen() {
           router.back();
         }}
       />
-    </FormScreen>
+    </AuthLayout>
   );
 }

@@ -24,6 +24,7 @@
     "db:migrate": "pnpm --filter @changehouse/api db:migrate",
     "lan:env": "node scripts/lan-env.mjs",
     "admin:grant": "pnpm --filter @changehouse/api admin:grant",
+    "media:generate": "node scripts/media/generate.mjs",
     "seed:demo": "node scripts/seed-demo.mjs"
   },
   "devDependencies": {

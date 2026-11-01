@@ -52,6 +52,12 @@ export const es = {
       'ChangeHouse te pone en contacto con quien quiere tu casa y tiene la que tú buscas, para cambiarlas directamente, sin agencias y sin esperar a vender.',
     cta: 'Apúntate a la lista de espera',
     secondary: 'Cómo funciona',
+    video: {
+      play: 'Reproducir el vídeo de fondo',
+      pause: 'Pausar el vídeo de fondo',
+      playing: 'Vídeo de fondo en reproducción',
+      paused: 'Vídeo de fondo en pausa',
+    },
   },
   howItWorks: {
     title: 'Cómo funciona',
@@ -61,14 +67,20 @@ export const es = {
       {
         title: 'Publica tu casa',
         text: 'Sube las fotos, cuéntanos cómo es y dinos dónde te gustaría vivir. Tu casa es tu escaparate.',
+        photo: '/media/paso-publicar.jpg',
+        photoAlt: 'Fachada de un edificio clásico con balcones de forja y macetas',
       },
       {
         title: 'Marca las que te gustan',
         text: 'Descubre viviendas y marca con un corazón las que te encantaría tener. Cuando a su dueño le guste la tuya, hay match.',
+        photo: '/media/paso-me-gusta.jpg',
+        photoAlt: 'Salón luminoso con sofá verde, ventanal y plantas',
       },
       {
         title: 'Cierra el cambio con una gestoría',
         text: 'Una gestoría asociada tramita el cambio hasta la notaría y las dos partes firmáis el mismo día.',
+        photo: '/media/paso-cambio.jpg',
+        photoAlt: 'Terraza de un ático al atardecer con tumbonas y vistas a los tejados',
       },
     ],
   },
