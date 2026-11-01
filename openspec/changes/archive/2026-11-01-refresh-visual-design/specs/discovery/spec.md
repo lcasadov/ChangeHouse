@@ -2,13 +2,11 @@
 
 ### Requirement: Tarjetas a pantalla completa
 
-«Explorar» SHALL presentar las viviendas como tarjetas con carrusel de fotos y
-SHALL mostrar sobre un degradado legible la píldora de compensación, la
-superficie, los dormitorios, los baños y la zona. Cada tarjeta SHALL caber
-entera en el área visible, sin desplazar la página, junto a la búsqueda y a los
-filtros, que van en una sola fila desplazable en horizontal. SHALL abrir el
-detalle al tocar la tarjeta y, si el usuario tiene varias viviendas propias
-publicadas, SHALL permitir elegir desde cuál busca.
+«Explorar» SHALL presentar las viviendas como tarjetas con carrusel de fotos y,
+sobre un degradado legible, la compensación, la superficie, los dormitorios, los
+baños y la zona. La tarjeta SHALL caber entera en el área visible junto a la
+búsqueda y a los filtros, que van en una fila desplazable. SHALL abrir el
+detalle al tocarla y permitir elegir desde qué vivienda propia se busca.
 
 #### Scenario: Tarjeta entera en pantalla
 - **GIVEN** una ventana de 390 × 844 o de 1280 × 720 con tarjetas disponibles

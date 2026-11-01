@@ -37,14 +37,13 @@ personas; la zona generada la reescribe `plan-sync` en cada operación.
 
 | change | estado | % | completadas/total | fase |
 |---|---|---|---|---|
-| refresh-visual-design | 🟢 COMPLETO — sin archivar | 100 % | 13/13 | 🟢 COMPLETO — sin archivar |
 
-**Progreso global de los changes activos**: 13/13 (100 %)
+
+**Progreso global de los changes activos**: 0/0 (0 %)
 
 | estado | changes |
 |---|---|
-| 🟢 COMPLETO — sin archivar | 1 |
-| ✅ ARCHIVADO | 23 |
+| ✅ ARCHIVADO | 24 |
 
 ### Changes archivados
 
@@ -73,5 +72,6 @@ personas; la zona generada la reescribe `plan-sync` en cada operación.
 | 2026-10-31-add-reports-and-blocking | 6/6 | 2026-10-31 |
 | 2026-10-31-add-user-suspension | 5/5 | 2026-10-31 |
 | 2026-11-01-harden-security-before-launch | 17/17 | 2026-11-01 |
+| 2026-11-01-refresh-visual-design | 13/13 | 2026-11-01 |
 
 <!-- catalogo:generado:fin -->
