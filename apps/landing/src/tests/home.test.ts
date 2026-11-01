@@ -107,3 +107,42 @@ describe('Presentación de la propuesta de valor', () => {
     ).toEqual([]);
   });
 });
+
+describe('Presentación de la propuesta de valor — fondo fotográfico', () => {
+  it('Scenario: Primera pantalla — el héroe lleva el vídeo con su imagen fija, el velo y el control de pausa', () => {
+    const hero = doc.querySelector('#inicio');
+    expect(hero?.querySelector('video#hero-video')).not.toBeNull();
+    expect(hero?.querySelector('.hero-veil')?.getAttribute('aria-hidden')).toBe('true');
+    const toggle = hero?.querySelector('button#hero-video-toggle');
+    expect(toggle?.getAttribute('type')).toBe('button');
+    expect(toggle?.getAttribute('aria-label')).toBe(es.hero.video.play);
+    expect(hero?.querySelector('#hero-video-status')?.getAttribute('aria-live')).toBe('polite');
+  });
+
+  it('Scenario: Texto legible sobre el fondo — la cabecera de la portada va superpuesta al héroe', () => {
+    expect(doc.querySelector('.site-header')?.classList.contains('overlay')).toBe(true);
+  });
+});
+
+describe('Secciones con fotografía', () => {
+  it('Scenario: Pasos con foto — cada paso tiene su foto con texto alternativo y carga diferida', () => {
+    const photos = [...doc.querySelectorAll('#como-funciona ol > li img')];
+    expect(photos).toHaveLength(3);
+    for (const [index, photo] of photos.entries()) {
+      expect(photo.getAttribute('alt')).toBe(es.howItWorks.steps[index]?.photoAlt);
+      expect(photo.getAttribute('alt')?.length).toBeGreaterThan(10);
+      expect(photo.getAttribute('loading')).toBe('lazy');
+      expect(photo.getAttribute('width')).toBeTruthy();
+      expect(photo.getAttribute('height')).toBeTruthy();
+    }
+  });
+
+  it('Scenario: Imágenes que no bloquean la carga — las fotos de fondo de las secciones son decorativas y diferidas', () => {
+    for (const id of ['cadenas', 'lista-de-espera']) {
+      const photo = doc.querySelector(`#${id} img.section-photo`);
+      expect(photo, id).not.toBeNull();
+      expect(photo?.getAttribute('alt'), id).toBe('');
+      expect(photo?.getAttribute('loading'), id).toBe('lazy');
+    }
+  });
+});

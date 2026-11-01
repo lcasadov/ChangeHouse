@@ -64,9 +64,11 @@ imágenes de prueba. En el equipo hay sharp; no hay ffmpeg instalado.
     función pura `shouldAutoplay({ reducedMotion, saveData })`. Si se reproduce,
     llama a `play()`; si no, deja la imagen fija.
   - *Sin JavaScript* solo se ve la imagen fija, que es el caso seguro.
-  - *Control:* un `<button aria-pressed>` en la esquina, «Pausar el vídeo de
-    fondo» / «Reproducir el vídeo de fondo», de al menos 44 px y siempre visible
-    (WCAG 2.2.2).
+  - *Control:* un `<button>` en la esquina, de al menos 44 px y siempre visible
+    (WCAG 2.2.2). Su nombre accesible cambia entre «Pausar el vídeo de fondo» y
+    «Reproducir el vídeo de fondo»; no usa `aria-pressed`, que junto a un nombre
+    cambiante anunciaría el estado dos veces. Cada cambio se anuncia en una región
+    `aria-live` oculta.
   - *Mensajes:* los textos están en `i18n/es.ts`.
   - *Fallo:* si `play()` falla (política del navegador), se queda la imagen fija
     y el control ofrece reproducir.
@@ -81,18 +83,18 @@ imágenes de prueba. En el equipo hay sharp; no hay ffmpeg instalado.
 - **Cabecera superpuesta**:
   - `Header` admite `overlay`; la página principal lo usa.
   - Sobre el héroe es transparente, con texto `textOnPhoto`.
-  - Al desplazarse pasa a la superficie del tema, con una clase que añade un
-    `IntersectionObserver` sobre el héroe. Sin JavaScript se queda sobre el velo
-    y sigue siendo legible.
+  - No es fija: se desplaza con el héroe, así que siempre está sobre el velo y no
+    necesita cambiar de aspecto con JavaScript.
 - **Secciones con fotografía**:
   - Las fotos de «Cómo funciona» son `<img loading="lazy" decoding="async">` con
     `alt`.
   - «Cadenas de tres» y la lista de espera usan un `<img>` decorativo (`alt=""`)
     posicionado detrás del contenido, en lugar de `background-image`, para poder
     usar la carga diferida.
-  - El formulario de la lista de espera va sobre `color.surface` con un 94 % de
-    opacidad y `backdrop-filter` (tarjeta translúcida), para que el contraste del
-    formulario no dependa de la foto.
+  - El formulario de la lista de espera va sobre una tarjeta opaca de
+    `color.surface` con `elevation.3`, para que el contraste del formulario no
+    dependa de la foto. «Cadenas de tres» pone el texto en `textOnPhoto` sobre el
+    velo y la ilustración en una tarjeta opaca.
 - **App, fotografía de ambiente**:
   - **`AmbientBackdrop`** (en `src/ui`) apila de 1 a 3 imágenes de `expo-image`
     con un fundido cruzado cada 7 s y un zoom de 1 → 1,08, ambos con
@@ -102,8 +104,11 @@ imágenes de prueba. En el equipo hay sharp; no hay ffmpeg instalado.
     `importantForAccessibility="no-hide-descendants"`.
   - **Bienvenida:** `AmbientBackdrop` a pantalla completa, con el texto en
     `textOnPhoto`.
-  - **Variante de botón `onPhoto`**: fondo `textOnPhoto` y texto `secondary`, de
-    14,3:1; el secundario es `ghost` con texto `textOnPhoto`.
+  - **Variante de botón `onPhoto`**: borde y texto `textOnPhoto`, fondo
+    transparente sobre el velo (el mismo 4,6:1 del texto). La acción principal
+    sigue en `primary`, que mantiene su contraste en los dos temas; un fondo
+    blanco con texto `secondary` no valdría en oscuro, donde `secondary` es
+    claro.
   - **`AuthLayout`**, para acceso y recuperar contraseña:
     - en `compact` y `medium`, una franja superior de 180 px con la foto y el
       título encima;
@@ -145,8 +150,8 @@ imágenes de prueba. En el equipo hay sharp; no hay ffmpeg instalado.
   lanzamiento se pueden sustituir por fotos reales con el mismo nombre de fichero.
 - **Binarios en el repositorio:** unos 7 MB en total, aceptable. Se regeneran con
   un comando documentado.
-- **`backdrop-filter`:** donde no se admite, la tarjeta queda con su color al
-  94 %, que sigue siendo legible.
+- **Velo uniforme:** oscurece la foto entera. Es el precio de garantizar el
+  contraste en cualquier fotograma sin depender de dónde cae el texto.
 
 ## Migration Plan
 

@@ -12,7 +12,20 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8080/v1';
 const [consentBefore = '', consentAfter = ''] = fields.consent.label.split(fields.consent.linkText);
 ---
 
-<section id="lista-de-espera" class="section waitlist" aria-labelledby="waitlist-title">
+<section
+  id="lista-de-espera"
+  class="section waitlist photo-section"
+  aria-labelledby="waitlist-title"
+>
+  <img
+    class="section-photo"
+    src="/media/lista-espera.jpg"
+    alt=""
+    width="1920"
+    height="1080"
+    loading="lazy"
+    decoding="async"
+  />
   <div class="container">
     <div class="card">
       <h2 id="waitlist-title" class="section-title" tabindex="-1">
@@ -114,10 +127,21 @@ const [consentBefore = '', consentAfter = ''] = fields.consent.label.split(field
 </script>
 
 <style>
+  /* Superficie opaca del tema sobre la foto: el contraste del formulario no depende de la imagen */
   .card {
+    max-width: calc(var(--content-max-reading) + var(--space-8) * 2);
+    margin-inline: auto;
     padding: var(--space-7) var(--space-5);
-    border: var(--border-thick) solid var(--color-brand);
+    border-top: var(--space-2) solid var(--color-brand);
     border-radius: calc(var(--radius-lg) * 2);
+    background: var(--color-surface);
+    box-shadow: var(--elevation-3-shadow);
+  }
+
+  @media (min-width: 600px) {
+    .card {
+      padding: var(--space-8) var(--space-7);
+    }
   }
 
   .form {

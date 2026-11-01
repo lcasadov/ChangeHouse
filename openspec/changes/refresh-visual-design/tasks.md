@@ -18,11 +18,11 @@
 
 ## 3. Landing
 
-- [ ] T3 Escribir las pruebas unitarias de `hero-video.ts` (reproducir por defecto; imagen fija con movimiento reducido o ahorro de datos; pausar, reanudar y estado del control; fallo de `play()`) y las E2E del héroe (titular sobre el fondo sin desplazar, vídeo oculto a lectores, control con teclado, movimiento reducido, fotos de los pasos con `alt`, carga diferida y axe en los dos temas). Comprobar que fallan. ref: Vídeo de fondo del héroe · est: 4h · disc: qa
+- [x] T3 Escribir las pruebas unitarias de `hero-video.ts` (reproducir por defecto; imagen fija con movimiento reducido o ahorro de datos; pausar, reanudar y estado del control; fallo de `play()`) y las E2E del héroe (titular sobre el fondo sin desplazar, vídeo oculto a lectores, control con teclado, movimiento reducido, fotos de los pasos con `alt`, carga diferida y axe en los dos temas). Comprobar que fallan. ref: Vídeo de fondo del héroe · est: 4h · disc: qa
   - GIVEN «reducir movimiento» emulado WHEN se abre la página THEN el vídeo está en pausa y el control ofrece reproducirlo
-- [ ] F2 Implementar el héroe a pantalla completa con vídeo, velo, control de pausa y cabecera superpuesta, y verificar que pasan las pruebas de T3 del héroe. ref: Presentación de la propuesta de valor · est: 5h · disc: front
+- [x] F2 Implementar el héroe a pantalla completa con vídeo, velo, control de pausa y cabecera superpuesta, y verificar que pasan las pruebas de T3 del héroe. ref: Presentación de la propuesta de valor · est: 5h · disc: front
   - GIVEN una ventana de 390 × 844 WHEN se abre la página THEN el titular, la frase y el botón se ven sobre el fondo sin desplazar
-- [ ] F3 Implementar «Cómo funciona» con foto por paso, «Cadenas de tres» y la lista de espera sobre fotografía, y verificar que pasan las pruebas de T3 de las secciones. ref: Secciones con fotografía · est: 4h · disc: front
+- [x] F3 Implementar «Cómo funciona» con foto por paso, «Cadenas de tres» y la lista de espera sobre fotografía, y verificar que pasan las pruebas de T3 de las secciones. ref: Secciones con fotografía · est: 4h · disc: front
   - GIVEN la lista de espera en tema oscuro WHEN se analiza con axe THEN no hay infracciones de contraste
 
 ## 4. App

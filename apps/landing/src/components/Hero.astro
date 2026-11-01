@@ -1,41 +1,99 @@
 ---
 import { es } from '../i18n/es';
-import SwapIllustration from './SwapIllustration.astro';
 
 const { hero } = es;
 ---
 
 <section id="inicio" class="hero" aria-labelledby="hero-title">
-  <div class="container grid">
-    <div class="copy">
-      <span class="eyebrow">{hero.eyebrow}</span>
-      <h1 id="hero-title">{hero.title}</h1>
-      <p class="subtitle">{hero.subtitle}</p>
-      <div class="actions">
-        <a class="button button-primary" href="#lista-de-espera">
-          {hero.cta}
-        </a>
-        <a class="button" href="#como-funciona">
-          {hero.secondary}
-        </a>
-      </div>
-    </div>
-    <div class="plate">
-      <SwapIllustration variant="pair" id="hero" />
+  <div class="media">
+    <video
+      id="hero-video"
+      class="video"
+      muted
+      loop
+      playsinline
+      preload="none"
+      poster="/media/hero-poster.jpg"
+      aria-hidden="true"
+      tabindex="-1"
+    >
+      <source src="/media/hero.webm" type="video/webm" />
+      <source src="/media/hero.mp4" type="video/mp4" />
+    </video>
+    <div class="hero-veil" aria-hidden="true"></div>
+  </div>
+
+  <div class="container copy">
+    <span class="eyebrow">{hero.eyebrow}</span>
+    <h1 id="hero-title">{hero.title}</h1>
+    <p class="subtitle">{hero.subtitle}</p>
+    <div class="actions">
+      <a class="button button-primary" href="#lista-de-espera">
+        {hero.cta}
+      </a>
+      <a class="button button-on-photo" href="#como-funciona">
+        {hero.secondary}
+      </a>
     </div>
   </div>
+
+  <button
+    id="hero-video-toggle"
+    class="video-toggle"
+    type="button"
+    aria-label={hero.video.play}
+    data-state="paused"
+  >
+    <svg class="icon icon-pause" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <rect x="6" y="5" width="4" height="14" rx="1"></rect>
+      <rect x="14" y="5" width="4" height="14" rx="1"></rect>
+    </svg>
+    <svg class="icon icon-play" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M8 5.5v13a1 1 0 0 0 1.5.87l11-6.5a1 1 0 0 0 0-1.74l-11-6.5A1 1 0 0 0 8 5.5Z"></path>
+    </svg>
+  </button>
+  <p id="hero-video-status" class="visually-hidden" aria-live="polite"></p>
 </section>
+
+<script>
+  import { browserEnvironment, initHeroVideo } from '../lib/hero-video';
+
+  initHeroVideo(document, browserEnvironment(window));
+</script>
 
 <style>
   .hero {
-    padding-block: var(--space-6) var(--section-gap);
+    position: relative;
+    display: grid;
+    align-items: center;
+    min-height: 100vh;
+    min-height: 100svh;
+    padding-block: calc(var(--space-8) + var(--space-6)) calc(var(--space-8) + var(--space-4));
     overflow: clip;
+    isolation: isolate;
+    color: var(--color-text-on-photo);
   }
 
-  .grid {
-    display: grid;
-    gap: var(--space-7);
-    align-items: center;
+  .media {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+  }
+
+  .video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    background: var(--color-secondary);
+  }
+
+  /* Velo uniforme más el degradado inferior: el texto blanco mantiene 4,5:1 en cualquier fotograma */
+  .hero-veil {
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(to bottom, var(--color-photo-scrim-start) 55%, var(--color-photo-scrim-end)),
+      var(--color-photo-veil);
   }
 
   .copy {
@@ -46,27 +104,31 @@ const { hero } = es;
 
   .eyebrow {
     padding: var(--space-1) var(--space-3);
+    border: var(--border-thin) solid var(--color-text-on-photo);
     border-radius: var(--radius-full);
-    background: var(--color-surface-muted);
-    color: var(--color-secondary);
+    color: var(--color-text-on-photo);
     font-size: var(--font-label-size);
     font-weight: var(--font-label-weight);
+    backdrop-filter: blur(var(--space-2));
   }
 
   h1 {
+    max-width: 14ch;
+    color: var(--color-text-on-photo);
     font-size: clamp(
-      calc(var(--font-display-size) * 0.9),
+      calc(var(--font-display-size) * 1.05),
       11.5vw,
-      calc(var(--font-display-size) * 2)
+      calc(var(--font-display-size) * 2.3)
     );
-    line-height: 1;
-    letter-spacing: -0.035em;
+    line-height: 0.98;
+    letter-spacing: -0.04em;
+    text-wrap: balance;
   }
 
   .subtitle {
     max-width: var(--content-max-reading);
-    color: var(--color-text-muted);
-    font-size: calc(var(--font-body-size) * 1.25);
+    color: var(--color-text-on-photo);
+    font-size: calc(var(--font-body-size) * 1.2);
     line-height: calc(var(--font-body-line-height) * 1.15);
   }
 
@@ -76,34 +138,37 @@ const { hero } = es;
     gap: var(--space-3);
   }
 
-  .plate {
-    position: relative;
-    padding: var(--space-6) var(--space-4);
-    border-radius: calc(var(--radius-lg) * 2);
-    background: var(--color-surface-muted);
-    isolation: isolate;
+  .video-toggle {
+    position: absolute;
+    right: var(--space-4);
+    bottom: var(--space-4);
+    display: grid;
+    place-items: center;
+    width: calc(var(--touch-target) + var(--space-1));
+    height: calc(var(--touch-target) + var(--space-1));
+    padding: 0;
+    border: var(--border-thick) solid var(--color-text-on-photo);
+    border-radius: var(--radius-full);
+    background: var(--color-photo-veil);
+    color: var(--color-text-on-photo);
+    cursor: pointer;
   }
 
-  /* Momento destacado: el degradado de marca solo asoma como resplandor tras la ilustración */
-  .plate::before {
-    content: '';
-    position: absolute;
-    inset: calc(var(--space-4) * -1);
-    z-index: -1;
-    border-radius: calc(var(--radius-lg) * 2.5);
-    background: linear-gradient(
-      135deg,
-      var(--color-match-gradient-start),
-      var(--color-match-gradient-end)
-    );
-    opacity: 0.35;
-    filter: blur(var(--space-6));
+  .icon {
+    width: var(--space-5);
+    height: var(--space-5);
+    fill: currentColor;
+  }
+
+  .video-toggle[data-state='playing'] .icon-play,
+  .video-toggle[data-state='paused'] .icon-pause {
+    display: none;
   }
 
   @media (min-width: 1024px) {
-    .grid {
-      grid-template-columns: 1.1fr 0.9fr;
-      gap: var(--space-8);
+    .video-toggle {
+      right: var(--space-6);
+      bottom: var(--space-6);
     }
   }
 </style>

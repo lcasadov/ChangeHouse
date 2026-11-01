@@ -1,8 +1,15 @@
 ---
 import { es } from '../i18n/es';
+
+interface Props {
+  /** Superpuesta a un héroe fotográfico: transparente y con texto blanco sobre el velo. */
+  overlay?: boolean;
+}
+
+const { overlay = false } = Astro.props;
 ---
 
-<header class="site-header">
+<header class:list={['site-header', { overlay }]}>
   <div class="container bar">
     <a class="brand" href="/" aria-label={es.header.brandLabel}>
       <svg class="mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
@@ -63,6 +70,21 @@ import { es } from '../i18n/es';
     flex-wrap: wrap;
     align-items: center;
     gap: var(--space-2) var(--space-4);
+  }
+
+  .overlay {
+    position: absolute;
+    inset: 0 0 auto;
+    z-index: 5;
+  }
+
+  .overlay .brand,
+  .overlay .links a {
+    color: var(--color-text-on-photo);
+  }
+
+  .overlay .door {
+    fill: var(--color-text-on-photo);
   }
 
   .links a {

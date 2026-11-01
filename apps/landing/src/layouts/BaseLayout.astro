@@ -16,9 +16,17 @@ interface Props {
   description?: string;
   image?: string;
   ogType?: 'website' | 'article';
+  /** La cabecera va superpuesta a un héroe fotográfico (solo la portada). */
+  overlayHeader?: boolean;
 }
 
-const { title, description = es.meta.description, image, ogType } = Astro.props;
+const {
+  title,
+  description = es.meta.description,
+  image,
+  ogType,
+  overlayHeader = false,
+} = Astro.props;
 const colors = themeColors();
 const themeStylesheet = buildThemeStylesheet();
 ---
@@ -41,7 +49,7 @@ const themeStylesheet = buildThemeStylesheet();
       {es.a11y.skipToContent}
     </a>
     <CookieBanner />
-    <Header />
+    <Header overlay={overlayHeader} />
     <slot />
     <Footer />
   </body>
@@ -164,6 +172,41 @@ const themeStylesheet = buildThemeStylesheet();
   .button-primary:hover {
     background: var(--color-primary-pressed);
     color: var(--color-text-on-primary);
+  }
+
+  /* Botón secundario sobre fotografía o vídeo con velo: blanco sobre el velo */
+  .button-on-photo,
+  .button-on-photo:hover {
+    border-color: var(--color-text-on-photo);
+    color: var(--color-text-on-photo);
+  }
+
+  .button-on-photo:hover {
+    background: var(--color-photo-veil);
+  }
+
+  /* Sección sobre una fotografía a sangre: la foto es decorativa y va detrás, bajo el velo */
+  .photo-section {
+    position: relative;
+    isolation: isolate;
+    overflow: clip;
+  }
+
+  .photo-section > .section-photo {
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .photo-section::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: var(--color-photo-veil);
   }
 
   .visually-hidden {

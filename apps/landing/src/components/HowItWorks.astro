@@ -14,6 +14,15 @@ const { howItWorks } = es;
     <ol class="steps">
       {howItWorks.steps.map((step, index) => (
         <li class="step">
+          <img
+            class="photo"
+            src={step.photo}
+            alt={step.photoAlt}
+            width="800"
+            height="600"
+            loading="lazy"
+            decoding="async"
+          />
           <span class="number" aria-hidden="true">
             {index + 1}
           </span>
@@ -40,15 +49,33 @@ const { howItWorks } = es;
   }
 
   .step {
+    position: relative;
     display: grid;
     gap: var(--space-3);
     align-content: start;
-    padding: var(--space-6) var(--space-5);
+    padding: 0 var(--space-5) var(--space-6);
     border-radius: calc(var(--radius-lg) * 1.5);
     background: var(--color-surface-muted);
+    overflow: hidden;
+    transition: transform var(--motion-base);
+  }
+
+  .step:hover {
+    transform: translateY(calc(var(--space-1) * -1));
+  }
+
+  .photo {
+    width: calc(100% + var(--space-5) * 2);
+    max-width: none;
+    height: auto;
+    aspect-ratio: 4 / 3;
+    margin-inline: calc(var(--space-5) * -1);
+    object-fit: cover;
   }
 
   .number {
+    margin-top: calc(var(--space-7) * -0.5 - var(--space-3));
+    border: var(--border-thick) solid var(--color-surface-muted);
     display: grid;
     place-items: center;
     width: calc(var(--space-7) + var(--space-2));
