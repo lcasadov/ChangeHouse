@@ -114,6 +114,106 @@ describe('chatItemsOf', () => {
     expect(items[1]).toMatchObject({ kind: 'image', localUri: 'file:///foto.jpg', mine: true });
   });
 
+  describe('cuando el canal entrega el mensaje antes de que responda la API', () => {
+    it('un envío sin serverId se da por llegado si hay un mensaje mío igual y nuevo en el canal', () => {
+      const echo = textFrom('Ana', 'Hola', 41, ME);
+      const items = chatItemsOf([echo], [outgoing({ seenRemoteIds: new Set() })], ME);
+
+      expect(items).toHaveLength(1);
+      expect(items[0]).toMatchObject({ key: echo.id, state: 'sent' });
+    });
+
+    it('dos envíos iguales seguidos con solo uno llegado se ven dos veces, no una ni tres', () => {
+      const echo = textFrom('Ana', 'Hola', 41, ME);
+      const items = chatItemsOf(
+        [echo],
+        [
+          outgoing({ key: 'local-1', seenRemoteIds: new Set() }),
+          outgoing({ key: 'local-2', seenRemoteIds: new Set() }),
+        ],
+        ME,
+      );
+
+      expect(items.map((item) => item.key)).toEqual([echo.id, 'local-2']);
+    });
+
+    it('con los dos llegados se ven solo los del canal', () => {
+      const first = textFrom('Ana', 'Hola', 41, ME);
+      const second = textFrom('Ana', 'Hola', 42, ME);
+      const items = chatItemsOf(
+        [first, second],
+        [
+          outgoing({ key: 'local-1', seenRemoteIds: new Set() }),
+          outgoing({ key: 'local-2', seenRemoteIds: new Set() }),
+        ],
+        ME,
+      );
+
+      expect(items.map((item) => item.key)).toEqual([first.id, second.id]);
+    });
+
+    it('un mensaje de otra persona con el mismo texto no oculta el mío', () => {
+      const theirs = textFrom('Beto', 'Hola', 41);
+      const items = chatItemsOf([theirs], [outgoing({ seenRemoteIds: new Set() })], ME);
+
+      expect(items.map((item) => item.key)).toEqual([theirs.id, 'local-1']);
+    });
+
+    it('un mensaje mío anterior al envío con el mismo texto no lo oculta', () => {
+      const older = textFrom('Ana', 'Hola', 5, ME);
+      const items = chatItemsOf([older], [outgoing({ seenRemoteIds: new Set([older.id]) })], ME);
+
+      expect(items.map((item) => item.key)).toEqual([older.id, 'local-1']);
+    });
+
+    it('un mensaje ya reclamado por el serverId de otro envío no se reutiliza', () => {
+      const claimed = textFrom('Ana', 'Hola', 41, ME);
+      const items = chatItemsOf(
+        [claimed],
+        [
+          outgoing({ key: 'local-1', stage: 'sent', serverId: claimed.id }),
+          outgoing({ key: 'local-2', seenRemoteIds: new Set() }),
+        ],
+        ME,
+      );
+
+      expect(items.map((item) => item.key)).toEqual([claimed.id, 'local-2']);
+    });
+
+    it('una imagen mía nueva en el canal oculta el envío de imagen pendiente', () => {
+      const echo = imageFrom('Ana', 'img-9', 41, ME);
+      const items = chatItemsOf(
+        [echo],
+        [outgoing({ kind: 'image', uri: 'file:///foto.jpg', seenRemoteIds: new Set() })],
+        ME,
+      );
+
+      expect(items.map((item) => item.key)).toEqual([echo.id]);
+    });
+
+    it('un texto mío no oculta un envío de imagen ni al revés', () => {
+      const echo = textFrom('Ana', 'Hola', 41, ME);
+      const items = chatItemsOf(
+        [echo],
+        [outgoing({ kind: 'image', uri: 'file:///foto.jpg', seenRemoteIds: new Set() })],
+        ME,
+      );
+
+      expect(items.map((item) => item.key)).toEqual([echo.id, 'local-1']);
+    });
+
+    it('un envío fallido no se empareja con el canal', () => {
+      const echo = textFrom('Ana', 'Hola', 41, ME);
+      const items = chatItemsOf(
+        [echo],
+        [outgoing({ stage: 'failed', failure: 'network', seenRemoteIds: new Set() })],
+        ME,
+      );
+
+      expect(items.map((item) => item.key)).toEqual([echo.id, 'local-1']);
+    });
+  });
+
   it('las claves de los elementos son únicas', () => {
     const items = chatItemsOf(
       [welcome(), textFrom('Beto', 'a', 1), textFrom('Beto', 'b', 2)],

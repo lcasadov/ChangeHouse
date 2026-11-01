@@ -64,6 +64,11 @@ export interface OutgoingMessage {
   /** La subida de la imagen, para no repetirla si solo falló el envío. */
   uploadId?: string;
   uploaded?: boolean;
+  /**
+   * Ids de los mensajes del canal que ya estaban cuando se encoló el envío: ninguno de ellos puede
+   * ser su eco. Sin él (`undefined`) el envío solo se reconcilia por `serverId`.
+   */
+  seenRemoteIds?: ReadonlySet<string>;
   createdAt: Date;
 }
 
@@ -132,19 +137,54 @@ function outgoingItem(message: OutgoingMessage): MessageItem {
   };
 }
 
+/** Si el mensaje del canal puede ser el eco de este envío local que aún no conoce su `serverId`. */
+function echoes(message: OutgoingMessage, remote: ChatMessage, meId: string): boolean {
+  if (message.stage !== 'sending' || message.seenRemoteIds === undefined) return false;
+  if (remote.kind === 'system' || remote.senderId !== meId) return false;
+  if (message.seenRemoteIds.has(remote.id) || remote.kind !== message.kind) return false;
+  return remote.kind === 'image' || remote.text === message.text;
+}
+
+/**
+ * Los envíos locales cuyo mensaje ya está en el canal. Uno con `serverId` se reconoce por su id. Si
+ * el canal gana la carrera a la respuesta de la API, aún no tiene `serverId`: se empareja, uno a uno
+ * y en orden, con un mensaje mío del mismo tipo y contenido que no estuviera al encolarlo y que
+ * ningún otro envío haya reclamado (así dos envíos iguales seguidos no se ocultan entre sí).
+ */
+function arrivedOutgoing(
+  remote: readonly ChatMessage[],
+  outgoing: readonly OutgoingMessage[],
+  meId: string | undefined,
+): Set<string> {
+  const remoteIds = new Set(remote.map((message) => message.id));
+  const known = new Set(outgoing.flatMap((message) => message.serverId ?? []));
+  const arrived = new Set<string>();
+  const taken = new Set<string>(known);
+  for (const message of outgoing) {
+    if (message.serverId !== undefined) {
+      if (remoteIds.has(message.serverId)) arrived.add(message.key);
+    } else if (meId !== undefined) {
+      const match = remote.find((item) => !taken.has(item.id) && echoes(message, item, meId));
+      if (match) {
+        taken.add(match.id);
+        arrived.add(message.key);
+      }
+    }
+  }
+  return arrived;
+}
+
 /**
  * Lo que se pinta: los mensajes del canal en su orden y, al final, los envíos locales que el canal
- * aún no ha devuelto (en cuanto llega el mensaje con el id que dio la API, el local desaparece).
+ * aún no ha devuelto (en cuanto llega el mensaje, el local desaparece).
  */
 export function chatItemsOf(
   remote: readonly ChatMessage[],
   outgoing: readonly OutgoingMessage[],
   meId: string | undefined,
 ): ChatItem[] {
-  const arrived = new Set(remote.map((message) => message.id));
-  const pending = outgoing.filter(
-    (message) => message.serverId === undefined || !arrived.has(message.serverId),
-  );
+  const arrived = arrivedOutgoing(remote, outgoing, meId);
+  const pending = outgoing.filter((message) => !arrived.has(message.key));
   return [...remote.map((message) => remoteItem(message, meId)), ...pending.map(outgoingItem)];
 }
 

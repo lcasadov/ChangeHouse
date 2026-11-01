@@ -1,0 +1,10 @@
+export const MOBILE_DIR: string;
+export const ROOT_DIR: string;
+export const DIST_DIR: string;
+export const API_PORT: number;
+export const APP_PORT: number;
+export const PROJECT_ID: string;
+export const E2E_DATABASE: string;
+export const DATABASE_URL: string;
+export const API_ENV: Readonly<Record<string, string>>;
+export const APP_ENV: Readonly<Record<string, string>>;
