@@ -37,14 +37,13 @@ personas; la zona generada la reescribe `plan-sync` en cada operación.
 
 | change | estado | % | completadas/total | fase |
 |---|---|---|---|---|
-| harden-security-before-launch | 🟢 COMPLETO — sin archivar | 100 % | 17/17 | 🟢 COMPLETO — sin archivar |
 
-**Progreso global de los changes activos**: 17/17 (100 %)
+
+**Progreso global de los changes activos**: 0/0 (0 %)
 
 | estado | changes |
 |---|---|
-| 🟢 COMPLETO — sin archivar | 1 |
-| ✅ ARCHIVADO | 22 |
+| ✅ ARCHIVADO | 23 |
 
 ### Changes archivados
 
@@ -72,5 +71,6 @@ personas; la zona generada la reescribe `plan-sync` en cada operación.
 | 2026-10-31-add-notifications | 7/7 | 2026-10-31 |
 | 2026-10-31-add-reports-and-blocking | 6/6 | 2026-10-31 |
 | 2026-10-31-add-user-suspension | 5/5 | 2026-10-31 |
+| 2026-11-01-harden-security-before-launch | 17/17 | 2026-11-01 |
 
 <!-- catalogo:generado:fin -->
