@@ -38,5 +38,5 @@
 
 ## 5. Verificación
 
-- [ ] Q1 Ejecutar la puerta de calidad completa (lint, typecheck, test:coverage, build, E2E de la landing y de la app web) y revisar a mano capturas de la landing y la app en los dos temas y en 390 × 844 y 1440 × 900. ref: Navegación principal legible · est: 3h · disc: qa
+- [x] Q1 Ejecutar la puerta de calidad completa (lint, typecheck, test:coverage, build, E2E de la landing y de la app web) y revisar a mano capturas de la landing y la app en los dos temas y en 390 × 844 y 1440 × 900. ref: Navegación principal legible · est: 3h · disc: qa
   - GIVEN la rama del change WHEN se ejecuta la puerta THEN todo pasa con cobertura ≥ 80 %

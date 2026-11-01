@@ -111,9 +111,7 @@ describe('velo sobre fotografía y vídeo', () => {
     (name) => {
       const { color } = themes[name];
       const worstCase = composite(color.photoVeil, '#FFFFFF');
-      expect(contrastRatio(color.textOnPhoto, worstCase)).toBeGreaterThanOrEqual(
-        MIN_TEXT_CONTRAST,
-      );
+      expect(contrastRatio(color.textOnPhoto, worstCase)).toBeGreaterThanOrEqual(MIN_TEXT_CONTRAST);
     },
   );
 
