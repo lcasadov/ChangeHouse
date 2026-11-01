@@ -48,8 +48,11 @@ imágenes de prueba. En el equipo hay sharp; no hay ffmpeg instalado.
   - `scripts/media/generate.mjs` escribe la landing (`apps/landing/public/media/`)
     y la app (`apps/mobile/assets/ambient/`).
   - Se versionan los resultados, no se generan en CI.
-  - El vídeo se codifica con el ffmpeg de `FFMPEG_PATH` o del `PATH`. Si no hay
-    ninguno, el script avisa y genera solo las imágenes.
+  - El vídeo se graba con el Chromium de Playwright, que ya está en el
+    repositorio: un canvas dibuja las escenas con zoom lento y fundido, y
+    `MediaRecorder` lo codifica en WebM VP9 y en MP4 H.264. Así no depende de
+    ffmpeg ni de binarios descargados. Si el navegador no codifica un formato, lo
+    omite y lo avisa; `--sin-video` genera solo las imágenes.
   - Presupuesto:
     - vídeo de 1280 × 720, WebM VP9 y MP4 H.264, de ≤ 3 MB cada uno;
     - imagen fija de ≤ 250 KB;

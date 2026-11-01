@@ -2,10 +2,10 @@
 
 ## 1. Imágenes y vídeo de prueba
 
-- [ ] T1 Escribir las pruebas del generador de escenas: cada escena produce un JPEG del tamaño pedido, la misma semilla da los mismos bytes y semillas distintas dan imágenes distintas. Comprobar que fallan. ref: Secciones con fotografía · est: 2h · disc: qa
+- [x] T1 Escribir las pruebas del generador de escenas: cada escena produce un JPEG del tamaño pedido, la misma semilla da los mismos bytes y semillas distintas dan imágenes distintas. Comprobar que fallan. ref: Secciones con fotografía · est: 2h · disc: qa
   - GIVEN la escena `salon` con la semilla 7 WHEN se genera dos veces THEN los dos JPEG son idénticos
-- [ ] D1 Implementar `scripts/media/scenes.mjs` y `scripts/media/generate.mjs` (imágenes de la landing y de la app, vídeo del héroe con ffmpeg si está disponible), generar y versionar los recursos dentro del presupuesto de tamaño, y verificar que pasan las pruebas de T1. ref: Vídeo de fondo del héroe · est: 6h · disc: devops
-  - GIVEN el generador con ffmpeg disponible WHEN se ejecuta THEN escribe `hero.webm`, `hero.mp4` y `hero-poster.jpg` de menos de 3 MB y 250 KB
+- [x] D1 Implementar `scripts/media/scenes.mjs` y `scripts/media/generate.mjs` (imágenes de la landing y de la app, vídeo del héroe grabado con el Chromium de Playwright), generar y versionar los recursos dentro del presupuesto de tamaño, y verificar que pasan las pruebas de T1. ref: Vídeo de fondo del héroe · est: 6h · disc: devops
+  - GIVEN el generador WHEN se ejecuta THEN escribe `hero.webm`, `hero.mp4` y `hero-poster.jpg` de menos de 3 MB y 250 KB
 - [ ] D2 Sustituir los dibujos de `scripts/seed-demo.mjs` por cuatro escenas variadas por casa y documentar la regeneración en `docs/desarrollo-local.md`. ref: Estados vacíos con imagen · est: 2h · disc: devops
   - GIVEN una base vacía WHEN se ejecuta `pnpm seed:demo` THEN cada casa tiene cuatro fotos distintas de exterior, salón, cocina y dormitorio
 

@@ -77,7 +77,7 @@ Es el momento de corregirlo, antes de enseñar la app a nadie.
 - `packages/ui`: un token de color para el velo sobre fotos y vídeo, con su
   contraste verificado en el tema claro y en el oscuro.
 - `scripts/media/`:
-  - Generador de escenas (sharp) y del vídeo (ffmpeg local, no en CI).
+  - Generador de escenas (sharp) y del vídeo (grabado con el Chromium de Playwright, en local y no en CI).
   - Lo usa `scripts/seed-demo.mjs`.
 - `docs/style-guide.md` (concepto, token nuevo y componentes) y
   `docs/desarrollo-local.md`.
