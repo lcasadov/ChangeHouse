@@ -7,6 +7,13 @@ import { copyFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { networkInterfaces } from 'node:os';
 import { join } from 'node:path';
 
+const log = (text) =>
+  process.stdout.write(`${text}
+`);
+const fail = (text) =>
+  process.stderr.write(`${text}
+`);
+
 const ROOT = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 const VIRTUAL = /vethernet|wsl|docker|virtualbox|vmware|hyper-v|loopback|tailscale|zerotier/i;
 
@@ -53,14 +60,12 @@ if (argument && argument !== '--reset') {
 } else if (!argument) {
   const found = lanAddress();
   if (found.length === 0) {
-    console.error('No encuentro una IP de red local. Pásala a mano: pnpm lan:env 192.168.1.40');
+    fail('No encuentro una IP de red local. Pásala a mano: pnpm lan:env 192.168.1.40');
     process.exit(1);
   }
   host = found[0].ip;
   if (found.length > 1) {
-    console.log(
-      `Varias IP posibles: ${found.map((f) => `${f.ip} (${f.name})`).join(', ')}. Uso ${host}.`,
-    );
+    log(`Varias IP posibles: ${found.map((f) => `${f.ip} (${f.name})`).join(', ')}. Uso ${host}.`);
   }
 }
 
@@ -76,7 +81,7 @@ upsert(join(ROOT, 'apps/mobile/.env'), {
   EXPO_PUBLIC_FIREBASE_FIRESTORE_EMULATOR_HOST: `${host}:8085`,
 });
 
-console.log(`Hosts locales apuntando a ${host}.`);
-console.log(
+log(`Hosts locales apuntando a ${host}.`);
+log(
   'Reinicia el almacenamiento (pnpm infra:up) y la app (pnpm dev) para que tomen los valores nuevos.',
 );
