@@ -1,0 +1,159 @@
+{
+  "tracker": "github-issues",
+  "change": "refresh-visual-design",
+  "sprint": {
+    "path": "Sprint 01",
+    "created": false
+  },
+  "epic": {
+    "capability": "landing",
+    "id": 18,
+    "reused": true
+  },
+  "related_epics": [
+    {
+      "capability": "app-experience",
+      "id": 398
+    },
+    {
+      "capability": "discovery",
+      "id": 150
+    }
+  ],
+  "feature": {
+    "id": 397,
+    "reused": true
+  },
+  "stories": [
+    {
+      "key": "Fotografía de ambiente en la bienvenida y el acceso",
+      "id": 399,
+      "reused": false,
+      "prio": "P1"
+    },
+    {
+      "key": "Navegación principal legible",
+      "id": 400,
+      "reused": false,
+      "prio": "P1"
+    },
+    {
+      "key": "Aviso de verificación compacto",
+      "id": 401,
+      "reused": false,
+      "prio": "P2"
+    },
+    {
+      "key": "Estados vacíos con imagen",
+      "id": 402,
+      "reused": false,
+      "prio": "P3"
+    },
+    {
+      "key": "Tarjetas a pantalla completa",
+      "id": 403,
+      "reused": false,
+      "prio": "P1"
+    },
+    {
+      "key": "Presentación de la propuesta de valor",
+      "id": 404,
+      "reused": false,
+      "prio": "P1"
+    },
+    {
+      "key": "Vídeo de fondo del héroe",
+      "id": 405,
+      "reused": false,
+      "prio": "P1"
+    },
+    {
+      "key": "Secciones con fotografía",
+      "id": 406,
+      "reused": false,
+      "prio": "P2"
+    }
+  ],
+  "tasks": [
+    {
+      "key": "T1",
+      "id": 407,
+      "parent": 406,
+      "state": "open"
+    },
+    {
+      "key": "D1",
+      "id": 408,
+      "parent": 405,
+      "state": "open"
+    },
+    {
+      "key": "D2",
+      "id": 409,
+      "parent": 402,
+      "state": "open"
+    },
+    {
+      "key": "T2",
+      "id": 410,
+      "parent": 400,
+      "state": "open"
+    },
+    {
+      "key": "F1",
+      "id": 411,
+      "parent": 400,
+      "state": "open"
+    },
+    {
+      "key": "T3",
+      "id": 412,
+      "parent": 405,
+      "state": "open"
+    },
+    {
+      "key": "F2",
+      "id": 413,
+      "parent": 404,
+      "state": "open"
+    },
+    {
+      "key": "F3",
+      "id": 414,
+      "parent": 406,
+      "state": "open"
+    },
+    {
+      "key": "T4",
+      "id": 415,
+      "parent": 399,
+      "state": "open"
+    },
+    {
+      "key": "F4",
+      "id": 416,
+      "parent": 402,
+      "state": "open"
+    },
+    {
+      "key": "T5",
+      "id": 417,
+      "parent": 403,
+      "state": "open"
+    },
+    {
+      "key": "F5",
+      "id": 418,
+      "parent": 401,
+      "state": "open"
+    },
+    {
+      "key": "Q1",
+      "id": 419,
+      "parent": 400,
+      "state": "open"
+    }
+  ],
+  "bugs": [],
+  "pending": []
+}
