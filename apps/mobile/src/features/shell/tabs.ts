@@ -1,3 +1,4 @@
+import type { Theme } from '@changehouse/ui';
 import type { Ionicons } from '@expo/vector-icons';
 import type { ComponentProps } from 'react';
 
@@ -43,4 +44,24 @@ export type NavigationLayout = 'bottom' | 'side';
 /** Barra lateral solo en web ancha (`expanded`); en el resto, pestañas inferiores. */
 export function navigationLayoutFor(os: string, breakpoint: Breakpoint): NavigationLayout {
   return os === 'web' && breakpoint === 'expanded' ? 'side' : 'bottom';
+}
+
+export interface TabBarColors {
+  activeTint: string;
+  inactiveTint: string;
+  activeBackground: string;
+  inactiveBackground: string;
+}
+
+/**
+ * Colores de la navegación: la sección activa con fondo suave y texto de acción (≥ 4,5:1 en los dos
+ * temas). Fijar los fondos evita el azul por defecto de React Navigation en la barra lateral.
+ */
+export function tabBarColors(theme: Theme): TabBarColors {
+  return {
+    activeTint: theme.color.primary,
+    inactiveTint: theme.color.textMuted,
+    activeBackground: theme.color.surfaceMuted,
+    inactiveBackground: 'transparent',
+  };
 }

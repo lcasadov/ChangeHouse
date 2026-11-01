@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Button, Notice, type NoticeTone } from '../../ui';
+import { Notice, type NoticeTone } from '../../ui';
 import { useServices } from '../session/services';
 import { useAuth } from './AuthProvider';
 
@@ -45,31 +45,35 @@ export function VerifyEmailBanner() {
 
   return (
     <SafeAreaView edges={['top']} style={{ backgroundColor: theme.color.bg }}>
-      <View style={{ gap: theme.space[2], padding: theme.space[3] }}>
+      <View style={{ paddingHorizontal: theme.space[3], paddingTop: theme.space[2] }}>
         <Notice
-          tone="warning"
-          action={{
-            label: t('auth.verify.resend'),
-            onPress: () => {
-              if (busy) return;
-              run('resend', () => auth.resendVerificationEmail(), 'resent').catch(() => undefined);
+          testID="verify-email-banner"
+          actionsTestID="verify-email-actions"
+          tone={feedback ? FEEDBACK_TONE[feedback] : 'warning'}
+          detail={feedback ? t(`auth.verify.${feedback}`) : undefined}
+          actions={[
+            {
+              label: t('auth.verify.resend'),
+              loading: busy === 'resend',
+              disabled: busy === 'refresh',
+              onPress: () => {
+                run('resend', () => auth.resendVerificationEmail(), 'resent').catch(
+                  () => undefined,
+                );
+              },
             },
-          }}
+            {
+              label: t('auth.verify.refresh'),
+              loading: busy === 'refresh',
+              disabled: busy === 'resend',
+              onPress: () => {
+                run('refresh', () => auth.refreshUser(), 'stillPending').catch(() => undefined);
+              },
+            },
+          ]}
         >
           {t('auth.verify.banner')}
         </Notice>
-        <Button
-          variant="ghost"
-          label={t('auth.verify.refresh')}
-          loading={busy === 'refresh'}
-          disabled={busy === 'resend'}
-          onPress={() => {
-            run('refresh', () => auth.refreshUser(), 'stillPending').catch(() => undefined);
-          }}
-        />
-        {feedback ? (
-          <Notice tone={FEEDBACK_TONE[feedback]}>{t(`auth.verify.${feedback}`)}</Notice>
-        ) : null}
       </View>
     </SafeAreaView>
   );

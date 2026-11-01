@@ -5,7 +5,7 @@ import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
 import { Text } from './Text';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
+export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'onPhoto';
 
 export interface ButtonProps {
   label: string;
@@ -49,6 +49,13 @@ const VARIANTS: Record<ButtonVariant, VariantColors> = {
     pressedBackground: 'primaryPressed',
     foreground: 'textOnPrimary',
     border: null,
+  },
+  /** Sobre fotografía con el velo `photoVeil`: blanco y transparente, con el contraste del velo. */
+  onPhoto: {
+    background: null,
+    pressedBackground: 'photoVeil',
+    foreground: 'textOnPhoto',
+    border: 'textOnPhoto',
   },
 };
 

@@ -27,13 +27,13 @@
 
 ## 4. App
 
-- [ ] T4 Escribir las pruebas de componente, en los dos temas, de `AmbientBackdrop` (decorativo; una sola imagen fija con movimiento reducido), la bienvenida y `AuthLayout` (franja en compacto, dos columnas en ancho), la variante `onPhoto` de `Button`, `EmptyState` con imagen y los estados vacíos de Explorar, Matches y Mis casas. Comprobar que fallan. ref: Fotografía de ambiente en la bienvenida y el acceso · est: 4h · disc: qa
+- [x] T4 Escribir las pruebas de componente, en los dos temas, de `AmbientBackdrop` (decorativo; una sola imagen fija con movimiento reducido), la bienvenida y `AuthLayout` (franja en compacto, dos columnas en ancho), la variante `onPhoto` de `Button`, `EmptyState` con imagen y los estados vacíos de Explorar, Matches y Mis casas. Comprobar que fallan. ref: Fotografía de ambiente en la bienvenida y el acceso · est: 4h · disc: qa
   - GIVEN «reducir movimiento» activado WHEN se muestra la bienvenida THEN hay una sola imagen y ninguna animación
-- [ ] F4 Implementar `AmbientBackdrop`, la variante `onPhoto`, la bienvenida, `AuthLayout` en acceso y recuperar contraseña, y `EmptyState` con imagen en los tres estados vacíos, y verificar que pasan las pruebas de T4. ref: Estados vacíos con imagen · est: 6h · disc: front
+- [x] F4 Implementar `AmbientBackdrop`, la variante `onPhoto`, la bienvenida, `AuthLayout` en acceso y recuperar contraseña, y `EmptyState` con imagen en los tres estados vacíos, y verificar que pasan las pruebas de T4. ref: Estados vacíos con imagen · est: 6h · disc: front
   - GIVEN un usuario sin matches WHEN abre «Matches» THEN ve la imagen de ambiente, el motivo y la acción de explorar
-- [ ] T5 Escribir las pruebas de la navegación (fondo activo `surfaceMuted` en las dos disposiciones y estado seleccionado anunciado), del aviso de verificación compacto (mensaje y dos acciones en una franja; resultado anunciado) y de `cardHeightFor` y la fila de filtros desplazable. Comprobar que fallan. ref: Tarjetas a pantalla completa · est: 3h · disc: qa
+- [x] T5 Escribir las pruebas de la navegación (fondo activo `surfaceMuted` en las dos disposiciones y estado seleccionado anunciado), del aviso de verificación compacto (mensaje y dos acciones en una franja; resultado anunciado) y de `feedMinHeight` y la fila de filtros desplazable. Comprobar que fallan. ref: Tarjetas a pantalla completa · est: 3h · disc: qa
   - GIVEN una ventana de 844 px de alto y 300 px de controles WHEN se calcula la altura de la tarjeta THEN cabe sin desplazar y no baja del mínimo legible
-- [ ] F5 Implementar la navegación legible, el aviso de verificación compacto, la altura de la tarjeta y la fila de filtros desplazable, y verificar que pasan las pruebas de T5. ref: Aviso de verificación compacto · est: 4h · disc: front
+- [x] F5 Implementar la navegación legible, el aviso de verificación compacto, la altura de la tarjeta y la fila de filtros desplazable, y verificar que pasan las pruebas de T5. ref: Aviso de verificación compacto · est: 4h · disc: front
   - GIVEN un email sin verificar WHEN se abre «Explorar» THEN el aviso ocupa una franja y la tarjeta se ve entera
 
 ## 5. Verificación

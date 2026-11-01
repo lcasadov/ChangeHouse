@@ -634,3 +634,12 @@ describe('Preferencias de una vivienda', () => {
     }, SAVE_TIMEOUT);
   });
 });
+
+describe('Estados vacíos con imagen', () => {
+  it('Scenario: Sin más viviendas - el estado vacío lleva su imagen de ambiente', async () => {
+    await open({ cards: [] });
+
+    expect(await screen.findByRole('header', { name: d.end.title })).toBeTruthy();
+    expect(screen.getByTestId('empty-state-image', { includeHiddenElements: true })).toBeTruthy();
+  });
+});

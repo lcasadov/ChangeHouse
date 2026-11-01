@@ -6,7 +6,7 @@ import { Platform } from 'react-native';
 
 import { useBreakpoint } from '../../ui';
 import { useIsAdmin } from '../admin/use-is-admin';
-import { hiddenTabRoute, navigationLayoutFor, tabsFor } from './tabs';
+import { hiddenTabRoute, navigationLayoutFor, tabBarColors, tabsFor } from './tabs';
 
 /**
  * Navegación principal: pestañas inferiores y, en web ancha (`expanded`), barra lateral
@@ -18,6 +18,7 @@ export function AppTabs() {
   const breakpoint = useBreakpoint();
   const isAdmin = useIsAdmin();
   const sideNavigation = navigationLayoutFor(Platform.OS, breakpoint) === 'side';
+  const colors = tabBarColors(theme);
 
   return (
     <Tabs
@@ -25,8 +26,13 @@ export function AppTabs() {
         headerShown: false,
         tabBarPosition: sideNavigation ? 'left' : 'bottom',
         tabBarLabelPosition: sideNavigation ? 'beside-icon' : 'below-icon',
-        tabBarActiveTintColor: theme.color.primary,
-        tabBarInactiveTintColor: theme.color.textMuted,
+        tabBarActiveTintColor: colors.activeTint,
+        tabBarInactiveTintColor: colors.inactiveTint,
+        tabBarActiveBackgroundColor: colors.activeBackground,
+        tabBarInactiveBackgroundColor: colors.inactiveBackground,
+        tabBarItemStyle: sideNavigation
+          ? { borderRadius: theme.radius.md, marginVertical: theme.space[1] }
+          : { borderRadius: theme.radius.md, margin: theme.space[1] },
         tabBarStyle: {
           backgroundColor: theme.color.surface,
           borderColor: theme.color.border,
@@ -54,7 +60,7 @@ export function AppTabs() {
               <Ionicons
                 name={focused ? icon.active : icon.inactive}
                 size={size}
-                color={focused ? theme.color.primary : theme.color.textMuted}
+                color={focused ? colors.activeTint : colors.inactiveTint}
                 accessible={false}
               />
             ),

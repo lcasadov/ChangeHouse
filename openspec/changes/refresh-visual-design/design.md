@@ -122,21 +122,25 @@ imágenes de prueba. En el equipo hay sharp; no hay ffmpeg instalado.
     azul por defecto.
   - En la barra lateral, los elementos llevan `radius.md`.
 - **Aviso de verificación**:
-  - Usa `Notice` en tono `warning`, con el mensaje y una fila de dos `Link`:
-    reenviar y comprobar.
-  - El resultado (enviado, aún pendiente o fallo) sustituye al mensaje dentro del
-    mismo aviso y se anuncia con `announce`.
-  - El botón grande desaparece.
+  - `Notice` admite `actions` (botones `ghost` compactos en una fila) y `detail`
+    (una segunda línea). El aviso lleva el mensaje y las dos acciones, reenviar
+    y comprobar, en una sola franja.
+  - El resultado (enviado, aún pendiente o fallo) aparece como `detail` en el
+    mismo aviso, que cambia de tono y se anuncia por su región viva, sin perder
+    el mensaje.
+  - Desaparecen el botón grande y el segundo aviso.
 - **Explorar entera en pantalla**:
-  - La altura de la tarjeta se limita con `cardHeightFor(viewportHeight,
-    chromeHeight)`: una función pura que resta lo que ocupan la búsqueda, los
-    filtros y los botones de decisión, y fija un mínimo legible.
-  - La proporción de la foto pasa de 4:5 fija a ser la que quepa, con un máximo
-    de 4:5.
-  - Los chips de filtro van en un `ScrollView` horizontal.
+  - La zona de tarjetas ya ocupa con flex lo que queda libre; el problema era
+    su alto mínimo fijo de 384 px, que, sumado al aviso de verificación,
+    empujaba la tarjeta fuera de la pantalla.
+  - `feedMinHeight(windowHeight)` es una función pura que da el 45 % del alto de
+    la ventana, entre 256 y 384 px. En 390 × 844 deja sitio a la búsqueda, los
+    filtros y los botones; en 1280 × 720 también.
+  - Los chips de filtro ya iban en un `ScrollView` horizontal; se mantiene.
 - **`EmptyState` con imagen**: admite `image` (una fuente de `expo-image`), que
   sustituye al icono por una foto redondeada de 160 px y decorativa. La usan fin
-  de Explorar, sin matches y sin casas.
+  de Explorar, sin matches y sin casas. Las fotos empaquetadas se importan como
+  módulos (`src/images.d.ts` declara `*.jpg`).
 - **Semilla de demostración**: `seed-demo.mjs` importa `scenes.mjs` y sube a
   cada casa cuatro fotos (exterior, salón, cocina y dormitorio). Las fotos usan
   la paleta y la hora del día de la persona.

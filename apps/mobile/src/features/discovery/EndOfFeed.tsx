@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
-import { EmptyState } from '../../ui';
+import { AMBIENT, EmptyState } from '../../ui';
 
 export interface EndOfFeedProps {
   onWidenZone: () => void;
@@ -13,6 +13,7 @@ export function EndOfFeed({ onWidenZone, onAdjustCompensation }: Readonly<EndOfF
   return (
     <EmptyState
       icon="compass-outline"
+      image={AMBIENT.emptyExplore}
       title={t('discovery.end.title')}
       description={t('discovery.end.description')}
       action={{ label: t('discovery.end.widenZone'), onPress: onWidenZone }}

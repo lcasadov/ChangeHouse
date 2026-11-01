@@ -2,8 +2,9 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Button, FormScreen, Link, Notice, Text, TextField } from '../../ui';
+import { Button, Link, Notice, Text, TextField } from '../../ui';
 import type { AccessMode } from './access-validation';
+import { AuthLayout } from './AuthLayout';
 import { useAccessForm } from './use-access-form';
 
 /** Registro e inicio de sesión en una única pantalla: Google y Apple primero, el email después. */
@@ -17,7 +18,7 @@ export function AccessScreen() {
   const busy = form.pending !== null;
 
   return (
-    <FormScreen>
+    <AuthLayout>
       <Button
         variant="ghost"
         label={t('auth.access.back')}
@@ -100,6 +101,6 @@ export function AccessScreen() {
           setMode(signingUp ? 'signIn' : 'signUp');
         }}
       />
-    </FormScreen>
+    </AuthLayout>
   );
 }

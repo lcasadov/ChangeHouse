@@ -13,6 +13,19 @@ export interface NoticeProps {
   tone: NoticeTone;
   children: string;
   action?: { label: string; onPress: () => void };
+  /** Varias acciones compactas en una fila, para avisos persistentes que no deben ocupar espacio. */
+  actions?: readonly NoticeAction[];
+  /** Una segunda línea anunciada (el resultado de la última acción), sin perder el mensaje. */
+  detail?: string;
+  testID?: string;
+  actionsTestID?: string;
+}
+
+export interface NoticeAction {
+  label: string;
+  onPress: () => void;
+  loading?: boolean;
+  disabled?: boolean;
 }
 
 const TONES: Record<
@@ -29,12 +42,21 @@ const TONES: Record<
  * Aviso con icono (el color nunca va solo). El mensaje se anuncia al aparecer; la acción queda
  * fuera del grupo anunciado para seguir siendo un control alcanzable por sí mismo.
  */
-export function Notice({ tone, children, action }: Readonly<NoticeProps>) {
+export function Notice({
+  tone,
+  children,
+  action,
+  actions,
+  detail,
+  testID,
+  actionsTestID,
+}: Readonly<NoticeProps>) {
   const theme = useTheme();
   const { color, icon } = TONES[tone];
 
   return (
     <View
+      testID={testID}
       style={{
         backgroundColor: theme.color.surface,
         borderColor: theme.color[color],
@@ -51,14 +73,36 @@ export function Notice({ tone, children, action }: Readonly<NoticeProps>) {
         style={[styles.row, { gap: theme.space[2] }]}
       >
         <Ionicons name={icon} size={theme.space[5]} color={theme.color[color]} />
-        <Text style={styles.message}>{children}</Text>
+        <View style={styles.message}>
+          <Text>{children}</Text>
+          {detail ? (
+            <Text variant="caption" tone="textMuted">
+              {detail}
+            </Text>
+          ) : null}
+        </View>
       </View>
+      {actions && actions.length > 0 ? (
+        <View testID={actionsTestID} style={[styles.actions, { columnGap: theme.space[2] }]}>
+          {actions.map((item) => (
+            <Button
+              key={item.label}
+              variant="ghost"
+              label={item.label}
+              loading={item.loading}
+              disabled={item.disabled}
+              onPress={item.onPress}
+            />
+          ))}
+        </View>
+      ) : null}
       {action ? <Button variant="secondary" label={action.label} onPress={action.onPress} /> : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  actions: { flexDirection: 'row', flexWrap: 'wrap' },
   message: { flex: 1 },
   row: { alignItems: 'flex-start', flexDirection: 'row' },
 });
