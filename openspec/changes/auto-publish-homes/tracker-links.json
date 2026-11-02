@@ -1,0 +1,101 @@
+{
+  "tracker": "github-issues",
+  "change": "auto-publish-homes",
+  "sprint": {
+    "path": "Sprint 01",
+    "created": false
+  },
+  "epic": {
+    "capability": "moderation",
+    "id": 125,
+    "reused": true
+  },
+  "related_epics": [
+    {
+      "capability": "homes",
+      "id": 92
+    }
+  ],
+  "feature": {
+    "id": 425,
+    "reused": true
+  },
+  "stories": [
+    {
+      "key": "Publicación al enviar",
+      "id": 426,
+      "reused": false,
+      "prio": "P1"
+    },
+    {
+      "key": "Cambios relevantes sin nueva revisión",
+      "id": 427,
+      "reused": false,
+      "prio": "P1"
+    },
+    {
+      "key": "Cola de moderación de viviendas",
+      "id": 428,
+      "reused": false,
+      "prio": "P1"
+    },
+    {
+      "key": "Denunciar",
+      "id": 429,
+      "reused": false,
+      "prio": "P1"
+    }
+  ],
+  "tasks": [
+    {
+      "key": "T1",
+      "id": 430,
+      "parent": 426,
+      "state": "open"
+    },
+    {
+      "key": "B1",
+      "id": 431,
+      "parent": 427,
+      "state": "open"
+    },
+    {
+      "key": "T2",
+      "id": 432,
+      "parent": 429,
+      "state": "open"
+    },
+    {
+      "key": "B2",
+      "id": 433,
+      "parent": 428,
+      "state": "open"
+    },
+    {
+      "key": "T3",
+      "id": 434,
+      "parent": 426,
+      "state": "open"
+    },
+    {
+      "key": "F1",
+      "id": 435,
+      "parent": 429,
+      "state": "open"
+    },
+    {
+      "key": "T4",
+      "id": 436,
+      "parent": 428,
+      "state": "open"
+    },
+    {
+      "key": "D1",
+      "id": 437,
+      "parent": 426,
+      "state": "open"
+    }
+  ],
+  "bugs": [],
+  "pending": []
+}
