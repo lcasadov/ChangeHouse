@@ -37,12 +37,13 @@ personas; la zona generada la reescribe `plan-sync` en cada operación.
 
 | change | estado | % | completadas/total | fase |
 |---|---|---|---|---|
+| auto-publish-homes | ❌ SIN EMPEZAR | 0 % | 0/8 | ❌ SIN EMPEZAR |
 
-
-**Progreso global de los changes activos**: 0/0 (0 %)
+**Progreso global de los changes activos**: 0/8 (0 %)
 
 | estado | changes |
 |---|---|
+| ❌ SIN EMPEZAR | 1 |
 | ✅ ARCHIVADO | 24 |
 
 ### Changes archivados
