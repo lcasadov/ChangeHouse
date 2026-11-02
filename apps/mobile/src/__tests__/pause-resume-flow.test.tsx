@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { fireEvent, screen } from '@testing-library/react-native';
 
 import type { Home } from '../features/homes/homes-api';
 import es from '../i18n/locales/es-ES.json';
@@ -124,49 +124,24 @@ describe('Pausar y reactivar desde el detalle', () => {
 });
 
 describe('Editar una vivienda publicada', () => {
-  it('Scenario: Cambiar el valor de una vivienda publicada - avisa antes de guardar de que volverá a revisión y, al confirmar, pasa a «En revisión»', async () => {
+  it('Scenario: Cambiar el valor de una vivienda publicada - guarda sin pedir confirmación y sigue publicada', async () => {
     const backend = await openDetail(completeHome({ status: 'published' }));
     await editUntilValue(backend);
 
     await fireEvent.changeText(field(h.form.valueMax), '320.000');
     await fireEvent.press(button(h.wizard.next));
-
-    expect(await screen.findByLabelText(h.reReview.title)).toBeTruthy();
-    expect(screen.getByText(h.reReview.description)).toBeTruthy();
-    expect(patches(backend)).toHaveLength(2);
-
-    await fireEvent.press(button(h.reReview.confirm));
 
     await stepBar(6);
+    expect(screen.queryByRole('button', { name: /enviar a revisión/i })).toBeNull();
     expect(backend.homes.all()[0]).toMatchObject({
-      status: 'in_review',
+      status: 'published',
       valueMaxCents: 32_000_000,
     });
-    // Ya va a revisión: los pasos siguientes no vuelven a avisar
     await fireEvent.press(button(h.wizard.next));
-    expect(await screen.findByText(h.detail.statusNote.in_review)).toBeTruthy();
-    expect(screen.queryByLabelText(h.reReview.title)).toBeNull();
+    expect(await screen.findByText(h.detail.statusNote.published)).toBeTruthy();
   });
 
-  it('«Seguir editando» no guarda nada y deja el paso como estaba', async () => {
-    const backend = await openDetail(completeHome({ status: 'published' }));
-    await editUntilValue(backend);
-
-    await fireEvent.changeText(field(h.form.valueMax), '320.000');
-    await fireEvent.press(button(h.wizard.next));
-    await screen.findByLabelText(h.reReview.title);
-    await fireEvent.press(button(h.reReview.cancel));
-
-    await waitFor(() => {
-      expect(screen.queryByLabelText(h.reReview.title)).toBeNull();
-    });
-    expect(await stepBar(5)).toBeTruthy();
-    expect(field(h.form.valueMax).props.value).toBe('320.000');
-    expect(patches(backend)).toHaveLength(2);
-    expect(backend.homes.all()[0]?.status).toBe('published');
-  });
-
-  it('Scenario: Cambiar solo la visibilidad de la ubicación - se guarda sin aviso, sigue publicada y vuelve al detalle', async () => {
+  it('Scenario: Cambiar solo la visibilidad de la ubicación - se guarda, sigue publicada y vuelve al detalle', async () => {
     const backend = await openDetail(completeHome({ status: 'published' }));
     await editUntilValue(backend);
     await fireEvent.press(button(h.wizard.next));
@@ -176,14 +151,13 @@ describe('Editar una vivienda publicada', () => {
     await fireEvent.press(button(h.wizard.next));
 
     expect(await screen.findByText(h.detail.statusNote.published)).toBeTruthy();
-    expect(screen.queryByLabelText(h.reReview.title)).toBeNull();
     expect(backend.homes.all()[0]).toMatchObject({
       status: 'published',
       location: { visibility: 'exact' },
     });
   });
 
-  it('una vivienda pausada también se edita y avisa igual', async () => {
+  it('una vivienda pausada también se edita sin diálogo y sigue pausada', async () => {
     const backend = await openDetail(completeHome({ status: 'paused' }));
     await fireEvent.press(button(h.detail.edit));
     await stepBar(2);
@@ -194,13 +168,12 @@ describe('Editar una vivienda publicada', () => {
 
     await fireEvent.changeText(field(h.form.bedrooms), '4');
     await fireEvent.press(button(h.wizard.next));
-    await fireEvent.press(await screen.findByRole('button', { name: h.reReview.confirm }));
 
     await stepBar(5);
-    expect(backend.homes.all()[0]).toMatchObject({ status: 'in_review', bedrooms: 4 });
+    expect(backend.homes.all()[0]).toMatchObject({ status: 'paused', bedrooms: 4 });
   });
 
-  it('cambiar el régimen de protección de una vivienda publicada avisa y, al confirmar, pasa a «En revisión»', async () => {
+  it('cambiar el régimen de protección de una vivienda publicada guarda sin diálogo y sigue publicada', async () => {
     const backend = await openDetail(completeHome({ status: 'published' }));
     await fireEvent.press(button(h.detail.edit));
     await stepBar(2);
@@ -210,13 +183,10 @@ describe('Editar una vivienda publicada', () => {
     await fireEvent.press(radio(h.regime.VPPL));
     await fireEvent.changeText(field(h.form.vppQualificationDate), '10/03/2015');
     await fireEvent.press(button(h.wizard.next));
-    expect(await screen.findByLabelText(h.reReview.title)).toBeTruthy();
-    expect(patches(backend)).toHaveLength(1);
-    await fireEvent.press(button(h.reReview.confirm));
 
     await stepBar(4);
     expect(backend.homes.all()[0]).toMatchObject({
-      status: 'in_review',
+      status: 'published',
       regime: 'VPPL',
       vppQualificationDate: '2015-03-10',
     });
@@ -232,11 +202,25 @@ describe('Editar una vivienda publicada', () => {
     expect(await screen.findByRole('header', { name: MALASANA_TITLE })).toBeTruthy();
   });
 
-  it('las fotos de una vivienda publicada avisan antes de cambiarlas de que volverá a revisión', async () => {
-    await openDetail(completeHome({ status: 'published', photos: readyPhotos(4) }));
+  it.each(['published', 'paused'] as const)(
+    'la pantalla de fotos de una vivienda %s no muestra ningún aviso de revisión',
+    async (status) => {
+      await openDetail(completeHome({ status, photos: readyPhotos(4) }));
 
-    await fireEvent.press(button(h.detail.managePhotos));
+      await fireEvent.press(button(h.detail.managePhotos));
 
-    expect(await screen.findByText(h.reReview.photosNotice)).toBeTruthy();
+      expect(await screen.findByText(h.photos.counter.replace('{{count}}', '4'))).toBeTruthy();
+      expect(screen.queryByText(/revisión|revisaremos/i)).toBeNull();
+    },
+  );
+});
+
+describe('Nota de una casa en revisión', () => {
+  it('explica que no aparece en Explorar mientras se revisa y que los matches siguen abiertos', async () => {
+    await openDetail(completeHome({ status: 'in_review' }));
+
+    expect(screen.getByText(h.detail.statusNote.in_review)).toBeTruthy();
+    expect(h.detail.statusNote.in_review).toContain('no aparece en Explorar');
+    expect(h.detail.statusNote.in_review).toContain('matches siguen abiertos');
   });
 });

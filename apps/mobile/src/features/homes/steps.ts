@@ -1,5 +1,3 @@
-import type { HomePatch } from '@changehouse/shared';
-
 import type { Home } from './homes-api';
 
 /** Lo que recibe cada paso del asistente. */
@@ -12,9 +10,4 @@ export interface StepProps {
   onBack?: (() => void) | undefined;
   /** Salir al listado; el borrador ya está guardado. */
   onExit: () => void;
-  /**
-   * Antes de guardar: resuelve `false` si la persona decide no guardar (p. ej. tras avisarle de que
-   * el cambio devuelve la vivienda a revisión). Ausente, se guarda siempre.
-   */
-  confirmSave?: ((patch: HomePatch) => Promise<boolean>) | undefined;
 }

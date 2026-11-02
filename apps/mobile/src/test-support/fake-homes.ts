@@ -3,7 +3,7 @@ import { FIXTURE_PLACES, type HomeInput } from '@changehouse/shared';
 import type { Home } from '../features/homes/homes-api';
 import { json, problem } from './http-responses';
 
-/** Campos que la API exige para enviar a revisión (`submitHome`). */
+/** Campos que la API exige para publicar (`submitHome`). */
 const REQUIRED_TO_SUBMIT = [
   'usefulM2',
   'builtM2',
@@ -18,26 +18,6 @@ const REQUIRED_TO_SUBMIT = [
 ] as const;
 
 const NOT_EDITABLE = new Set<Home['status']>(['in_operation', 'closed']);
-/** Estados en los que un cambio relevante (ficha o fotos) devuelve la vivienda a revisión. */
-const RESUBMIT_ON_CHANGE = new Set<Home['status']>(['published', 'paused']);
-/** Datos relevantes de la ficha (`updateHome` en `docs/api/openapi.yaml`); las fotos también lo son. */
-const RELEVANT = [
-  'type',
-  'regime',
-  'usefulM2',
-  'builtM2',
-  'bedrooms',
-  'bathrooms',
-  'floor',
-  'hasLift',
-  'garage',
-  'storageRoom',
-  'valueMinCents',
-  'valueMaxCents',
-  'vppQualificationDate',
-  'vppProtectionEnd',
-  'vppMaxLegalPriceCents',
-] as const;
 const HOME_PATH =
   /^\/homes\/([^/]+)(?:\/(submit|pause|resume|photos)(?:\/([^/]+?)(\/complete)?)?)?$/;
 
@@ -238,7 +218,6 @@ export class FakeHomes {
       position: photos.length + 1,
     };
     home.photos = [...photos, photo];
-    this.resubmitOnChange(home);
     return json(200, photo);
   }
 
@@ -256,7 +235,6 @@ export class FakeHomes {
     home.photos = photos
       .filter((photo) => photo.id !== photoId)
       .map((photo, index) => ({ ...photo, position: index + 1 }));
-    this.resubmitOnChange(home);
     return new Response(null, { status: 204 });
   }
 
@@ -301,12 +279,7 @@ export class FakeHomes {
     }
     if (locationVisibility) location = { ...location, visibility: locationVisibility };
 
-    const relevant =
-      formatted !== home.address ||
-      JSON.stringify(rest.features ?? home.features) !== JSON.stringify(home.features) ||
-      RELEVANT.some((key) => key in rest && rest[key] !== home[key]);
     Object.assign(home, rest, { address: formatted, location });
-    if (relevant) this.resubmitOnChange(home);
     return json(200, home);
   }
 
@@ -317,8 +290,10 @@ export class FakeHomes {
     return json(200, home);
   }
 
-  private resubmitOnChange(home: Home): void {
-    if (RESUBMIT_ON_CHANGE.has(home.status)) home.status = 'in_review';
+  /** Una denuncia retira de Explorar la vivienda publicada o pausada (`createReport`). */
+  retireReported(homeId: string): void {
+    const home = this.homes.find((candidate) => candidate.id === homeId);
+    if (home?.status === 'published' || home?.status === 'paused') home.status = 'in_review';
   }
 
   private submit(home: Home): Response {
@@ -331,7 +306,12 @@ export class FakeHomes {
         errors: missing.map((field) => ({ field, message: 'required' })),
       });
     }
-    home.status = 'in_review';
+    // Como la API: se publica al enviar, salvo que un administrador la rechazara antes
+    if (isMissing(home.moderationNote)) {
+      home.status = 'published';
+    } else {
+      home.status = 'in_review';
+    }
     return json(200, home);
   }
 

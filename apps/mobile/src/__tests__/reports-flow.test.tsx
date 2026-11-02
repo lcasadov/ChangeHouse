@@ -91,13 +91,13 @@ async function openHomeDetail(theme?: 'light' | 'dark') {
 }
 
 describe('Denunciar una vivienda ajena', () => {
-  it('Scenario: Denunciar una vivienda - con el motivo «Anuncio falso» la API responde 201 y se confirma que el equipo la revisará', async () => {
+  it('Scenario: Denunciar una vivienda - con el motivo «Anuncio falso» la API responde 201 y se confirma que se ha retirado mientras se revisa', async () => {
     const { backend, card } = await openHomeDetail();
 
     await chooseOption(HOME_TITLE, m.more.report);
     await sendReport();
 
-    expect(await screen.findByText(m.report.sent)).toBeTruthy();
+    expect(await screen.findByText(m.report.sentHome)).toBeTruthy();
     expect(posts(backend, '/reports')).toHaveLength(1);
     expect(posts(backend, '/reports')[0]?.body).toEqual({
       targetType: 'home',
@@ -127,7 +127,7 @@ describe('Denunciar una vivienda ajena', () => {
     );
     await fireEvent.press(button(m.report.send));
 
-    expect(await screen.findByText(m.report.sent)).toBeTruthy();
+    expect(await screen.findByText(m.report.sentHome)).toBeTruthy();
     expect(posts(backend, '/reports')[0]?.body).toMatchObject({
       reason: 'Las fotos no son suyas',
     });
@@ -163,12 +163,12 @@ describe('Denunciar una vivienda ajena', () => {
     await sendReport();
 
     expect(await screen.findByText(m.report.errors.rateLimited)).toBeTruthy();
-    expect(screen.queryByText(m.report.sent)).toBeNull();
+    expect(screen.queryByText(m.report.sentHome)).toBeNull();
 
     backend.reports.rateLimited = false;
     await fireEvent.press(button(m.report.send));
 
-    expect(await screen.findByText(m.report.sent)).toBeTruthy();
+    expect(await screen.findByText(m.report.sentHome)).toBeTruthy();
   });
 
   it.each([
@@ -256,13 +256,13 @@ async function openMatchDetail() {
 }
 
 describe('Denunciar desde el detalle de un match', () => {
-  it('denuncia la vivienda de la otra persona y confirma que el equipo la revisará', async () => {
+  it('denuncia la vivienda de la otra persona y confirma que se ha retirado mientras se revisa', async () => {
     const { backend, card } = await openMatchDetail();
 
     await chooseOption('Beto', m.more.report);
     await sendReport(m.report.reasons.inappropriate);
 
-    expect(await screen.findByText(m.report.sent)).toBeTruthy();
+    expect(await screen.findByText(m.report.sentHome)).toBeTruthy();
     expect(posts(backend, '/reports')[0]?.body).toEqual({
       targetType: 'home',
       targetId: card.id,
