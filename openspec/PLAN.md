@@ -37,14 +37,13 @@ personas; la zona generada la reescribe `plan-sync` en cada operación.
 
 | change | estado | % | completadas/total | fase |
 |---|---|---|---|---|
-| auto-publish-homes | 🔄 EN PROGRESO | 88 % | 7/8 | 🔄 EN PROGRESO |
 
-**Progreso global de los changes activos**: 7/8 (88 %)
+
+**Progreso global de los changes activos**: 0/0 (0 %)
 
 | estado | changes |
 |---|---|
-| 🔄 EN PROGRESO | 1 |
-| ✅ ARCHIVADO | 24 |
+| ✅ ARCHIVADO | 25 |
 
 ### Changes archivados
 
@@ -74,5 +73,6 @@ personas; la zona generada la reescribe `plan-sync` en cada operación.
 | 2026-10-31-add-user-suspension | 5/5 | 2026-10-31 |
 | 2026-11-01-harden-security-before-launch | 17/17 | 2026-11-01 |
 | 2026-11-01-refresh-visual-design | 13/13 | 2026-11-01 |
+| 2026-11-02-auto-publish-homes | 7/8 | 2026-11-02 |
 
 <!-- catalogo:generado:fin -->
