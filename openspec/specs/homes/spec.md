@@ -84,33 +84,6 @@ una vivienda ajena no publicada MUST responder como inexistente (404).
 - **WHEN** un usuario la consulta por su identificador
 - **THEN** la API responde 404, igual que si no existiera
 
-### Requirement: Envío a revisión
-
-El propietario SHALL poder enviar a revisión una vivienda en `draft` cuando sus
-datos obligatorios están completos y tiene al menos 3 fotos procesadas,
-pasando a `in_review`; una vivienda incompleta MUST NOT poder enviarse y la API
-SHALL indicar qué falta.
-
-#### Scenario: Envío de una ficha completa
-- **GIVEN** una vivienda en `draft` con todos los datos obligatorios y 3 fotos procesadas
-- **WHEN** el propietario la envía a revisión
-- **THEN** pasa a `in_review` y «Mis casas» muestra «En revisión»
-
-#### Scenario: Envío de una ficha incompleta
-- **GIVEN** una vivienda en `draft` sin rango de valor
-- **WHEN** el propietario intenta enviarla
-- **THEN** la API responde 422 indicando los campos que faltan y sigue en `draft`
-
-#### Scenario: Envío con menos de 3 fotos
-- **GIVEN** una vivienda en `draft` completa con 2 fotos
-- **WHEN** el propietario intenta enviarla
-- **THEN** la API responde 422 indicando que faltan fotos y sigue en `draft`
-
-#### Scenario: Edición de una vivienda en operación
-- **GIVEN** una vivienda en `in_operation` o `closed`
-- **WHEN** su propietario intenta modificarla
-- **THEN** la API responde 409 y no cambia nada
-
 ### Requirement: Rol de propietario derivado de sus viviendas
 
 El sistema SHALL considerar `owner` al usuario con al menos una vivienda en
@@ -226,23 +199,6 @@ o reactivar algo que no está pausado MUST responder 409.
 - **WHEN** su propietario intenta pausarla
 - **THEN** la API responde 409
 
-### Requirement: Vuelta a revisión tras cambios relevantes
-
-Editar el valor, las fotos, las características o el régimen de protección (con
-su fecha de calificación, el fin de la protección y el precio máximo legal) de una
-vivienda publicada o pausada SHALL devolverla a `in_review` y actualizar la fecha
-de cambio relevante; editar solo la visibilidad de la ubicación MUST NOT hacerlo.
-
-#### Scenario: Cambiar el valor de una vivienda publicada
-- **GIVEN** una vivienda publicada
-- **WHEN** su propietario cambia su rango de valor
-- **THEN** pasa a `in_review` y la app avisa antes de guardar de que volverá a revisión
-
-#### Scenario: Cambiar solo la visibilidad de la ubicación
-- **GIVEN** una vivienda publicada
-- **WHEN** su propietario cambia de «zona» a «ubicación exacta»
-- **THEN** sigue publicada
-
 ### Requirement: Límites de las subidas de fotos
 
 Cada fichero subido como foto de una vivienda MUST NOT superar 25 MB, y el
@@ -265,3 +221,54 @@ llegar a procesarse.
 - **GIVEN** una foto subida de 10.000 × 10.000 píxeles
 - **WHEN** el propietario confirma la subida
 - **THEN** la API la rechaza con un error de validación y la foto no se publica
+
+### Requirement: Publicación al enviar
+
+El propietario SHALL poder enviar una vivienda en `draft` cuando sus datos
+obligatorios están completos y tiene al menos 3 fotos procesadas, y la vivienda
+SHALL pasar directamente a `published`, sin esperar a un administrador. Una
+vivienda rechazada antes por un administrador (con motivo de rechazo) SHALL
+pasar a `in_review` al reenviarse. Una vivienda incompleta MUST NOT poder
+enviarse y la API SHALL indicar qué falta.
+
+#### Scenario: Envío de una ficha completa
+- **GIVEN** una vivienda en `draft`, nunca rechazada, con todos los datos obligatorios y 3 fotos procesadas
+- **WHEN** el propietario la publica
+- **THEN** pasa a `published` con su fecha de publicación, aparece en el descubrimiento y «Mis casas» muestra «Publicada»
+
+#### Scenario: Reenvío de una vivienda rechazada
+- **GIVEN** una vivienda en `draft` que un administrador rechazó con el motivo «Las fotos no corresponden a la vivienda», ya corregida
+- **WHEN** el propietario la reenvía
+- **THEN** pasa a `in_review` y entra en la cola de moderación
+
+#### Scenario: Envío de una ficha incompleta
+- **GIVEN** una vivienda en `draft` sin rango de valor
+- **WHEN** el propietario intenta publicarla
+- **THEN** la API responde 422 indicando los campos que faltan y sigue en `draft`
+
+#### Scenario: Envío con menos de 3 fotos
+- **GIVEN** una vivienda en `draft` completa con 2 fotos
+- **WHEN** el propietario intenta publicarla
+- **THEN** la API responde 422 indicando que faltan fotos y sigue en `draft`
+
+#### Scenario: Edición de una vivienda en operación
+- **GIVEN** una vivienda en `in_operation` o `closed`
+- **WHEN** su propietario intenta modificarla
+- **THEN** la API responde 409 y no cambia nada
+
+### Requirement: Cambios relevantes sin nueva revisión
+
+Editar el valor, las fotos, las características o el régimen de protección de
+una vivienda publicada o pausada MUST NOT cambiar su estado: SHALL seguir
+publicada o pausada y SHALL actualizar la fecha de cambio relevante. La app
+MUST NOT avisar de que la vivienda volverá a revisión.
+
+#### Scenario: Cambiar el valor de una vivienda publicada
+- **GIVEN** una vivienda publicada
+- **WHEN** su propietario cambia su rango de valor
+- **THEN** sigue publicada, se actualiza su fecha de cambio relevante y la app guarda sin pedir confirmación de revisión
+
+#### Scenario: Añadir una foto a una vivienda pausada
+- **GIVEN** una vivienda pausada
+- **WHEN** su propietario añade una foto
+- **THEN** sigue pausada y la pantalla de fotos no muestra ningún aviso de revisión
