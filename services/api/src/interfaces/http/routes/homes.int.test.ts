@@ -273,14 +273,14 @@ describe.skipIf(!emulatorAvailable())('viviendas con tokens reales', () => {
       },
     );
 
-    it('una vivienda publicada que cambia un dato relevante vuelve a in_review y anota el cambio', async () => {
+    it('una vivienda publicada que cambia un dato relevante sigue publicada y anota el cambio', async () => {
       const user = await registered();
       const { id } = await createHome(user, COMPLETE);
       await setStatus(id, 'published');
 
       const response = await call(user, 'PATCH', `/v1/homes/${String(id)}`, { usefulM2: 90 });
 
-      expect(response.json()).toMatchObject({ status: 'in_review', usefulM2: 90 });
+      expect(response.json()).toMatchObject({ status: 'published', usefulM2: 90 });
       const [row] = await sql<
         { changed: Date | null }[]
       >`SELECT relevant_changed_at AS changed FROM homes`;
@@ -402,7 +402,7 @@ describe.skipIf(!emulatorAvailable())('viviendas con tokens reales', () => {
   });
 
   describe('submitHome', () => {
-    it('Scenario: Envío de una ficha completa - pasa a in_review y «Mis casas» lo refleja', async () => {
+    it('Scenario: Envío de una ficha completa - pasa a published y «Mis casas» lo refleja', async () => {
       const user = await registered();
       const { id } = await createHome(user, COMPLETE);
       await addReadyPhotos(id);
@@ -411,8 +411,8 @@ describe.skipIf(!emulatorAvailable())('viviendas con tokens reales', () => {
       const list = await call(user, 'GET', '/v1/me/homes');
 
       expect(response.statusCode).toBe(200);
-      expect(response.json()).toMatchObject({ status: 'in_review' });
-      expect(list.json<Json[]>()).toMatchObject([{ id, status: 'in_review' }]);
+      expect(response.json()).toMatchObject({ status: 'published' });
+      expect(list.json<Json[]>()).toMatchObject([{ id, status: 'published' }]);
     });
 
     it('Scenario: Envío de una ficha incompleta - 422 con los campos que faltan y sigue en draft', async () => {
@@ -435,7 +435,7 @@ describe.skipIf(!emulatorAvailable())('viviendas con tokens reales', () => {
       expect(row?.status).toBe('draft');
     });
 
-    it('enviar una vivienda que ya está en revisión da 409', async () => {
+    it('enviar una vivienda que ya está publicada da 409', async () => {
       const user = await registered();
       const { id } = await createHome(user, COMPLETE);
       await addReadyPhotos(id);
@@ -476,7 +476,7 @@ describe.skipIf(!emulatorAvailable())('viviendas con tokens reales', () => {
       expect(row?.status).toBe('draft');
     });
 
-    it('Scenario: VPP sin fecha de calificación - con la fecha de calificación la VPPL se envía a revisión', async () => {
+    it('Scenario: VPP sin fecha de calificación - con la fecha de calificación la VPPL se publica al enviarla', async () => {
       const user = await registered();
       const { id } = await createHome(user, { ...COMPLETE, regime: 'VPPL' });
       await addReadyPhotos(id);
@@ -489,13 +489,13 @@ describe.skipIf(!emulatorAvailable())('viviendas con tokens reales', () => {
       expect(patched.statusCode).toBe(200);
       expect(response.statusCode).toBe(200);
       expect(response.json()).toMatchObject({
-        status: 'in_review',
+        status: 'published',
         regime: 'VPPL',
         vppQualificationDate: '2015-03-10',
       });
     });
 
-    it('Scenario: Vivienda libre - se guarda y se envía sin datos de protección', async () => {
+    it('Scenario: Vivienda libre - se guarda y se publica sin datos de protección', async () => {
       const user = await registered();
       const { id } = await createHome(user, { ...COMPLETE, regime: 'libre' });
       await addReadyPhotos(id);
@@ -504,7 +504,7 @@ describe.skipIf(!emulatorAvailable())('viviendas con tokens reales', () => {
 
       expect(response.statusCode).toBe(200);
       expect(response.json()).toMatchObject({
-        status: 'in_review',
+        status: 'published',
         regime: 'libre',
         vppQualificationDate: null,
         vppProtectionEnd: null,
@@ -583,8 +583,7 @@ describe.skipIf(!emulatorAvailable())('viviendas con tokens reales', () => {
     it('Scenario: Sin vivienda publicada - con una única vivienda en in_review su rol es seeker', async () => {
       const user = await registered();
       const { id } = await createHome(user, COMPLETE);
-      await addReadyPhotos(id);
-      await call(user, 'POST', `/v1/homes/${String(id)}/submit`);
+      await setStatus(id, 'in_review');
 
       expect(await me(user)).toMatchObject({ roles: ['seeker'], hasPublishedHome: false });
     });

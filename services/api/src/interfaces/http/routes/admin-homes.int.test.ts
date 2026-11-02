@@ -69,7 +69,11 @@ async function addReadyPhotos(homeId: string, count = 3): Promise<void> {
   }
 }
 
-/** Una vivienda completa de un propietario nuevo, con fotos; enviada a revisión por la API salvo `draft`. */
+/**
+ * Una vivienda completa de un propietario nuevo, con fotos; la API la publica al enviarla y luego
+ * pasa a `in_review` como lo haría una denuncia (el flujo de denuncia se prueba en `reports.int.test.ts`
+ * y aquí no debe dejar su auditoría). Con `submit: false` queda en `draft`.
+ */
 async function homeInReview(
   options: { submittedAt?: string; submit?: boolean } = {},
 ): Promise<{ owner: EmulatorUser; homeId: string }> {
@@ -85,6 +89,8 @@ async function homeInReview(
   if (options.submit !== false) {
     const submitted = await call(owner, 'POST', `/v1/homes/${homeId}/submit`);
     expect(submitted.statusCode, submitted.body).toBe(200);
+    expect(submitted.json()).toMatchObject({ status: 'published' });
+    await sql`UPDATE homes SET status = 'in_review', submitted_at = now() WHERE id = ${homeId}`;
     if (options.submittedAt) {
       await sql`UPDATE homes SET submitted_at = ${options.submittedAt} WHERE id = ${homeId}`;
     }

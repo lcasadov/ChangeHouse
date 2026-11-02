@@ -364,7 +364,7 @@ describe.skipIf(!emulatorAvailable())('fotos de la vivienda con tokens reales', 
     expect(row?.status).toBe('draft');
   });
 
-  it('Scenario: Envío de una ficha completa - con 3 fotos subidas y confirmadas pasa a in_review', async () => {
+  it('Scenario: Envío de una ficha completa - con 3 fotos subidas y confirmadas pasa a published', async () => {
     const user = await registered();
     const homeId = await createHome(user, COMPLETE);
     for (let n = 0; n < 3; n += 1) {
@@ -376,7 +376,7 @@ describe.skipIf(!emulatorAvailable())('fotos de la vivienda con tokens reales', 
 
     expect(response.statusCode).toBe(200);
     const view = response.json<{ status: string; photos: { position: number }[] }>();
-    expect(view.status).toBe('in_review');
+    expect(view.status).toBe('published');
     expect(view.photos.map((photo) => photo.position)).toEqual([1, 2, 3]);
   });
 

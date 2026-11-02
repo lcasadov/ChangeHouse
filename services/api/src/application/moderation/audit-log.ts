@@ -2,6 +2,8 @@
 export type AuditAction =
   | 'home.approve'
   | 'home.reject'
+  /** Una vivienda retirada a revisión por una denuncia; el actor es quien denuncia. */
+  | 'home.report_retire'
   | 'match.withdraw'
   /** Un match cerrado por la suspensión de uno de sus participantes; el actor es el admin. */
   | 'match.close'
