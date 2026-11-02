@@ -106,19 +106,22 @@ modo incógnito, o el PC y el móvil.
    «Retiro» y elige la sugerencia.
 2. Rellena los datos y pulsa **Añadir fotos**: sube al menos 3 fotos tuyas, de la
    galería en el móvil o de un archivo en el PC.
-3. Pulsa **Enviar a revisión**. La casa queda «En revisión».
-4. Entra como `admin@…` y ve a **Administración**. Aprueba la casa, o recházala
-   con un motivo. Vuelve a `yo@…` y comprueba el estado.
-5. Con la casa publicada, **Pausar** la oculta de Explorar para los demás.
+3. Pulsa **Publicar**. La casa queda «Publicada» al momento, sin esperar a un
+   administrador.
+4. Con la casa publicada, **Pausar** la oculta de Explorar para los demás.
 
 ### 4. Seguridad y moderación
 
-1. En un match o en Explorar, **Denunciar** a Pablo y luego **Bloquear** a Pablo. Ya
+1. En Explorar, **Denuncia** la casa de una persona de prueba. La casa se retira
+   de Explorar al momento y queda «En revisión» para su propietario.
+2. Como `admin@…`, en **Administración**, la casa aparece en la cola: apruébala
+   para que vuelva a publicarse o recházala con un motivo.
+3. En un match o en Explorar, **Denunciar** a Pablo y luego **Bloquear** a Pablo. Ya
    no os veis.
-2. Como `admin@…`, en **Administración**, revisa la denuncia y usa **Suspender o
+4. Como `admin@…`, en **Administración**, revisa la denuncia y usa **Suspender o
    reactivar** con Pablo.
-3. Entra como `pablo@…`: verás la pantalla de cuenta suspendida.
-4. En **Perfil** de cualquier cuenta, descarga tus datos y elimina la cuenta. Lo
+5. Entra como `pablo@…`: verás la pantalla de cuenta suspendida.
+6. En **Perfil** de cualquier cuenta, descarga tus datos y elimina la cuenta. Lo
    mejor es hacerlo con una cuenta nueva, no con las de prueba.
 
 Para volver al estado inicial:

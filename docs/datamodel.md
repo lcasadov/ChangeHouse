@@ -291,7 +291,7 @@ confirmado. Identificadores: `uuid` v7 generado en la aplicación —
 | `approx_location` | geography(Point, 4326) | sí | Centro del barrio o zona: lo único público si `location_visibility = area` (RF-13) |
 | `area_name` | text | sí | Nombre del barrio o zona (de Google Places); también es la «zona» de las métricas |
 | `moderation_note` | text | no | Motivo del último rechazo de moderación, visible para el propietario |
-| `submitted_at` | timestamptz | no | Cuándo entró en la cola de moderación por última vez (`submitHome`, o un cambio relevante tras publicar). Ordena la cola (`in_review`); nula si nunca se envió |
+| `submitted_at` | timestamptz | no | Cuándo se envió o entró en la cola de moderación por última vez (`submitHome`, que publica al momento salvo tras un rechazo, o la retirada por denuncia). Ordena la cola (`in_review`); nula si nunca se envió |
 | `relevant_changed_at` | timestamptz | sí | Se actualiza cuando cambian el rango de valor o las fotos; un descarte anterior a esta fecha vuelve a mostrarse (RF-44) |
 | `published_at` | timestamptz | no | Última aprobación en moderación; ordena las tarjetas de descubrimiento y forma su cursor. Nula si nunca se publicó (relleno en la migración 0007 con el último envío o el alta) |
 | `municipality`, `municipality_normalized` | text | no | Municipio de la dirección (localidad de Google Places) y su forma comparable (sin tildes, minúsculas), con la que se cruzan `search_preferences.municipalities_normalized`. Nulos en las viviendas anteriores a la migración 0007: solo cuentan por radio |
