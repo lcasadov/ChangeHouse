@@ -113,8 +113,9 @@ const REQUIRED_FOR_SUBMIT = [
 ] as const satisfies readonly (keyof Home)[];
 
 /**
- * Cambiar estos datos de una vivienda publicada o pausada exige volver a moderarla (RF-18), igual
- * que sus fotos, sus características (`features`) y su dirección. La visibilidad de la ubicación,
+ * Cambiar estos datos de una vivienda publicada o pausada es un cambio relevante que reactiva sus
+ * descartes (RF-44), igual que sus fotos, sus características (`features`) y su dirección. No la
+ * devuelve a revisión: la moderación solo ocurre bajo denuncia. La visibilidad de la ubicación,
  * la calificación energética, el año, la vivienda habitual y la hipoteca no son relevantes.
  */
 const RELEVANT_FIELDS = [
@@ -135,8 +136,8 @@ const RELEVANT_FIELDS = [
   'vppMaxLegalPriceCents',
 ] as const satisfies readonly (keyof Home)[];
 
-/** Estados en los que la vivienda está o estaba a la vista: un cambio relevante la devuelve a revisión. */
-const RESUBMIT_ON_CHANGE: readonly HomeStatus[] = ['published', 'paused'];
+/** Estados en los que una denuncia retira la vivienda del descubrimiento. */
+const RETIRABLE_ON_REPORT: readonly HomeStatus[] = ['published', 'paused'];
 
 const NOT_EDITABLE: readonly HomeStatus[] = ['in_operation', 'closed'];
 
@@ -260,27 +261,21 @@ export function hasBeenPublished(home: Home): boolean {
 /** Lo que un cambio relevante deja anotado en la vivienda. */
 export interface RelevantChange {
   readonly relevantChangedAt: Date;
-  /** Presentes solo si la vivienda vuelve a la cola de moderación. */
-  readonly status?: 'in_review';
-  readonly submittedAt?: Date;
 }
 
 /**
- * Qué anota un cambio relevante (de la ficha o de las fotos) en `now`. Una vivienda publicada o
- * pausada vuelve a `in_review` y se encola; una que ya se publicó alguna vez y ahora está en
- * revisión o en borrador solo anota la fecha (RF-44). Si nunca se publicó, no hay nada que anotar.
+ * Qué anota un cambio relevante (de la ficha o de las fotos) en `now`: solo la fecha, que reactiva
+ * los descartes (RF-44). No cambia el estado: una publicada o pausada sigue como está. Si la
+ * vivienda nunca se publicó, no hay nada que anotar.
  */
 export function relevantChangeOf(home: Home, now: Date): RelevantChange | null {
-  if (RESUBMIT_ON_CHANGE.includes(home.status)) {
-    return { relevantChangedAt: now, status: 'in_review', submittedAt: now };
-  }
   return hasBeenPublished(home) ? { relevantChangedAt: now } : null;
 }
 
 /**
  * Aplica los cambios del propietario. No se edita en `in_operation` ni `closed`. Una vivienda
- * publicada o pausada que cambia un dato relevante vuelve a `in_review` (RF-18); los demás cambios
- * relevantes se anotan según `relevantChangeOf`. El valor no supera el precio máximo legal de una
+ * publicada o pausada que cambia un dato relevante conserva su estado; el cambio se anota según
+ * `relevantChangeOf`. El valor no supera el precio máximo legal de una
  * protegida, y fuera de borrador una protegida lleva su fecha de calificación.
  */
 export function editHome(home: Home, changes: HomeChanges, now: Date): Home {
@@ -337,15 +332,28 @@ export function assertEditable(home: Home): void {
 }
 
 /**
- * Envía a revisión una vivienda en borrador con la ficha completa y al menos 3 fotos procesadas
+ * Envía una vivienda en borrador con la ficha completa y al menos 3 fotos procesadas
  * (`readyPhotos`). Si falta algo, el error lista los campos y `photos` si faltan fotos. Una
- * vivienda protegida sin fecha de calificación se rechaza antes (400, RF-14).
+ * vivienda protegida sin fecha de calificación se rechaza antes (400, RF-14). Si todo está en
+ * orden se publica al momento; solo una vivienda con un rechazo pendiente (`moderationNote`)
+ * pasa a `in_review`, para que reenviarla sin más no se salte la moderación.
  */
 export function submitHome(home: Home, readyPhotos: number, now: Date): Home {
   if (home.status !== 'draft') throw new HomeNotSubmittableError();
   assertQualified(home);
   const missing = [...missingFields(home), ...(readyPhotos < MIN_PHOTOS ? ['photos'] : [])];
   if (missing.length > 0) throw new HomeIncompleteError(missing);
+  if (home.moderationNote !== null) return { ...home, status: 'in_review', submittedAt: now };
+  return { ...home, status: 'published', submittedAt: now, publishedAt: now };
+}
+
+/**
+ * Retira una vivienda denunciada: la publicada o pausada pasa a `in_review` y se encola en `now`
+ * para que un administrador la revise. En cualquier otro estado no hay nada que retirar y se
+ * devuelve la misma vivienda.
+ */
+export function retireReportedHome(home: Home, now: Date): Home {
+  if (!RETIRABLE_ON_REPORT.includes(home.status)) return home;
   return { ...home, status: 'in_review', submittedAt: now };
 }
 

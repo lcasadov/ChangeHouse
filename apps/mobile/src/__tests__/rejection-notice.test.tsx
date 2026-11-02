@@ -82,7 +82,7 @@ describe('Aviso de rechazo en el detalle del propietario', () => {
     expect(await screen.findByRole('progressbar')).toBeTruthy();
   });
 
-  it('un borrador nunca rechazado mantiene «Enviar a revisión» y «Editar datos»', async () => {
+  it('un borrador nunca rechazado mantiene «Publicar» y «Editar datos»', async () => {
     await openHomes([completeHome({ status: 'draft' })]);
 
     await fireEvent.press(await screen.findByRole('link', { name: `Ver el detalle de ${TITLE}` }));

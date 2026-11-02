@@ -184,13 +184,13 @@ describe('update', () => {
 });
 
 describe('submit', () => {
-  it('envía POST /homes/{id}/submit y devuelve la vivienda en revisión', async () => {
+  it('envía POST /homes/{id}/submit y devuelve la vivienda publicada', async () => {
     const home = completeHome();
     const backend = new FakeBackend({ homes: [home] });
 
     const submitted = await setup(backend).submit(home.id);
 
-    expect(submitted.status).toBe('in_review');
+    expect(submitted.status).toBe('published');
     expect(backend.requests).toMatchObject([{ method: 'POST', path: `/homes/${home.id}/submit` }]);
   });
 

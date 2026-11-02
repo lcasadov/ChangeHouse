@@ -57,7 +57,7 @@ async function ownPhoto(deps: PhotoDeps, ownerId: string, homeId: string, photoI
 
 /**
  * Las fotos de una vivienda que ya estuvo en el descubrimiento son un cambio relevante (RF-44): si
- * está publicada o pausada, además, vuelve a revisión (RF-18).
+ * conserva su estado: la revisión solo ocurre bajo denuncia.
  */
 async function noteRelevantChange(deps: PhotoDeps, home: Home): Promise<void> {
   const change = relevantChangeOf(home, deps.clock.now());

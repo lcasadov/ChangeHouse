@@ -43,14 +43,14 @@ function failureOf(error: unknown): Failure {
 
 export interface SubmitActionProps {
   home: Home;
-  /** La API aceptó el envío; `home` ya está «En revisión» en la caché. */
+  /** La API aceptó el envío; `home` ya tiene el estado devuelto («Publicada» o «En revisión») en la caché. */
   onSubmitted?: (home: Home) => void;
   /** La API dice que faltan datos: lleva al paso donde se rellenan. */
   onComplete: (step: WizardStep) => void;
 }
 
 /**
- * «Enviar a revisión» de un borrador. Si faltan datos, la API los nombra y se ofrece ir a completarlos;
+ * «Publicar» un borrador. Si faltan datos, la API los nombra y se ofrece ir a completarlos;
  * el botón se bloquea mientras se envía, para que un segundo toque no repita el envío.
  */
 export function SubmitAction({ home, onSubmitted, onComplete }: Readonly<SubmitActionProps>) {

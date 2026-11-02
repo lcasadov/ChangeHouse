@@ -278,7 +278,6 @@ describe.skipIf(!emulatorAvailable())('discoverHomes con tokens reales y Postgre
     it('Scenario: Descarte y cambio relevante - una vivienda descartada vuelve a aparecer cuando su dueño cambia el rango de valor', async () => {
       const mine = await me();
       const other = await leganesOwner(220_000);
-      const admin = await registered('admin');
       await sql`INSERT INTO dismissals (home_id, dismissed_home_id, created_at)
                 VALUES (${mine.home}, ${other.home}, '2026-01-01T00:00:00Z')`;
       expect(idsOf(await discover(mine.person))).toEqual([]);
@@ -288,12 +287,7 @@ describe.skipIf(!emulatorAvailable())('discoverHomes con tokens reales y Postgre
         valueMaxCents: euros(230_000),
       });
       expect(edited.statusCode, edited.body).toBe(200);
-      // El cambio relevante la devuelve a revisión: mientras tanto no está publicada
-      expect(idsOf(await discover(mine.person))).toEqual([]);
-      const approved = await call(admin, 'POST', `/v1/admin/homes/${other.home}/moderation`, {
-        decision: 'approve',
-      });
-      expect(approved.statusCode, approved.body).toBe(200);
+      // El cambio relevante no la devuelve a revisión: sigue publicada y reaparece al momento
 
       const page = await discover(mine.person);
 

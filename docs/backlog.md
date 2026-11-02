@@ -22,7 +22,7 @@
 | `landing` | Web pública: propuesta, cómo funciona, FAQ, páginas legales, blog |
 | `accounts` | Registro, inicio de sesión, perfil, consentimientos, supresión y exportación |
 | `homes` | Ficha de vivienda, fotos, régimen VPP, ciclo de estados |
-| `moderation` | Revisión de viviendas antes de publicar, denuncias, bloqueos, suspensiones |
+| `moderation` | Revisión de viviendas denunciadas (la publicación es inmediata desde `auto-publish-homes`), denuncias, bloqueos, suspensiones |
 | `search-preferences` | Zonas, filtros y compensación aceptable |
 | `discovery` | Tarjetas compatibles, me gusta, descartes, deshacer, límite diario |
 | `matching` | Detección de matches directos y en cadena con compatibilidad económica |

@@ -1,5 +1,6 @@
 import type { ReportInput, ReportResolutionInput, ReportStatus } from '@changehouse/shared';
 
+import { retireReportedHome } from '../../domain/home/home.js';
 import { withdrawFromMatch } from '../../domain/matching/match.js';
 import { openReport, type Report, resolveReport } from '../../domain/moderation/report.js';
 import type { UserRepository } from '../account/user-repository.js';
@@ -126,8 +127,35 @@ async function createReport(
     evidence,
     now: deps.clock.now(),
   });
-  await deps.reports.insert(report);
+  if (report.targetType === 'home') {
+    await insertAndRetireHome(deps, report);
+  } else {
+    await deps.reports.insert(report);
+  }
   return toView(report);
+}
+
+/**
+ * Guarda la denuncia de una vivienda y la retira (publicada o pausada pasa a `in_review`) en la
+ * misma transacción, con su entrada de auditoría a nombre de quien denuncia. Los matches no se
+ * tocan. Si la vivienda ya no es retirable (otra denuncia la retiró antes) solo se guarda la denuncia.
+ */
+async function insertAndRetireHome(deps: ReportDeps, report: Report): Promise<void> {
+  await deps.units.run(async ({ reports, homes, audit }) => {
+    await reports.insert(report);
+    const home = await homes.findByIdForUpdate(report.targetId);
+    if (home === null) return;
+    const retired = retireReportedHome(home, report.createdAt);
+    if (retired.status === home.status) return;
+    await homes.save(retired);
+    await audit.record({
+      actorId: report.reporterId,
+      action: 'home.report_retire',
+      entity: 'home',
+      entityId: home.id,
+      at: report.createdAt,
+    });
+  });
 }
 
 async function blockUser(deps: ReportDeps, blockerId: string, blockedId: string): Promise<void> {

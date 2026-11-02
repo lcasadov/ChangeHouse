@@ -4,7 +4,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, inject, it } from 'v
 import { emulatorAvailable } from '../../../../test/auth-emulator.js';
 import { firestoreAvailable } from '../../../../test/firestore-emulator.js';
 import { openSql, testConfig } from '../../../../test/fixtures.js';
-import { createScenario, type Person, POINTS } from '../../../../test/scenario.js';
+import { createScenario, type Person, POINTS, SEARCH_LEGANES } from '../../../../test/scenario.js';
 import { createApi } from '../../../bootstrap.js';
 import { AddressCipher } from '../../../infrastructure/crypto/address-cipher.js';
 import {
@@ -125,6 +125,61 @@ describe.skipIf(!emulatorAvailable() || !firestoreAvailable())(
             evidence_text: null,
           }),
         ]);
+      });
+
+      it('Scenario: Denunciar una vivienda - la retira a in_review, la saca del descubrimiento y deja la auditoría con quien denuncia', async () => {
+        const ana = await scenario.registered('Ana');
+        const beto = await scenario.registered('Beto');
+        const betoHome = await scenario.publishedHome(beto, 'Leganés', POINTS.leganes, 212_000);
+        await scenario.search(ana, SEARCH_LEGANES);
+        const discovered = async () =>
+          (await scenario.call(ana, 'GET', '/v1/discover')).json<{ items: { id: string }[] }>()
+            .items;
+        expect((await discovered()).map((card) => card.id)).toEqual([betoHome]);
+
+        const response = await report(ana, {
+          targetType: 'home',
+          targetId: betoHome,
+          reason: 'Anuncio falso',
+        });
+
+        expect(response.statusCode, response.body).toBe(201);
+        const [home] = await sql<
+          { status: string; submitted_at: Date | null }[]
+        >`SELECT status, submitted_at FROM homes WHERE id = ${betoHome}`;
+        expect(home?.status).toBe('in_review');
+        expect(home?.submitted_at).toBeInstanceOf(Date);
+        expect(await discovered()).toEqual([]);
+        expect(await sql`SELECT actor_id, action, entity, entity_id FROM audit_log`).toEqual([
+          expect.objectContaining({
+            actor_id: ana.id,
+            action: 'home.report_retire',
+            entity: 'home',
+            entity_id: betoHome,
+          }),
+        ]);
+      });
+
+      it('Scenario: Denunciar una vivienda pausada - pasa a in_review y su match sigue abierto', async () => {
+        const { ana, beto, anaHome, matchId } = await scenario.pair();
+        await sql`UPDATE homes SET status = 'paused' WHERE id = ${anaHome}`;
+
+        const response = await report(beto, {
+          targetType: 'home',
+          targetId: anaHome,
+          reason: 'Anuncio falso',
+        });
+
+        expect(response.statusCode, response.body).toBe(201);
+        const [home] = await sql<
+          { status: string }[]
+        >`SELECT status FROM homes WHERE id = ${anaHome}`;
+        expect(home?.status).toBe('in_review');
+        const [match] = await sql<
+          { status: string }[]
+        >`SELECT status FROM matches WHERE id = ${matchId}`;
+        expect(match?.status).toBe('open');
+        expect(ana.id).not.toBe(beto.id);
       });
 
       it('denunciar a un usuario responde 201; a uno mismo, a un inexistente o a una vivienda inexistente, no', async () => {

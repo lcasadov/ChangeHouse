@@ -7,9 +7,7 @@ import { seedReadyPhotos } from './support/db';
 const next = 'Guardar y continuar';
 
 test.describe('alta de una vivienda con el asistente', () => {
-  test('Scenario: el propietario completa el asistente y envía la vivienda a revisión', async ({
-    page,
-  }) => {
+  test('Scenario: el propietario completa el asistente y publica la vivienda', async ({ page }) => {
     const owner = await registerPerson('Olga Propietaria', 'propietaria');
     await signInToTabs(page, owner);
     await openTab(page, 'Mis casas');
@@ -21,7 +19,7 @@ test.describe('alta de una vivienda con el asistente', () => {
     await expect(page.getByRole('heading', { name: 'Fotos de tu casa' })).toBeVisible();
     await expect(page.getByText('Paso 1 de 7')).toBeVisible();
     await expect(
-      page.getByText('Añade al menos 3 fotos para poder enviar tu casa a revisión.'),
+      page.getByText('Añade al menos 3 fotos para poder publicar tu casa.'),
     ).toBeVisible();
     await page.getByRole('button', { name: next }).click();
 
@@ -59,19 +57,17 @@ test.describe('alta de una vivienda con el asistente', () => {
     await expect(page.getByRole('heading', { name: 'Ubicación visible' })).toBeVisible();
     await page.getByRole('button', { name: next }).click();
 
-    // Paso 7: revisión y envío
+    // Paso 7: revisión y publicación
     await expect(page.getByRole('heading', { name: 'Revisa tu casa' })).toBeVisible();
     await expect(page.getByText('3/20 fotos')).toBeVisible();
-    await page.getByRole('button', { name: 'Enviar a revisión' }).click();
+    await page.getByRole('button', { name: 'Publicar', exact: true }).click();
 
-    await expect(page.getByText('Estamos revisando tu casa.')).toBeVisible();
-    const [submitted] = await call<{ status: string }[]>(owner, 'GET', '/me/homes');
-    expect(submitted?.status).toBe('in_review');
+    await expect(page.getByText('Tu casa está publicada y puede recibir matches.')).toBeVisible();
+    const [published] = await call<{ status: string }[]>(owner, 'GET', '/me/homes');
+    expect(published?.status).toBe('published');
   });
 
-  test('Scenario: una vivienda sin fotos suficientes no se puede enviar a revisión', async ({
-    page,
-  }) => {
+  test('Scenario: una vivienda sin fotos suficientes no se puede publicar', async ({ page }) => {
     const owner = await registerPerson('Pablo Sinfotos', 'sinfotos');
     const euros = 20_000_000;
     const home = await call<{ id: string }>(owner, 'POST', '/homes', {
@@ -85,10 +81,10 @@ test.describe('alta de una vivienda con el asistente', () => {
     await openTab(page, 'Mis casas');
     await page.getByRole('link', { name: /^Ver el detalle de Piso en Chamberí/ }).click();
 
-    await page.getByRole('button', { name: 'Enviar a revisión' }).click();
+    await page.getByRole('button', { name: 'Publicar', exact: true }).click();
 
     await expect(
-      page.getByText('Faltan datos para enviar tu casa a revisión: Fotos (mínimo 3).'),
+      page.getByText('Faltan datos para publicar tu casa: Fotos (mínimo 3).'),
     ).toBeVisible();
     const [stillDraft] = await call<{ id: string; status: string }[]>(owner, 'GET', '/me/homes');
     expect(stillDraft).toMatchObject({ id: home.id, status: 'draft' });

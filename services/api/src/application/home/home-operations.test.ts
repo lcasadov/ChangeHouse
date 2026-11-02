@@ -217,14 +217,14 @@ describe('updateHome', () => {
     expect(homes.homes.get('home-1')?.bedrooms).toBeNull();
   });
 
-  it('una vivienda publicada que cambia un dato relevante vuelve a in_review', async () => {
+  it('una vivienda publicada que cambia un dato relevante sigue publicada', async () => {
     const { createHome, updateHome, homes } = setup();
     await createHome('user-1', { type: 'piso', address: ADDRESS, ...COMPLETE });
     publish(homes, 'home-1');
 
     const view = await updateHome('user-1', 'home-1', { usefulM2: 90 });
 
-    expect(view.status).toBe('in_review');
+    expect(view.status).toBe('published');
   });
 });
 
@@ -321,15 +321,15 @@ describe('getHome', () => {
 });
 
 describe('submitHome', () => {
-  it('Scenario: Envío de una ficha completa - pasa a in_review', async () => {
+  it('Scenario: Envío de una ficha completa - pasa a published', async () => {
     const { createHome, submitHome, homes, photos } = setup();
     await createHome('user-1', { type: 'piso', address: ADDRESS, ...COMPLETE });
     addPhotos(photos, 'home-1', 3);
 
     const view = await submitHome('user-1', 'home-1');
 
-    expect(view.status).toBe('in_review');
-    expect(homes.homes.get('home-1')?.status).toBe('in_review');
+    expect(view.status).toBe('published');
+    expect(homes.homes.get('home-1')).toMatchObject({ status: 'published', publishedAt: NOW });
   });
 
   it('Scenario: Ver la cola - al enviar se guarda la fecha de envío con la que se ordena la cola', async () => {
@@ -487,18 +487,17 @@ describe('pauseHome y resumeHome', () => {
   });
 });
 
-describe('vuelta a revisión al modificar', () => {
-  it('Scenario: Cambiar el valor de una vivienda publicada - se guarda en in_review con las fechas de envío y de cambio relevante', async () => {
+describe('cambios relevantes sin nueva revisión', () => {
+  it('Scenario: Cambiar el valor de una vivienda publicada - sigue published y anota la fecha de cambio relevante', async () => {
     const { createHome, updateHome, homes } = setup();
     await createHome('user-1', { type: 'piso', address: ADDRESS, ...COMPLETE });
     publish(homes, 'home-1');
 
     const view = await updateHome('user-1', 'home-1', { valueMaxCents: 300_000_00 });
 
-    expect(view.status).toBe('in_review');
+    expect(view.status).toBe('published');
     expect(homes.homes.get('home-1')).toMatchObject({
-      status: 'in_review',
-      submittedAt: NOW,
+      status: 'published',
       relevantChangedAt: NOW,
     });
   });

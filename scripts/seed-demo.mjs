@@ -6,8 +6,9 @@
 // Uso: pnpm seed:demo
 //
 // Pasa por la API real: alta en el emulador de Auth, perfil, vivienda, subida de fotos con URL firmada
-// (fake-gcs), envío a revisión y aprobación de un administrador. Se puede repetir: lo que ya existe
-// se conserva y solo se completa lo que falta.
+// (fake-gcs) y publicación, que es inmediata. Una vivienda que se quedó en revisión (de una versión
+// anterior o retirada por una denuncia) la aprueba el administrador. Se puede repetir: lo que ya
+// existe se conserva y solo se completa lo que falta.
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -355,8 +356,7 @@ async function publishedHome(person, admin, config) {
   }
   if (home.status === 'draft') {
     if ((home.photos ?? []).length < 3) await uploadPhotos(person, home.id, config);
-    await api(person, 'POST', `/homes/${home.id}/submit`);
-    home.status = 'in_review';
+    home = await api(person, 'POST', `/homes/${home.id}/submit`);
   }
   if (home.status === 'in_review') {
     await api(admin, 'POST', `/admin/homes/${home.id}/moderation`, { decision: 'approve' });

@@ -88,7 +88,7 @@ cambiar de casa. Segmentos prioritarios:
 | Descubrimiento | Tarjetas de viviendas compatibles: me gusta, descartar, ver detalle | Propietario, buscador | MVP |
 | Match directo y en cadena | Detecta interés recíproco entre 2 o 3 viviendas económicamente compatibles, notifica a todos y abre un chat de grupo | Propietario | MVP |
 | Chat y notificaciones | Conversación en tiempo real entre participantes; avisos push y por email | Propietario | MVP |
-| Moderación y administración | Revisión de anuncios antes de publicarse, denuncias, métricas | Equipo ChangeHouse | MVP |
+| Moderación y administración | Publicación inmediata con revisión de los anuncios denunciados, denuncias, métricas | Equipo ChangeHouse | MVP |
 | Landing y lista de espera | Web pública con la propuesta, guías y alta en lista de espera | Visitante | Fase 0 |
 | Simulador fiscal | Estimación orientativa de impuestos y gastos por participante, y comparativa permuta frente a vender y comprar | Propietario | Fase 2 |
 | Operación con gestoría | Paso del match a operación, seguimiento hasta la firma y documentación privada | Propietario, gestoría | Fase 2 |

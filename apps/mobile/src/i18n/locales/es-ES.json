@@ -301,7 +301,7 @@
     },
     "actions": {
       "continue": "Continuar",
-      "submit": "Enviar a revisión",
+      "submit": "Publicar",
       "view": "Ver"
     },
     "wizard": {
@@ -390,7 +390,7 @@
     },
     "review": {
       "title": "Revisa tu casa",
-      "description": "Comprueba los datos antes de enviarla. Podrás cambiarlos más tarde."
+      "description": "Comprueba los datos antes de publicarla. Podrás cambiarlos más tarde."
     },
     "summary": {
       "address": "Dirección",
@@ -417,12 +417,12 @@
       "photos": "Fotos"
     },
     "submit": {
-      "action": "Enviar a revisión",
-      "missing": "Faltan datos para enviar tu casa a revisión: {{fields}}.",
+      "action": "Publicar",
+      "missing": "Faltan datos para publicar tu casa: {{fields}}.",
       "complete": "Completar lo que falta",
-      "network": "No hemos podido enviar tu casa. Comprueba tu conexión y vuelve a intentarlo.",
-      "conflict": "Esta casa ya no se puede enviar a revisión.",
-      "unknown": "No hemos podido enviar tu casa. Inténtalo de nuevo en unos minutos."
+      "network": "No hemos podido publicar tu casa. Comprueba tu conexión y vuelve a intentarlo.",
+      "conflict": "Esta casa ya no se puede publicar.",
+      "unknown": "No hemos podido publicar tu casa. Inténtalo de nuevo en unos minutos."
     },
     "fields": {
       "usefulM2": "Superficie útil",
@@ -469,8 +469,8 @@
       "loadFailed": "No hemos podido cargar esta casa. Comprueba tu conexión y vuelve a intentarlo.",
       "notFound": "No encontramos esta casa. Puede que ya no exista.",
       "statusNote": {
-        "draft": "Completa los datos y envíala a revisión para poder publicarla.",
-        "in_review": "Estamos revisando tu casa. Cuando se publique, podrás recibir matches.",
+        "draft": "Completa los datos y publícala para que otras personas la vean.",
+        "in_review": "Estamos revisando tu casa. Mientras tanto no aparece en Explorar; tus matches siguen abiertos.",
         "published": "Tu casa está publicada y puede recibir matches.",
         "paused": "Tu casa está pausada: otras personas no la ven.",
         "in_operation": "Tu casa está en una operación de permuta.",
@@ -484,7 +484,7 @@
       },
       "resume": {
         "action": "Reactivar",
-        "hint": "Volverá a aparecer en Explorar sin pasar otra vez por revisión."
+        "hint": "Volverá a aparecer en Explorar."
       },
       "actionFailed": "No hemos podido cambiar el estado de tu casa. Comprueba tu conexión y vuelve a intentarlo.",
       "stateChanged": "Tu casa ha cambiado de estado mientras tanto. Vuelve a Mis casas para ver cómo está ahora."
@@ -502,7 +502,7 @@
       "intro": "Las casas con buenas fotos se descubren antes. La primera será la portada.",
       "add": "Añadir fotos",
       "counter": "{{count}}/20 fotos",
-      "minHint": "Añade al menos 3 fotos para poder enviar tu casa a revisión.",
+      "minHint": "Añade al menos 3 fotos para poder publicar tu casa.",
       "limitReached": "Has llegado al máximo de 20 fotos. Elimina alguna para añadir otra.",
       "pickFailed": "No hemos podido abrir tu galería. Comprueba los permisos de la app y vuelve a intentarlo.",
       "cover": "Portada",
@@ -561,13 +561,6 @@
       "notice": "No hemos podido publicar tu casa. Motivo: {{reason}}",
       "action": "Corregir y reenviar",
       "actionLabel": "Corregir y reenviar: {{title}}"
-    },
-    "reReview": {
-      "title": "Volverá a revisión antes de mostrarse",
-      "description": "Has cambiado datos que revisamos antes de publicar. Mientras la revisamos, tu casa no aparecerá en Explorar; tus matches siguen abiertos.",
-      "confirm": "Guardar y enviar a revisión",
-      "cancel": "Seguir editando",
-      "photosNotice": "Volverá a revisión antes de mostrarse: si añades o quitas fotos, revisaremos tu casa antes de volver a mostrarla en Explorar."
     }
   },
   "profile": {
@@ -1185,6 +1178,7 @@
       "send": "Enviar denuncia",
       "cancel": "Cancelar",
       "sent": "Gracias. Hemos recibido tu denuncia y el equipo la revisará.",
+      "sentHome": "Gracias. Hemos retirado esta casa de Explorar mientras el equipo la revisa.",
       "errors": {
         "required": "Indica el motivo de la denuncia.",
         "tooLong": "El motivo no puede superar los 1000 caracteres.",

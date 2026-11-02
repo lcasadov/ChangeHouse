@@ -50,6 +50,7 @@ function setup() {
   const audit = new InMemoryAuditLog();
   const matches = new InMemoryMatchReader();
   const outbox = new InMemoryOutbox();
+  const clockAt = { value: NOW };
   let sequence = 0;
   const operations = reportOperations({
     reports,
@@ -59,10 +60,10 @@ function setup() {
     blockUnits: new InMemoryBlockUnitOfWork(blocks, matches, audit, outbox),
     memberships: chat,
     messages: chat,
-    clock: { now: () => NOW },
+    clock: { now: () => clockAt.value },
     ids: { next: () => `report-${String(++sequence)}` },
   });
-  return { homes, users, reports, blocks, chat, audit, matches, outbox, ...operations };
+  return { homes, users, reports, blocks, chat, audit, matches, outbox, clockAt, ...operations };
 }
 
 type Fixture = ReturnType<typeof setup>;
@@ -151,6 +152,83 @@ describe('createReport', () => {
     });
 
     expect(view.status).toBe('open');
+  });
+
+  it('Scenario: Denunciar una vivienda - la retira a in_review y la encola con la fecha de la denuncia', async () => {
+    const fixture = setup();
+    seedHome(fixture, 'home-1', BETO);
+
+    await fixture.createReport(ANA, {
+      targetType: 'home',
+      targetId: 'home-1',
+      reason: 'Anuncio falso',
+    });
+
+    expect(fixture.homes.homes.get('home-1')).toMatchObject({
+      status: 'in_review',
+      submittedAt: NOW,
+    });
+  });
+
+  it('Scenario: La retirada queda auditada - con quien denuncia como actor', async () => {
+    const fixture = setup();
+    seedHome(fixture, 'home-1', BETO);
+
+    await fixture.createReport(ANA, { targetType: 'home', targetId: 'home-1', reason: 'x' });
+
+    expect(fixture.audit.entries).toEqual([
+      { actorId: ANA, action: 'home.report_retire', entity: 'home', entityId: 'home-1', at: NOW },
+    ]);
+  });
+
+  it('Scenario: Denunciar una vivienda pausada - pasa a in_review y su match sigue abierto', async () => {
+    const fixture = setup();
+    seedHome(fixture, 'home-1', BETO, { status: 'paused' });
+    fixture.matches.records.push(matchOf('m-open', 'open', [ANA, BETO]));
+
+    await fixture.createReport(ANA, { targetType: 'home', targetId: 'home-1', reason: 'x' });
+
+    expect(fixture.homes.homes.get('home-1')?.status).toBe('in_review');
+    expect(fixture.matches.records.map((record) => record.status)).toEqual(['open']);
+  });
+
+  it('si la auditoría falla, ni la denuncia ni la retirada quedan guardadas', async () => {
+    const fixture = setup();
+    seedHome(fixture, 'home-1', BETO);
+    fixture.audit.failWith = new Error('auditoría caída');
+
+    await expect(
+      fixture.createReport(ANA, { targetType: 'home', targetId: 'home-1', reason: 'x' }),
+    ).rejects.toThrow('auditoría caída');
+
+    expect(fixture.reports.reports.size).toBe(0);
+    expect(fixture.homes.homes.get('home-1')?.status).toBe('published');
+  });
+
+  it('denunciar usuarios o mensajes no toca ninguna vivienda ni audita', async () => {
+    const fixture = setup();
+    seedHome(fixture, 'home-1', BETO);
+
+    await fixture.createReport(ANA, { targetType: 'user', targetId: BETO, reason: 'x' });
+
+    expect(fixture.homes.homes.get('home-1')?.status).toBe('published');
+    expect(fixture.audit.entries).toEqual([]);
+  });
+
+  it('Scenario: Ver la cola - dos viviendas denunciadas en días distintos, la retirada antes va primero', async () => {
+    const fixture = setup();
+    seedHome(fixture, 'home-a', BETO);
+    seedHome(fixture, 'home-b', BETO);
+    const first = new Date('2026-10-28T10:00:00.000Z');
+    const second = new Date('2026-10-29T10:00:00.000Z');
+    fixture.clockAt.value = second;
+    await fixture.createReport(ANA, { targetType: 'home', targetId: 'home-b', reason: 'x' });
+    fixture.clockAt.value = first;
+    await fixture.createReport(ANA, { targetType: 'home', targetId: 'home-a', reason: 'x' });
+
+    const queue = await fixture.homes.listForModeration({ status: 'in_review', limit: 10 });
+
+    expect(queue.map((home) => home.id)).toEqual(['home-a', 'home-b']);
   });
 
   it('una vivienda inexistente es un 404 y no guarda nada', async () => {

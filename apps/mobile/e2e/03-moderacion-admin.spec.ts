@@ -1,15 +1,16 @@
 import { expect, test } from '@playwright/test';
 
-import { call, PLACES, registerAdmin, registerPerson, submittedHome } from './support/api';
+import { call, PLACES, registerAdmin, registerPerson, reportedHome } from './support/api';
 import { openTab, signInToTabs } from './support/app';
 
 test.describe('moderación de viviendas por la administración', () => {
-  test('Scenario: la administración aprueba una vivienda en revisión y queda publicada', async ({
+  test('Scenario: la administración aprueba una vivienda retirada por denuncia y vuelve a publicarse', async ({
     browser,
     page,
   }) => {
     const owner = await registerPerson('Olivia Propietaria', 'moderacion');
-    const home = await submittedHome(owner, { type: 'piso', place: PLACES.chamberi });
+    const reporter = await registerPerson('Dani Denunciante', 'denuncia');
+    const home = await reportedHome(owner, reporter, { type: 'piso', place: PLACES.chamberi });
     const admin = await registerAdmin();
 
     await signInToTabs(page, admin);
@@ -22,7 +23,7 @@ test.describe('moderación de viviendas por la administración', () => {
     await page.getByRole('button', { name: 'Sí, aprobar' }).click();
     await expect(page.getByText('Vivienda aprobada: ya está publicada.')).toBeVisible();
 
-    // Para la propietaria, la vivienda pasa de «En revisión» a «Publicada»
+    // Para la propietaria, la vivienda vuelve de «En revisión» a «Publicada»
     const [published] = await call<{ id: string; status: string }[]>(owner, 'GET', '/me/homes');
     expect(published).toMatchObject({ id: home.id, status: 'published' });
     const ownerPage = await (await browser.newContext({ locale: 'es-ES' })).newPage();
@@ -40,7 +41,8 @@ test.describe('moderación de viviendas por la administración', () => {
     page,
   }) => {
     const owner = await registerPerson('Rosa Rechazada', 'rechazo');
-    const home = await submittedHome(owner, { type: 'bajo', place: PLACES.lavapies });
+    const reporter = await registerPerson('Diego Denunciante', 'denuncia');
+    const home = await reportedHome(owner, reporter, { type: 'bajo', place: PLACES.lavapies });
     const admin = await registerAdmin();
 
     await signInToTabs(page, admin);

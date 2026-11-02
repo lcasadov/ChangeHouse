@@ -251,8 +251,8 @@ describe.skipIf(!emulatorAvailable())('pausar y reactivar con tokens reales y Po
   });
 });
 
-describe.skipIf(!emulatorAvailable())('vuelta a revisión tras cambios relevantes', () => {
-  it('Scenario: Cambiar el valor de una vivienda publicada - pasa a in_review con las fechas de envío y de cambio relevante, y deja de aparecer', async () => {
+describe.skipIf(!emulatorAvailable())('cambios relevantes sin nueva revisión', () => {
+  it('Scenario: Cambiar el valor de una vivienda publicada - sigue publicada, anota el cambio relevante y sigue apareciendo', async () => {
     const mine = await ana();
     const other = await beto();
 
@@ -262,15 +262,15 @@ describe.skipIf(!emulatorAvailable())('vuelta a revisión tras cambios relevante
     });
 
     expect(response.statusCode, response.body).toBe(200);
-    expect(response.json<Json>()).toMatchObject({ status: 'in_review' });
+    expect(response.json<Json>()).toMatchObject({ status: 'published' });
     const row = await statusOf(other.home);
-    expect(row?.status).toBe('in_review');
-    expect(row?.submitted_at).toBeInstanceOf(Date);
-    expect(row?.relevant_changed_at).toEqual(row?.submitted_at);
-    expect(await discoveredIds(mine.person)).toEqual([]);
+    expect(row?.status).toBe('published');
+    expect(row?.submitted_at).toBeNull();
+    expect(row?.relevant_changed_at).toBeInstanceOf(Date);
+    expect(await discoveredIds(mine.person)).toEqual([other.home]);
   });
 
-  it('una vivienda pausada que cambia un dato relevante también vuelve a revisión', async () => {
+  it('una vivienda pausada que cambia un dato relevante sigue pausada y anota el cambio', async () => {
     const mine = await ana();
     await call(mine.person, 'POST', `/v1/homes/${mine.home}/pause`);
 
@@ -278,8 +278,10 @@ describe.skipIf(!emulatorAvailable())('vuelta a revisión tras cambios relevante
       features: { terrace: true },
     });
 
-    expect(response.json<Json>()).toMatchObject({ status: 'in_review' });
-    expect((await statusOf(mine.home))?.submitted_at).toBeInstanceOf(Date);
+    expect(response.json<Json>()).toMatchObject({ status: 'paused' });
+    const row = await statusOf(mine.home);
+    expect(row?.submitted_at).toBeNull();
+    expect(row?.relevant_changed_at).toBeInstanceOf(Date);
   });
 
   it('Scenario: Cambiar solo la visibilidad de la ubicación - de zona a exacta sigue publicada y visible', async () => {

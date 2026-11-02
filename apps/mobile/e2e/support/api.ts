@@ -130,7 +130,7 @@ export interface SeededHome {
   id: string;
 }
 
-/** Datos mínimos con los que una vivienda puede enviarse a revisión (salvo las fotos). */
+/** Datos mínimos con los que una vivienda puede publicarse (salvo las fotos). */
 export const COMPLETE_DETAILS = {
   usefulM2: 80,
   builtM2: 95,
@@ -142,8 +142,8 @@ export const COMPLETE_DETAILS = {
   isPrimaryResidence: true,
 } as const;
 
-/** Vivienda completa con tres fotos, enviada a revisión (estado `in_review`). */
-export async function submittedHome(owner: Person, seed: HomeSeed): Promise<SeededHome> {
+/** Vivienda completa con tres fotos y publicada: el envío la publica sin pasar por la administración. */
+export async function publishedHome(owner: Person, seed: HomeSeed): Promise<SeededHome> {
   const euros = (seed.valueEuros ?? 200_000) * 100;
   const home = await call<{ id: string }>(owner, 'POST', '/homes', {
     type: seed.type,
@@ -152,23 +152,24 @@ export async function submittedHome(owner: Person, seed: HomeSeed): Promise<Seed
     valueMinCents: euros,
     valueMaxCents: euros,
   });
-  // Fotos sembradas por SQL (ver db.ts: la subida real a fake-gcs falla en local)
+  // Fotos sembradas por SQL (ver db.ts): más rápido y determinista que subirlas
   await seedReadyPhotos(home.id);
   await call(owner, 'POST', `/homes/${home.id}/submit`);
   return { id: home.id };
 }
 
-export const approveHome = (admin: Person, homeId: string) =>
-  call(admin, 'POST', `/admin/homes/${homeId}/moderation`, { decision: 'approve' });
+/** Denuncia una vivienda: si está publicada o pausada, la retira a la cola de moderación. */
+export const reportHome = (reporter: Person, homeId: string, reason = 'Anuncio falso') =>
+  call(reporter, 'POST', '/reports', { targetType: 'home', targetId: homeId, reason });
 
-/** Vivienda publicada (envío a revisión + aprobación de un administrador). */
-export async function publishedHome(
+/** Vivienda publicada y retirada por la denuncia de otra persona (estado `in_review`). */
+export async function reportedHome(
   owner: Person,
-  admin: Person,
+  reporter: Person,
   seed: HomeSeed,
 ): Promise<SeededHome> {
-  const home = await submittedHome(owner, seed);
-  await approveHome(admin, home.id);
+  const home = await publishedHome(owner, seed);
+  await reportHome(reporter, home.id);
   return home;
 }
 

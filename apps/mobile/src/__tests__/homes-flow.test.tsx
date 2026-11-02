@@ -746,8 +746,8 @@ describe('Aviso de vivienda protegida', () => {
   });
 });
 
-describe('Envío a revisión', () => {
-  it('Scenario: Envío de una ficha completa - pasa a «En revisión» y Mis casas lo muestra', async () => {
+describe('Publicación al enviar', () => {
+  it('Scenario: Envío de una ficha completa - «Publicar» deja la casa «Publicada» y Mis casas lo muestra', async () => {
     const { backend } = await openHomes({ homes: [completeHome()] });
     await fireEvent.press(
       await screen.findByRole('button', { name: cardAction(h.actions.submit) }),
@@ -759,12 +759,12 @@ describe('Envío a revisión', () => {
 
     await fireEvent.press(button(h.submit.action));
 
-    expect(await screen.findByText(h.status.in_review)).toBeTruthy();
+    expect(await screen.findByText(h.status.published)).toBeTruthy();
     expect(backend.requests.filter((request) => request.method === 'POST')).toHaveLength(1);
-    expect(backend.homes.all()[0]?.status).toBe('in_review');
+    expect(backend.homes.all()[0]?.status).toBe('published');
 
     await fireEvent.press(button(h.detail.back));
-    expect(await screen.findByText(h.status.in_review)).toBeTruthy();
+    expect(await screen.findByText(h.status.published)).toBeTruthy();
     expect(screen.getByRole('button', { name: cardAction(h.actions.view) })).toBeTruthy();
   });
 
@@ -780,7 +780,7 @@ describe('Envío a revisión', () => {
     await fireEvent.press(button(h.submit.action));
     release();
 
-    expect(await screen.findByText(h.status.in_review)).toBeTruthy();
+    expect(await screen.findByText(h.status.published)).toBeTruthy();
     expect(
       backend.requestsTo('POST', `/homes/${backend.homes.all()[0]?.id ?? ''}/submit`),
     ).toHaveLength(1);
@@ -829,7 +829,7 @@ describe('Envío a revisión', () => {
     await fireEvent.press(button(h.submit.action));
     expect(await screen.findByText(h.submit.network)).toBeTruthy();
 
-    backend.homes.all()[0]!.status = 'in_review';
+    backend.homes.all()[0]!.status = 'closed';
     await fireEvent.press(button(h.submit.action));
     expect(await screen.findByText(h.submit.conflict)).toBeTruthy();
 
@@ -877,7 +877,7 @@ describe('Detalle de la vivienda', () => {
     expect(button(h.submit.action)).toBeTruthy();
   });
 
-  it('enviar desde el detalle cambia el estado mostrado a «En revisión»', async () => {
+  it('publicar desde el detalle cambia el estado mostrado a «Publicada»', async () => {
     await openHomes({ homes: [completeHome()] });
     await fireEvent.press(
       await screen.findByRole('link', { name: h.card.open.replace('{{title}}', MALASANA_TITLE) }),
@@ -886,9 +886,28 @@ describe('Detalle de la vivienda', () => {
 
     await fireEvent.press(button(h.submit.action));
 
+    expect(await screen.findByText(h.detail.statusNote.published)).toBeTruthy();
+    expect(screen.getByText(h.status.published)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: h.submit.action })).toBeNull();
+  });
+
+  it('Scenario: Reenvío de una vivienda rechazada - queda «En revisión»', async () => {
+    const { backend } = await openHomes({
+      homes: [completeHome({ moderationNote: 'Las fotos no corresponden a la vivienda' })],
+    });
+    await fireEvent.press(
+      await screen.findByRole('link', { name: h.card.open.replace('{{title}}', MALASANA_TITLE) }),
+    );
+    await screen.findByRole('header', { name: MALASANA_TITLE });
+
+    await fireEvent.press(button(h.rejection.action));
+    await stepBar(7);
+
+    await fireEvent.press(button(h.submit.action));
+
     expect(await screen.findByText(h.detail.statusNote.in_review)).toBeTruthy();
     expect(screen.getByText(h.status.in_review)).toBeTruthy();
-    expect(screen.queryByRole('button', { name: h.submit.action })).toBeNull();
+    expect(backend.homes.all()[0]?.status).toBe('in_review');
   });
 
   it('una ficha incompleta enviada desde el detalle lleva a completar el paso que falta', async () => {

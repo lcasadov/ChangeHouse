@@ -22,7 +22,7 @@ import { useStepSubmit } from './use-step-submit';
  * Paso 1, tipo y dirección. En el alta crea el borrador (`createHome`); en uno existente actualiza
  * el tipo y, solo si se ha elegido otra, la dirección.
  */
-export function TypeStep({ home, onSaved, onExit, onBack, confirmSave }: Readonly<StepProps>) {
+export function TypeStep({ home, onSaved, onExit, onBack }: Readonly<StepProps>) {
   const { t } = useTranslation();
   const theme = useTheme();
   const errorText = useErrorText();
@@ -41,7 +41,6 @@ export function TypeStep({ home, onSaved, onExit, onBack, confirmSave }: Readonl
     async ({ type, address }) => {
       if (home) {
         const patch = { type, ...(address ? { address } : {}) };
-        if (confirmSave && !(await confirmSave(patch))) return;
         onSaved(await update.mutateAsync(patch));
       } else if (address) {
         onSaved(await create.mutateAsync({ type, address }));

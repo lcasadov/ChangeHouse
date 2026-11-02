@@ -29,6 +29,7 @@ import {
   rejectHome,
   relevantChangeOf,
   resumeHome,
+  retireReportedHome,
   submitHome,
 } from './home.js';
 
@@ -162,16 +163,16 @@ describe('editHome', () => {
     },
   );
 
-  it('una vivienda publicada que cambia un dato relevante vuelve a in_review y anota cuándo', () => {
+  it('una vivienda publicada que cambia un dato relevante sigue publicada y anota cuándo', () => {
     const published = withStatus(draft(COMPLETE), 'published');
 
     const edited = editHome(published, { usefulM2: 90 }, LATER);
 
-    expect(edited.status).toBe('in_review');
+    expect(edited.status).toBe('published');
     expect(edited.relevantChangedAt).toEqual(LATER);
   });
 
-  it('una vivienda publicada que cambia su dirección vuelve a in_review', () => {
+  it('una vivienda publicada que cambia su dirección sigue publicada', () => {
     const published = withStatus(draft(COMPLETE), 'published');
 
     const edited = editHome(
@@ -180,7 +181,7 @@ describe('editHome', () => {
       LATER,
     );
 
-    expect(edited.status).toBe('in_review');
+    expect(edited.status).toBe('published');
   });
 
   it('una vivienda publicada que cambia un dato no relevante sigue publicada', () => {
@@ -210,13 +211,13 @@ describe('editHome', () => {
     expect(edited.status).toBe('published');
   });
 
-  it('una vivienda pausada con un cambio relevante vuelve a in_review, se encola y anota el cambio', () => {
+  it('una vivienda pausada con un cambio relevante sigue pausada, no se encola y anota el cambio', () => {
     const paused = withStatus(draft(COMPLETE), 'paused');
 
     const edited = editHome(paused, { bedrooms: 5 }, LATER);
 
-    expect(edited.status).toBe('in_review');
-    expect(edited.submittedAt).toEqual(LATER);
+    expect(edited.status).toBe('paused');
+    expect(edited.submittedAt).toBeNull();
     expect(edited.relevantChangedAt).toEqual(LATER);
   });
 
@@ -263,8 +264,18 @@ describe('missingFields y submitHome', () => {
     expect(home.status).toBe('draft');
   });
 
-  it('Scenario: Envío de una ficha completa - pasa de draft a in_review', () => {
-    expect(submitHome(draft(COMPLETE), ENOUGH_PHOTOS, NOW).status).toBe('in_review');
+  it('Scenario: Envío de una ficha completa - pasa de draft a published con su fecha de publicación', () => {
+    const submitted = submitHome(draft(COMPLETE), ENOUGH_PHOTOS, NOW);
+
+    expect(submitted).toMatchObject({ status: 'published', publishedAt: NOW, submittedAt: NOW });
+  });
+
+  it('Scenario: Reenvío de una vivienda rechazada - pasa a in_review sin publicarse', () => {
+    const rejected = { ...draft(COMPLETE), moderationNote: 'Las fotos no corresponden' };
+
+    const submitted = submitHome(rejected, ENOUGH_PHOTOS, NOW);
+
+    expect(submitted).toMatchObject({ status: 'in_review', submittedAt: NOW, publishedAt: null });
   });
 
   it('Scenario: Envío con menos de 3 fotos - señala photos entre los campos que faltan y sigue en draft', () => {
@@ -282,7 +293,7 @@ describe('missingFields y submitHome', () => {
   });
 
   it('con tres fotos o más no pide fotos; con una ficha incompleta lista primero los campos y luego las fotos', () => {
-    expect(submitHome(draft(COMPLETE), 20, NOW).status).toBe('in_review');
+    expect(submitHome(draft(COMPLETE), 20, NOW).status).toBe('published');
     try {
       submitHome(draft({ ...COMPLETE, bedrooms: undefined }), 2, NOW);
       expect.unreachable();
@@ -302,19 +313,20 @@ describe('missingFields y submitHome', () => {
 });
 
 describe('submittedAt', () => {
-  it('Scenario: Ver la cola - al enviar a revisión se fija la fecha de envío', () => {
-    const submitted = submitHome(draft(COMPLETE), ENOUGH_PHOTOS, LATER);
+  it('Scenario: Ver la cola - al reenviar una vivienda rechazada se fija la fecha de envío', () => {
+    const rejected = { ...draft(COMPLETE), moderationNote: 'Fotos borrosas' };
+    const submitted = submitHome(rejected, ENOUGH_PHOTOS, LATER);
 
     expect(submitted.submittedAt).toBe(LATER);
   });
 
-  it('una vivienda publicada que vuelve a revisión por un cambio relevante se encola con la fecha del cambio', () => {
-    const published = withStatus(draft(COMPLETE), 'published');
+  it('una vivienda publicada con un cambio relevante no se encola: conserva su fecha de envío', () => {
+    const published = { ...withStatus(draft(COMPLETE), 'published'), submittedAt: NOW };
 
     const edited = editHome(published, { bedrooms: 5 }, LATER);
 
-    expect(edited.status).toBe('in_review');
-    expect(edited.submittedAt).toBe(LATER);
+    expect(edited.status).toBe('published');
+    expect(edited.submittedAt).toBe(NOW);
   });
 
   it('un cambio no relevante no cambia la fecha de envío, tampoco en una vivienda pausada', () => {
@@ -489,15 +501,15 @@ describe('pauseHome y resumeHome', () => {
   );
 });
 
-describe('vuelta a revisión tras cambios relevantes', () => {
-  it('Scenario: Cambiar el valor de una vivienda publicada - pasa a in_review con la fecha de envío y la de cambio relevante', () => {
+describe('cambios relevantes sin nueva revisión', () => {
+  it('Scenario: Cambiar el valor de una vivienda publicada - sigue publicada y anota el cambio relevante', () => {
     const published = { ...withStatus(draft(COMPLETE), 'published'), publishedAt: NOW };
 
     const edited = editHome(published, { valueMinCents: 260_000_00 }, LATER);
 
     expect(edited).toMatchObject({
-      status: 'in_review',
-      submittedAt: LATER,
+      status: 'published',
+      submittedAt: null,
       relevantChangedAt: LATER,
       publishedAt: NOW,
     });
@@ -533,13 +545,13 @@ describe('vuelta a revisión tras cambios relevantes', () => {
   ];
 
   it.each(RELEVANT_CHANGES)(
-    'cambiar %s de una vivienda publicada o pausada la devuelve a in_review',
+    'cambiar %s de una vivienda publicada o pausada no cambia su estado y anota el cambio',
     (_, changes) => {
       for (const status of ['published', 'paused'] as const) {
         const edited = editHome(withStatus(draft(COMPLETE), status), changes, LATER);
 
-        expect(edited.status).toBe('in_review');
-        expect(edited.submittedAt).toBe(LATER);
+        expect(edited.status).toBe(status);
+        expect(edited.submittedAt).toBeNull();
         expect(edited.relevantChangedAt).toBe(LATER);
       }
     },
@@ -561,12 +573,10 @@ describe('vuelta a revisión tras cambios relevantes', () => {
 });
 
 describe('relevantChangeOf (fotos)', () => {
-  it('en una vivienda publicada o pausada anota el cambio y la devuelve a revisión', () => {
+  it('en una vivienda publicada o pausada solo anota el cambio, sin devolverla a revisión', () => {
     for (const status of ['published', 'paused'] as const) {
       expect(relevantChangeOf(withStatus(draft(COMPLETE), status), LATER)).toEqual({
         relevantChangedAt: LATER,
-        status: 'in_review',
-        submittedAt: LATER,
       });
     }
   });
@@ -613,11 +623,11 @@ describe('régimen de protección (RF-14, RN-06)', () => {
   });
 
   it.each(['VPPB', 'VPPL', 'VPO'] as const)(
-    'Scenario: VPP sin fecha de calificación - una %s con fecha de calificación se envía a revisión',
+    'Scenario: VPP sin fecha de calificación - una %s con fecha de calificación se publica al enviarla',
     (regime) => {
       const home = draft({ ...COMPLETE, regime, vppQualificationDate: '2015-03-10' });
 
-      expect(submitHome(home, ENOUGH_PHOTOS, LATER).status).toBe('in_review');
+      expect(submitHome(home, ENOUGH_PHOTOS, LATER).status).toBe('published');
     },
   );
 
@@ -632,7 +642,7 @@ describe('régimen de protección (RF-14, RN-06)', () => {
     },
   );
 
-  it('Scenario: Vivienda libre - una vivienda libre sin datos de protección se guarda y se envía a revisión', () => {
+  it('Scenario: Vivienda libre - una vivienda libre sin datos de protección se guarda y se publica al enviarla', () => {
     const home = draft({ ...COMPLETE, regime: 'libre' });
 
     expect(home).toMatchObject({
@@ -640,7 +650,7 @@ describe('régimen de protección (RF-14, RN-06)', () => {
       vppProtectionEnd: null,
       vppMaxLegalPriceCents: null,
     });
-    expect(submitHome(home, ENOUGH_PHOTOS, LATER).status).toBe('in_review');
+    expect(submitHome(home, ENOUGH_PHOTOS, LATER).status).toBe('published');
   });
 
   it('Scenario: Valor por encima del máximo legal - una VPO con máximo legal de 180.000 € y valor máximo de 200.000 € se rechaza (422) señalando valueMaxCents', () => {
@@ -719,4 +729,26 @@ describe('closeHome', () => {
   it('una vivienda en operación no se puede cerrar', () => {
     expect(() => closeHome(homeIn('in_operation'))).toThrow(HomeInOperationError);
   });
+});
+
+describe('retireReportedHome', () => {
+  it.each(['published', 'paused'] as const)(
+    'Scenario: Denunciar una vivienda - una vivienda %s pasa a in_review y se encola',
+    (status) => {
+      const home = { ...withStatus(draft(COMPLETE), status), publishedAt: NOW };
+
+      const retired = retireReportedHome(home, LATER);
+
+      expect(retired).toMatchObject({ status: 'in_review', submittedAt: LATER, publishedAt: NOW });
+    },
+  );
+
+  it.each(['draft', 'in_review', 'in_operation', 'closed'] as const)(
+    'una vivienda en %s no cambia',
+    (status) => {
+      const home = withStatus(draft(COMPLETE), status);
+
+      expect(retireReportedHome(home, LATER)).toBe(home);
+    },
+  );
 });

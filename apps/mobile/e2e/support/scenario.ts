@@ -28,11 +28,11 @@ export async function compatiblePair(config: {
   const admin = await registerAdmin('Admin de la pareja');
   const first = await registerPerson(config.first.name, 'pareja-a');
   const second = await registerPerson(config.second.name, 'pareja-b');
-  const firstHome = await publishedHome(first, admin, {
+  const firstHome = await publishedHome(first, {
     type: config.first.type,
     place: PLACES.getafe,
   });
-  const secondHome = await publishedHome(second, admin, {
+  const secondHome = await publishedHome(second, {
     type: config.second.type,
     place: PLACES.alcala,
   });

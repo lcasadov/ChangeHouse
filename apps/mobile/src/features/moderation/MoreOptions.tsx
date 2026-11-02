@@ -79,7 +79,7 @@ export function MoreOptions({ subject, report, block }: Readonly<MoreOptionsProp
       />
       {feedback?.kind === 'reported' ? (
         <Notice tone="success" action={dismiss}>
-          {t('moderation.report.sent')}
+          {t(report.type === 'home' ? 'moderation.report.sentHome' : 'moderation.report.sent')}
         </Notice>
       ) : null}
       {feedback?.kind === 'blocked' ? (

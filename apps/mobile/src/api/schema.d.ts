@@ -170,10 +170,9 @@ export interface paths {
     head?: never;
     /**
      * Modifica una vivienda propia
-     * @description Una vivienda `published` o `paused` que cambia datos relevantes vuelve a `in_review`
-     *     (moderación previa, RF-18), con `submittedAt` y la fecha de cambio relevante en ese
-     *     momento; deja de aparecer en el descubrimiento y conserva sus matches abiertos. Son
-     *     relevantes el rango de valor, el tipo, la dirección, las superficies, los dormitorios, los
+     * @description Una vivienda `published` o `paused` que cambia datos relevantes conserva su estado y solo
+     *     anota la fecha de cambio relevante (reactiva los descartes, RF-44); no vuelve a revisión.
+     *     Son relevantes el rango de valor, el tipo, la dirección, las superficies, los dormitorios, los
      *     baños, la planta, el ascensor, el garaje, el trastero, las características (`features`),
      *     el régimen y los datos VPP; también las fotos (`completeHomePhotoUpload`,
      *     `deleteHomePhoto`). `locationVisibility`, `energyRating`, `yearBuilt`,
@@ -200,8 +199,12 @@ export interface paths {
     get?: never;
     put?: never;
     /**
-     * Envía la vivienda a moderación (`draft` → `in_review`)
-     * @description Exige los campos obligatorios completos (`usefulM2`, `builtM2`, `bedrooms`, `bathrooms`,
+     * Publica la vivienda (`draft` → `published`)
+     * @description Publica la vivienda al momento, sin esperar a un administrador (`draft` → `published`, con
+     *     su `publishedAt`). Si un administrador la rechazó antes (tiene `moderationNote`), pasa a
+     *     `in_review` y entra en la cola de moderación.
+     *
+     *     Exige los campos obligatorios completos (`usefulM2`, `builtM2`, `bedrooms`, `bathrooms`,
      *     `hasLift`, `garage`, `storageRoom`, `valueMinCents`, `valueMaxCents`, `isPrimaryResidence`);
      *     si faltan, 422 con `code: HOME_INCOMPLETE` y `errors` con cada campo. La exigencia de al
      *     menos 3 fotos procesadas (RF-11); si faltan, el mismo 422 incluye `photos` entre los
@@ -253,8 +256,7 @@ export interface paths {
     put?: never;
     /**
      * Reactiva una vivienda pausada (`paused` → `published`, RF-17)
-     * @description Vuelve a aparecer en el descubrimiento sin pasar por moderación: un cambio relevante
-     *     durante la pausa ya la habría devuelto a `in_review`. Si no está `paused`: 409 con
+     * @description Vuelve a aparecer en el descubrimiento sin pasar por moderación. Si no está `paused`: 409 con
      *     `code: HOME_NOT_RESUMABLE`.
      */
     post: operations['resumeHome'];
@@ -314,8 +316,8 @@ export interface paths {
      *     sobre una foto ya `ready`. Si el fichero no es una imagen válida: 422 con
      *     `code: INVALID_IMAGE`, el fichero se elimina y la foto se descarta. Si la subida aún no se
      *     ha hecho: 422 con `code: PHOTO_NOT_UPLOADED` y la foto sigue `pending`. Una foto nueva en
-     *     una vivienda `published` o `paused` es un cambio relevante: la vivienda vuelve a
-     *     `in_review` (RF-18). Una imagen de más de 40 megapíxeles se rechaza igual que un
+     *     una vivienda `published` o `paused` es un cambio relevante que se anota, pero la
+     *     vivienda conserva su estado. Una imagen de más de 40 megapíxeles se rechaza igual que un
      *     fichero inválido (422 `INVALID_IMAGE`) sin llegar a procesarse. Si el procesado de
      *     imágenes está saturado y no queda hueco en 30 segundos: 503 con `Retry-After`
      *     (`code: IMAGE_PROCESSING_BUSY`); la foto sigue `pending` y se puede reintentar.
@@ -343,8 +345,8 @@ export interface paths {
     /**
      * Elimina una foto
      * @description Elimina también los ficheros. Sirve para fotos `pending` y `ready`. Borrar una foto
-     *     `ready` de una vivienda `published` o `paused` es un cambio relevante: la vivienda vuelve
-     *     a `in_review` (RF-18).
+     *     `ready` de una vivienda `published` o `paused` es un cambio relevante que se anota, pero la
+     *     vivienda conserva su estado.
      */
     delete: operations['deleteHomePhoto'];
     options?: never;
@@ -770,7 +772,7 @@ export interface paths {
     put?: never;
     /**
      * Denuncia un usuario, una vivienda o un mensaje (RF-63)
-     * @description Un usuario o una vivienda se identifican por su UUID; un mensaje, por su id de Firestore, y solo se puede denunciar si se participa en su chat (si no, 404, igual que si no existe). La denuncia de un mensaje guarda su texto, su remitente y su fecha como evidencia. No se puede denunciar lo propio (400). Límite de 10 denuncias por usuario y hora (429).
+     * @description Un usuario o una vivienda se identifican por su UUID; un mensaje, por su id de Firestore, y solo se puede denunciar si se participa en su chat (si no, 404, igual que si no existe). La denuncia de un mensaje guarda su texto, su remitente y su fecha como evidencia. No se puede denunciar lo propio (400). Límite de 10 denuncias por usuario y hora (429). Denunciar una vivienda `published` o `paused` la retira: pasa a `in_review`, deja de aparecer en el descubrimiento y entra en la cola de moderación; la denuncia, la retirada y su auditoría (`home.report_retire`, con quien denuncia como actor) se guardan juntas y los matches abiertos de la vivienda no se cierran.
      */
     post: operations['createReport'];
     delete?: never;
@@ -808,7 +810,7 @@ export interface paths {
     };
     /**
      * Viviendas por estado, p. ej. pendientes de moderación (RF-18, RF-90)
-     * @description Con `status=in_review` es la cola de moderación, de la enviada antes a la enviada después. Sin `status` devuelve todas las viviendas, de la dada de alta más recientemente a la más antigua. Devuelve la ficha completa con sus fotos, pero `address` lleva el barrio o zona, nunca la dirección exacta.
+     * @description Con `status=in_review` es la cola de moderación (viviendas retiradas por una denuncia o rechazadas y reenviadas), de la que entró antes a la que entró después. Sin `status` devuelve todas las viviendas, de la dada de alta más recientemente a la más antigua. Devuelve la ficha completa con sus fotos, pero `address` lleva el barrio o zona, nunca la dirección exacta.
      */
     get: operations['adminListHomes'];
     put?: never;
@@ -1159,7 +1161,7 @@ export interface components {
     };
     /**
      * @description Solo `type` y `address` son obligatorios al crear el borrador; `regime` es `libre` por
-     *     defecto. Los demás son obligatorios para enviar a revisión (`submitHome`), no para guardar.
+     *     defecto. Los demás son obligatorios para publicar (`submitHome`), no para guardar.
      *     Si hay rango, `valueMinCents` > 0 y `valueMinCents` <= `valueMaxCents` (422 en otro caso).
      *     Una vivienda protegida (`VPPB`, `VPPL`, `VPO`) exige `vppQualificationDate` para salir del
      *     borrador (400 `VPP_QUALIFICATION_DATE_REQUIRED`) y, si declara `vppMaxLegalPriceCents`,
@@ -1893,7 +1895,7 @@ export interface operations {
     };
     requestBody?: never;
     responses: {
-      /** @description Vivienda en revisión */
+      /** @description Vivienda publicada (o en revisión, si un administrador la rechazó antes) */
       200: {
         headers: {
           [name: string]: unknown;

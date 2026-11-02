@@ -252,9 +252,15 @@ afterAll(async () => {
 let publishedHomeId: string | undefined;
 let strangerId = MISSING_HOME;
 
-/** Una vivienda publicada de un tercero, creada una sola vez para todas las filas. */
+/**
+ * Una vivienda publicada de un tercero, creada una sola vez para todas las filas. Denunciarla la
+ * retira a `in_review`, así que cada fila la recupera publicada.
+ */
 async function publishedHome(): Promise<string> {
-  if (publishedHomeId) return publishedHomeId;
+  if (publishedHomeId) {
+    await sql`UPDATE homes SET status = 'published' WHERE id = ${publishedHomeId}`;
+    return publishedHomeId;
+  }
   const landlord = await signUp();
   const landlordId = crypto.randomUUID();
   await sql`INSERT INTO users (id, firebase_uid, email, display_name)

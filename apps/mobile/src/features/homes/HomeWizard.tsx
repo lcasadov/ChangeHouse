@@ -1,4 +1,3 @@
-import type { HomePatch } from '@changehouse/shared';
 import { useTheme } from '@changehouse/ui';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -9,7 +8,6 @@ import { Dialog, FormScreen, Notice, ProgressBar, Text } from '../../ui';
 import { LoadingView } from '../session/LoadingView';
 import { CharacteristicsStep } from './CharacteristicsStep';
 import { firstIncompleteStep, TOTAL_STEPS, type WizardStep } from './home-form';
-import { changesRelevantData, returnsToReview } from './home-relevance';
 import { homeRoutes } from './home-routes';
 import type { Home } from './homes-api';
 import { HomesApiError } from './homes-api';
@@ -42,13 +40,16 @@ const LAST_DATA_STEP: WizardStep = 6;
 /**
  * `create`: alta o borrador, los siete pasos. `edit`: una vivienda publicada o pausada cambia sus
  * datos (pasos 2 a 6) y vuelve al detalle. `photos`: cualquier otra vivienda ya enviada solo
- * gestiona sus fotos. Se decide al abrir: si la edición la devuelve a revisión, sigue editándose.
+ * gestiona sus fotos. Se decide al abrir.
  */
 type WizardMode = 'create' | 'edit' | 'photos';
 
+/** Una vivienda publicada o pausada se edita sin pasar por el asistente de alta. */
+const isLive = (home: Home): boolean => home.status === 'published' || home.status === 'paused';
+
 function modeOf(home: Home | undefined, initialStep: WizardStep): WizardMode {
   if (home === undefined || home.status === 'draft') return 'create';
-  return initialStep !== PHOTOS_STEP && returnsToReview(home) ? 'edit' : 'photos';
+  return initialStep !== PHOTOS_STEP && isLive(home) ? 'edit' : 'photos';
 }
 
 const asStep = (value: number): WizardStep =>
@@ -137,8 +138,6 @@ function WizardBody({ home, initialStep, onCreated }: Readonly<WizardBodyProps>)
     mode === 'edit' ? asStep(Math.min(initialStep, LAST_DATA_STEP)) : initialStep,
   );
   const [confirmingExit, setConfirmingExit] = useState(false);
-  // Respuesta pendiente al aviso de vuelta a revisión: `true` guarda, `false` sigue editando
-  const [pendingReview, setPendingReview] = useState<((save: boolean) => void) | null>(null);
 
   const leave = () => {
     router.dismissTo(mode === 'edit' && home ? homeRoutes.detail(home.id) : homeRoutes.list);
@@ -160,20 +159,6 @@ function WizardBody({ home, initialStep, onCreated }: Readonly<WizardBodyProps>)
       router.dismissTo(homeRoutes.detail(savedHome.id));
     else goTo(step + 1);
   };
-  /** Avisa antes de guardar un cambio relevante en una vivienda publicada o pausada (RF-18). */
-  const confirmSave = (patch: HomePatch): Promise<boolean> => {
-    if (!home || !returnsToReview(home) || !changesRelevantData(home, patch)) {
-      return Promise.resolve(true);
-    }
-    return new Promise((resolve) => {
-      setPendingReview(() => resolve);
-    });
-  };
-  const answerReview = (save: boolean) => {
-    pendingReview?.(save);
-    setPendingReview(null);
-  };
-
   const firstStep = mode === 'edit' ? FIRST_DATA_STEP : 1;
   const stepProps: StepProps = {
     home,
@@ -185,7 +170,6 @@ function WizardBody({ home, initialStep, onCreated }: Readonly<WizardBodyProps>)
           }
         : undefined,
     onExit: exit,
-    confirmSave,
   };
 
   if (mode === 'photos' && home) {
@@ -194,9 +178,6 @@ function WizardBody({ home, initialStep, onCreated }: Readonly<WizardBodyProps>)
         <Text variant="title" accessibilityRole="header">
           {t(STEP_TITLES[PHOTOS_STEP])}
         </Text>
-        {returnsToReview(home) ? (
-          <Notice tone="warning">{t('homes.reReview.photosNotice')}</Notice>
-        ) : null}
         <PhotosStep
           home={home}
           uploads={uploads}
@@ -251,19 +232,6 @@ function WizardBody({ home, initialStep, onCreated }: Readonly<WizardBodyProps>)
         }}
         onCancel={() => {
           setConfirmingExit(false);
-        }}
-      />
-      <Dialog
-        visible={pendingReview !== null}
-        title={t('homes.reReview.title')}
-        description={t('homes.reReview.description')}
-        confirmLabel={t('homes.reReview.confirm')}
-        cancelLabel={t('homes.reReview.cancel')}
-        onConfirm={() => {
-          answerReview(true);
-        }}
-        onCancel={() => {
-          answerReview(false);
         }}
       />
     </FormScreen>

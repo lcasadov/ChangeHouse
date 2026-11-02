@@ -250,6 +250,13 @@ export class FakeBackend {
     return this.respondToUserResource(method, path, search, body);
   }
 
+  /** Como la API: denunciar una vivienda la retira de Explorar. */
+  private retireIfHomeReported(path: string, report: Response, body: unknown): void {
+    if (path !== '/reports' || !report.ok) return;
+    const { targetType, targetId } = body as { targetType: string; targetId: string };
+    if (targetType === 'home') this.homes.retireReported(targetId);
+  }
+
   /** Lo que ve una persona con sesión: decisiones, descubrimiento, matches, viviendas y su cuenta. */
   private respondToUserResource(
     method: string,
@@ -263,6 +270,7 @@ export class FakeBackend {
       if (path === '/me/blocked-users' && report.ok) {
         this.matches.closeOnBlock((body as { userId: string }).userId);
       }
+      this.retireIfHomeReported(path, report, body);
       return report;
     }
     const decision = this.decisions.respond(method, path, search, body);
